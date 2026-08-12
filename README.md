@@ -1,1 +1,1 @@
-# -llamvizsga-2026-27
+# Allamvizsga-2026-27
