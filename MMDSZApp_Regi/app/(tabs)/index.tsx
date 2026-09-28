@@ -52,6 +52,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('Csapattag');
   const [hasIgazolas, setHasIgazolas] = useState<boolean>(false);
+  const [isVerified, setIsVerified] = useState<boolean>(false);
   const [currentView, setCurrentView] = useState<string | null>(null);
 
   const [fullName, setFullName] = useState('');
@@ -76,8 +77,23 @@ export default function App() {
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
   const [teamFlag, setTeamFlag] = useState<string | null>(null);
 
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'Csapattag' | 'Alcsapatkapitány'>('Csapattag');
+
   const [selectedCategory, setSelectedCategory] = useState<string>('Szerda');
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+
+  const [adminEventTitle, setAdminEventTitle] = useState('');
+  const [adminEventTime, setAdminEventTime] = useState('');
+  const [adminEventLocation, setAdminEventLocation] = useState('');
+  const [adminEventDay, setAdminEventDay] = useState('Szerda');
+  const [isUploading, setIsUploading] = useState(false);
+  
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [showPending, setShowPending] = useState(false);
+
+  const [notifTitle, setNotifTitle] = useState('');
+  const [notifBody, setNotifBody] = useState('');
 
   const safeRole = (userRole || '').toLowerCase();
   const isOrganizerOrHead = safeRole.includes('szervez');
@@ -102,8 +118,15 @@ export default function App() {
         const unsubscribeDb = onSnapshot(doc(db, "users", user.uid), (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
-            setUserRole(data.role || 'Csapattag');
+            
+            if (user.email === 'dorazolcseak@gmail.com') {
+              setUserRole('Főszervező');
+            } else {
+              setUserRole(data.role || 'Csapattag');
+            }
+
             setHasIgazolas(!!data.igazolas);
+            setIsVerified(!!data.isVerified);
             setFullName(data.name || '');
             setTeamName(data.team || '');
             setProfileImage(data.profileImage || null);
@@ -115,6 +138,7 @@ export default function App() {
         setIsLoggedIn(false);
         setUserRole('Csapattag');
         setHasIgazolas(false);
+        setIsVerified(false);
       }
     });
 
@@ -127,7 +151,14 @@ export default function App() {
     if (!fullName || !email || !password) return alert('Minden mező kötelező!');
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "users", userCredential.user.uid), { name: fullName, email: email, team: teamName || 'Egyéni', role: 'Csapattag', createdAt: new Date() });
+      await setDoc(doc(db, "users", userCredential.user.uid), { 
+        name: fullName, 
+        email: email, 
+        team: teamName || 'Egyéni', 
+        role: 'Csapattag', 
+        createdAt: new Date(), 
+        isVerified: false 
+      });
     } catch (error: any) { alert(`Hiba: ${error.message}`); }
   };
 
@@ -151,8 +182,8 @@ export default function App() {
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
         if (imgStr.length > 1000000) return alert("A kép túl nagy!");
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { igazolas: imgStr });
-        alert("Sikeres feltöltés!");
+        await updateDoc(doc(db, "users", auth.currentUser.uid), { igazolas: imgStr, isVerified: false });
+        alert("Sikeres feltöltés! Várakozás a jóváhagyásra.");
       }
     } catch (e: any) { alert("Hiba: " + e.message); }
   };
@@ -210,6 +241,96 @@ export default function App() {
         fetchPhotoHuntProgress();
       }
     } catch (e: any) { alert("Hiba: " + e.message); }
+  };
+
+  const handleAddAdminEvent = async () => {
+    if (!adminEventTitle || !adminEventTime || !adminEventLocation) {
+      return alert("Kérlek, tölts ki minden mezőt!");
+    }
+    setIsUploading(true);
+    try {
+      await addDoc(collection(db, "programs"), {
+        title: adminEventTitle,
+        time: adminEventTime,
+        helyszín: adminEventLocation,
+        day: adminEventDay,
+        createdAt: new Date(),
+        createdBy: auth.currentUser?.uid
+      });
+      alert(`Program sikeresen hozzáadva a(z) ${adminEventDay} naphoz! ✅`);
+      setAdminEventTitle('');
+      setAdminEventTime('');
+      setAdminEventLocation('');
+    } catch (error: any) {
+      alert("Hiba történt: " + error.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const fetchPendingUsers = async () => {
+    try {
+      const q = query(collection(db, "users"));
+      const snapshot = await getDocs(q);
+      const list: any[] = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.igazolas) {
+          list.push({ id: doc.id, ...data });
+        }
+      });
+      setPendingUsers(list);
+      setShowPending(true);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleApproveId = async (userId: string) => {
+    try {
+      await updateDoc(doc(db, "users", userId), { isVerified: true });
+      alert("Diákigazolvány sikeresen jóváhagyva! ✅");
+      fetchPendingUsers();
+    } catch (error: any) {
+      alert("Hiba: " + error.message);
+    }
+  };
+
+  const handleSendNotification = async () => {
+    if (!notifTitle || !notifBody) return alert("Add meg az értesítés címét és szövegét!");
+    try {
+      await addDoc(collection(db, "notifications"), {
+        title: notifTitle,
+        body: notifBody,
+        createdAt: new Date(),
+      });
+      alert("Értesítés sikeresen elküldve minden résztvevőnek! 📯");
+      setNotifTitle('');
+      setNotifBody('');
+    } catch (e: any) {
+      alert("Hiba: " + e.message);
+    }
+  };
+
+  const handleSendTeamInvite = async () => {
+    if (!inviteEmail || !teamName) return alert("Add meg a csapattag e-mail címét!");
+    try {
+      await addDoc(collection(db, "invites"), {
+        email: inviteEmail,
+        team: teamName,
+        role: inviteRole,
+        invitedBy: fullName || 'Csapatkapitány',
+        createdAt: new Date(),
+        status: 'Függőben'
+      });
+
+      const emailMessage = `Meghívást kaptál a Diáknapokra! Töltsd le az appot, regisztrálj, majd kapod az e-mailt a jóváhagyással és lépj be, hogy minden információt időben tudj meg a Diáknapokról! (Csapat: ${teamName}, Szerep: ${inviteRole})`;
+      
+      alert(`Meghívó sikeresen elküldve ide: ${inviteEmail} ✉️\n\n[Elküldött e-mail szövege]:\n"${emailMessage}"`);
+      setInviteEmail('');
+    } catch (e: any) {
+      alert("Hiba a meghíváskor: " + e.message);
+    }
   };
 
   const fetchTeamData = async () => {
@@ -325,7 +446,6 @@ export default function App() {
     } catch (e) { console.error(e); }
   };
 
-  // Biztonságos letöltés kezelő (webes letöltés vagy mobil megosztás/letöltés)
   const handleDownloadImage = (imageBase64: string) => {
     if (Platform.OS === 'web') {
       const link = document.createElement('a');
@@ -335,7 +455,6 @@ export default function App() {
       link.click();
       document.body.removeChild(link);
     } else {
-      // Mobilon megnyitja böngészőben, ahonnan hosszú nyomással menthető
       Linking.openURL(imageBase64).catch(() => alert('A kép letöltése nem sikerült.'));
     }
   };
@@ -365,7 +484,7 @@ export default function App() {
             {!isLoginMode && (
               <>
                 <TextInput style={styles.input} placeholder="Teljes név" placeholderTextColor="#888" value={fullName} onChangeText={setFullName} />
-                <TextInput style={styles.input} placeholder="Csapat neve (opcionális)" placeholderTextColor="#888" value={teamName} onChangeText={setTeamName} />
+                <TextInput style={styles.input} placeholder="Csapat neve" placeholderTextColor="#888" value={teamName} onChangeText={setTeamName} />
               </>
             )}
             <TextInput style={styles.input} placeholder="E-mail cím" placeholderTextColor="#888" keyboardType="email-address" value={email} onChangeText={setEmail} autoCapitalize="none" />
@@ -387,6 +506,33 @@ export default function App() {
     );
   }
 
+  if (isLoggedIn && !isVerified && userRole !== 'Főszervező') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.webWrapper}>
+          <View style={styles.card}>
+            <Text style={[styles.title, { color: '#F39C12' }]}>⏳ FÜGGŐBEN LÉVŐ REGISZTRÁCIÓ</Text>
+            <Text style={[styles.cardText, { textAlign: 'center', marginVertical: 15 }]}>
+              A fiókod és a diákigazolványod ellenőrzés alatt áll. Kérjük, várd meg, amíg egy főszervező jóváhagyja a regisztrációdat!
+            </Text>
+            
+            {!hasIgazolas ? (
+              <TouchableOpacity style={styles.solidButton} onPress={handleUploadIgazolas}>
+                <Text style={styles.solidButtonText}>📸 Diákigazolvány Feltöltése</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={{ color: '#27AE60', textAlign: 'center', fontWeight: 'bold', marginBottom: 15 }}>✅ Igazolvány feltöltve. Visszaigazolásra vár.</Text>
+            )}
+
+            <TouchableOpacity style={[styles.outlineButton, { marginTop: 10 }]} onPress={handleLogout}>
+              <Text style={styles.outlineButtonText}>Kilépés</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   if (currentView === 'profile') {
     return (
       <SafeAreaView style={styles.container}>
@@ -403,7 +549,11 @@ export default function App() {
               <Text style={styles.profileLabel}>E-mail:</Text><Text style={styles.profileValue}>{auth.currentUser?.email}</Text>
               <Text style={styles.profileLabel}>Csapat:</Text><Text style={styles.profileValue}>{teamName || 'Egyéni'}</Text>
               <Text style={styles.profileLabel}>Szerepkör:</Text><Text style={[styles.profileValue, { color: '#EC2127' }]}>{userRole}</Text>
-              <Text style={styles.profileLabel}>Diákigazolvány:</Text><Text style={{ fontWeight: 'bold', color: hasIgazolas ? '#27AE60' : '#EC2127' }}>{hasIgazolas ? '✅ Feltöltve' : '❌ Nincs feltöltve'}</Text>
+              
+              <Text style={styles.profileLabel}>Diákigazolvány:</Text>
+              <Text style={{ fontWeight: 'bold', color: hasIgazolas ? (isVerified ? '#27AE60' : '#F39C12') : '#EC2127' }}>
+                {hasIgazolas ? (isVerified ? '✅ Elfogadva' : '⏳ Ellenőrzés alatt') : '❌ Nincs feltöltve'}
+              </Text>
             </View>
           </ScrollView>
         </View>
@@ -465,6 +615,7 @@ export default function App() {
           </View>
           <Text style={[styles.title, { marginTop: 15, color: '#EC2127' }]}>🛡️ {teamName ? teamName.toUpperCase() : 'CSAPAT'} KEZELÉSE</Text>
           <Text style={styles.subtitle}>Csapatkapitányi felület</Text>
+          
           <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
               <View style={{ alignItems: 'center', width: '48%' }}>
@@ -480,20 +631,58 @@ export default function App() {
                 </TouchableOpacity>
               </View>
             </View>
+
             <View style={styles.card}>
               <Text style={styles.cardTitle}>Csapat Leírása</Text>
-              <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} placeholder="Írd le a csapatot pár mondatban..." placeholderTextColor="#888" multiline value={teamDescription} onChangeText={setTeamDescription} />
-              <Text style={[styles.cardTitle, { marginTop: 10 }]}>Bemutatkozó Videó Link (YouTube/TikTok)</Text>
+              <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} placeholder="Írd le a csapatot pár mondatban..." placeholderTextColor="#888" multiline value={teamDescription} onChangeText={setTeamDescription} />
+              
+              <Text style={[styles.cardTitle, { marginTop: 10 }]}>Bemutatkozó Videó Link</Text>
               <TextInput style={styles.input} placeholder="https://..." placeholderTextColor="#888" value={teamVideoLink} onChangeText={setTeamVideoLink} />
               <TouchableOpacity style={styles.solidButton} onPress={handleSaveTeamData}><Text style={styles.solidButtonText}>Mentés</Text></TouchableOpacity>
             </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>✉️ Csapattag Meghívása E-mailen</Text>
+              <Text style={styles.cardText}>Add meg a tag e-mail címét, és válaszd ki a szerepkörét:</Text>
+              
+              <TextInput 
+                style={[styles.input, { marginTop: 8 }]} 
+                placeholder="tag@email.com" 
+                placeholderTextColor="#888" 
+                keyboardType="email-address"
+                value={inviteEmail} 
+                onChangeText={setInviteEmail} 
+                autoCapitalize="none"
+              />
+
+              <Text style={[styles.profileLabel, { marginBottom: 6 }]}>Szerepkör kiválasztása:</Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                <TouchableOpacity 
+                  style={[styles.filterChip, inviteRole === 'Csapattag' && styles.filterChipActive, { flex: 1, marginRight: 5 }]} 
+                  onPress={() => setInviteRole('Csapattag')}
+                >
+                  <Text style={[styles.filterChipText, inviteRole === 'Csapattag' && styles.filterChipTextActive]}>Csapattag</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.filterChip, inviteRole === 'Alcsapatkapitány' && styles.filterChipActive, { flex: 1, marginLeft: 5 }]} 
+                  onPress={() => setInviteRole('Alcsapatkapitány')}
+                >
+                  <Text style={[styles.filterChipText, inviteRole === 'Alcsapatkapitány' && styles.filterChipTextActive]}>Alcsapatkapitány</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={[styles.solidButton, { backgroundColor: '#27AE60' }]} onPress={handleSendTeamInvite}>
+                <Text style={styles.solidButtonText}>Meghívó E-mail Küldése</Text>
+              </TouchableOpacity>
+            </View>
+
           </ScrollView>
         </View>
       </SafeAreaView>
     );
   }
 
-  // KÉP MEGTEKINTÉS ÉS EGYSZERŰ LETÖLTÉS GOMB
   if (selectedGalleryImage) {
     return (
       <SafeAreaView style={styles.container}>
@@ -708,6 +897,92 @@ export default function App() {
     );
   }
 
+  if (currentView === 'adminDashboard') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.webWrapper}>
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => setCurrentView(null)}>
+              <Text style={{ color: '#EC2127', fontSize: 16, fontWeight: 'bold' }}>← Vissza</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={[styles.title, { marginTop: 15, color: '#EC2127' }]}>⚙️ ADMIN VEZÉRLŐPULT</Text>
+          
+          <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
+            
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📅 Új program hozzáadása</Text>
+              
+              <Text style={styles.profileLabel}>Válassz napot:</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 }}>
+                {['Szerda', 'Csütörtök', 'Péntek', 'Szombat'].map((day) => (
+                  <TouchableOpacity 
+                    key={day} 
+                    style={[styles.filterChip, adminEventDay === day && styles.filterChipActive, { marginBottom: 6 }]} 
+                    onPress={() => setAdminEventDay(day)}
+                  >
+                    <Text style={[styles.filterChipText, adminEventDay === day && styles.filterChipTextActive]}>{day}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TextInput style={styles.input} placeholder="Program neve (pl. Koncert)" placeholderTextColor="#888" value={adminEventTitle} onChangeText={setAdminEventTitle} />
+              <TextInput style={styles.input} placeholder="Időpont (pl. 20:00)" placeholderTextColor="#888" value={adminEventTime} onChangeText={setAdminEventTime} />
+              <TextInput style={styles.input} placeholder="Helyszín (pl. Nagyszínpad)" placeholderTextColor="#888" value={adminEventLocation} onChangeText={setAdminEventLocation} />
+              
+              <TouchableOpacity style={[styles.solidButton, { opacity: isUploading ? 0.7 : 1 }]} onPress={handleAddAdminEvent} disabled={isUploading}>
+                <Text style={styles.solidButtonText}>{isUploading ? 'Feltöltés folyamatban...' : 'Program Mentése'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📯 Push Értesítés Küldése</Text>
+              <TextInput style={styles.input} placeholder="Értesítés címe" placeholderTextColor="#888" value={notifTitle} onChangeText={setNotifTitle} />
+              <TextInput style={[styles.input, { height: 70, textAlignVertical: 'top' }]} placeholder="Értesítés szövege..." placeholderTextColor="#888" multiline value={notifBody} onChangeText={setNotifBody} />
+              <TouchableOpacity style={styles.solidButton} onPress={handleSendNotification}>
+                <Text style={styles.solidButtonText}>Értesítés Kiküldése</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🎓 Diákigazolványok Ellenőrzése</Text>
+              <TouchableOpacity style={styles.outlineButton} onPress={fetchPendingUsers}>
+                <Text style={styles.outlineButtonText}>🔄 Feltöltött igazolványok listázása</Text>
+              </TouchableOpacity>
+
+              {showPending && (
+                <View style={{ marginTop: 10 }}>
+                  {pendingUsers.length === 0 ? (
+                    <Text style={{ color: '#888', textAlign: 'center', marginTop: 10 }}>Még nincsenek feltöltött igazolványok.</Text>
+                  ) : (
+                    pendingUsers.map(user => (
+                      <View key={user.id} style={{ backgroundColor: '#121212', padding: 10, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#333' }}>
+                        <Text style={{ color: '#FFF', fontWeight: 'bold' }}>{user.name} ({user.email})</Text>
+                        <Text style={{ color: '#aaa', fontSize: 12, marginBottom: 5 }}>Csapat: {user.team || 'Egyéni'}</Text>
+                        <Text style={{ color: user.isVerified ? '#27AE60' : '#F39C12', fontSize: 12, fontWeight: 'bold', marginBottom: 10 }}>
+                          Státusz: {user.isVerified ? '✅ Elfogadva' : '⏳ Függőben'}
+                        </Text>
+                        
+                        <Image source={{ uri: user.igazolas }} style={{ width: '100%', height: 150, borderRadius: 8, marginBottom: 10 }} resizeMode="contain" />
+                        
+                        {!user.isVerified && (
+                          <TouchableOpacity style={[styles.solidButton, { backgroundColor: '#27AE60' }]} onPress={() => handleApproveId(user.id)}>
+                            <Text style={styles.solidButtonText}>✅ Jóváhagyás (Engedélyezés)</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))
+                  )}
+                </View>
+              )}
+            </View>
+
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
@@ -741,7 +1016,15 @@ export default function App() {
           {showIgazolasUpload && (
             <View style={[styles.card, { alignItems: 'center' }]}>
               <Text style={styles.cardTitle}>🎓 Diákigazolvány</Text>
-              {hasIgazolas ? <Text style={{ color: '#27AE60', fontWeight: 'bold', marginTop: 5 }}>✅ Sikeresen feltöltve!</Text> : <TouchableOpacity style={styles.outlineButton} onPress={handleUploadIgazolas}><Text style={styles.outlineButtonText}>📸 Fénykép kiválasztása</Text></TouchableOpacity>}
+              {hasIgazolas ? (
+                <Text style={{ color: isVerified ? '#27AE60' : '#F39C12', fontWeight: 'bold', marginTop: 5 }}>
+                  {isVerified ? '✅ Elfogadva' : '⏳ Ellenőrzés alatt...'}
+                </Text>
+              ) : (
+                <TouchableOpacity style={styles.outlineButton} onPress={handleUploadIgazolas}>
+                  <Text style={styles.outlineButtonText}>📸 Fénykép kiválasztása</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -773,6 +1056,12 @@ export default function App() {
             {isOrganizerOrHead && (
               <TouchableOpacity style={styles.menuButton} onPress={() => { fetchRegisteredUsers(); setCurrentView('usersList'); }}>
                 <Text style={styles.menuIcon}>👥</Text><Text style={styles.menuText}>Regisztráltak</Text>
+              </TouchableOpacity>
+            )}
+
+            {userRole === 'Főszervező' && (
+              <TouchableOpacity style={styles.menuButton} onPress={() => setCurrentView('adminDashboard')}>
+                <Text style={styles.menuIcon}>⚙️</Text><Text style={styles.menuText}>Admin Pult</Text>
               </TouchableOpacity>
             )}
           </View>
