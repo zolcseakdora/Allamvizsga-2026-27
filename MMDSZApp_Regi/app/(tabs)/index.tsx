@@ -4,6 +4,10 @@ import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswo
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert } from 'react-native';
+
+import { FilterChip } from '@/components/filter-chip';
+import { MenuButton } from '@/components/menu-button';
 import { EVENT_DAYS } from '@/constants/event-days';
 import { GALLERY_FOLDERS } from '@/constants/gallery';
 import { PHOTO_HUNT_TASKS } from '@/constants/photo-hunt';
@@ -290,6 +294,7 @@ export default function App() {
   const handleSendTeamInvite = async () => {
     if (!inviteEmail || !teamName) return alert("Add meg a csapattag e-mail címét!");
     try {
+      // 1. Belső meghívó mentése az appnak (opcionális, de jó ha megmarad)
       await addDoc(collection(db, "invites"), {
         email: inviteEmail,
         team: teamName,
@@ -299,9 +304,21 @@ export default function App() {
         status: 'Függőben'
       });
 
-      const emailMessage = `Meghívást kaptál a Diáknapokra! Töltsd le az appot, regisztrálj, majd kapod az e-mailt a jóváhagyással és lépj be, hogy minden információt időben tudj meg a Diáknapokról! (Csapat: ${teamName}, Szerep: ${inviteRole})`;
+      // 2. VALÓS E-MAIL KÜLDÉSE a Firebase Trigger Email bővítménynek
+      await addDoc(collection(db, "mail"), {
+        to: inviteEmail,
+        message: {
+          subject: "Meghívás a Diáknapokra! 🚀",
+          text: `Szia! Meghívást kaptál a(z) ${teamName} csapatba, mint ${inviteRole}. Töltsd le az appot és regisztrálj!`,
+          html: `
+            <h3>Szia!</h3>
+            <p>Meghívást kaptál a(z) <b>${teamName}</b> csapatba, mint <b>${inviteRole}</b>.</p>
+            <p>Töltsd le az appot és regisztrálj, hogy csatlakozhass a csapathoz és ne maradj le semmiről!</p>
+          `
+        }
+      });
       
-      alert(`Meghívó sikeresen elküldve ide: ${inviteEmail} ✉️\n\n[Elküldött e-mail szövege]:\n"${emailMessage}"`);
+      alert(`A valós e-mail meghívó sikeresen elküldve ide: ${inviteEmail} ✉️`);
       setInviteEmail('');
     } catch (e: any) {
       alert("Hiba a meghíváskor: " + e.message);
@@ -632,19 +649,9 @@ export default function App() {
 
               <Text style={[styles.profileLabel, { marginBottom: 6 }]}>Szerepkör kiválasztása:</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
-                <TouchableOpacity 
-                  style={[styles.filterChip, inviteRole === 'Csapattag' && styles.filterChipActive, { flex: 1, marginRight: 5 }]} 
-                  onPress={() => setInviteRole('Csapattag')}
-                >
-                  <Text style={[styles.filterChipText, inviteRole === 'Csapattag' && styles.filterChipTextActive]}>Csapattag</Text>
-                </TouchableOpacity>
+                <FilterChip label="Csapattag" selected={inviteRole === 'Csapattag'} onPress={() => setInviteRole('Csapattag')} style={{ flex: 1, marginRight: 5 }} />
                 
-                <TouchableOpacity 
-                  style={[styles.filterChip, inviteRole === 'Alcsapatkapitány' && styles.filterChipActive, { flex: 1, marginLeft: 5 }]} 
-                  onPress={() => setInviteRole('Alcsapatkapitány')}
-                >
-                  <Text style={[styles.filterChipText, inviteRole === 'Alcsapatkapitány' && styles.filterChipTextActive]}>Alcsapatkapitány</Text>
-                </TouchableOpacity>
+                <FilterChip label="Alcsapatkapitány" selected={inviteRole === 'Alcsapatkapitány'} onPress={() => setInviteRole('Alcsapatkapitány')} style={{ flex: 1, marginLeft: 5 }} />
               </View>
 
               <TouchableOpacity style={[styles.solidButton, { backgroundColor: '#27AE60' }]} onPress={handleSendTeamInvite}>
@@ -803,9 +810,7 @@ export default function App() {
           <View style={styles.filterContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
               {EVENT_DAYS.map((cat) => (
-                <TouchableOpacity key={cat} style={[styles.filterChip, selectedCategory === cat && styles.filterChipActive]} onPress={() => setSelectedCategory(cat)}>
-                  <Text style={[styles.filterChipText, selectedCategory === cat && styles.filterChipTextActive]}>{cat}</Text>
-                </TouchableOpacity>
+                <FilterChip key={cat} label={cat} selected={selectedCategory === cat} onPress={() => setSelectedCategory(cat)} />
               ))}
             </ScrollView>
           </View>
@@ -891,13 +896,7 @@ export default function App() {
               <Text style={styles.profileLabel}>Válassz napot:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 }}>
                 {EVENT_DAYS.map((day) => (
-                  <TouchableOpacity 
-                    key={day} 
-                    style={[styles.filterChip, adminEventDay === day && styles.filterChipActive, { marginBottom: 6 }]} 
-                    onPress={() => setAdminEventDay(day)}
-                  >
-                    <Text style={[styles.filterChipText, adminEventDay === day && styles.filterChipTextActive]}>{day}</Text>
-                  </TouchableOpacity>
+                  <FilterChip key={day} label={day} selected={adminEventDay === day} onPress={() => setAdminEventDay(day)} style={{ marginBottom: 6 }} />
                 ))}
               </View>
 
@@ -1004,40 +1003,24 @@ export default function App() {
           )}
 
           <View style={styles.menuGrid}>
-            <TouchableOpacity style={styles.menuButton} onPress={() => { fetchPrograms(); setCurrentView('schedule'); }}>
-              <Text style={styles.menuIcon}>📅</Text><Text style={styles.menuText}>Programok</Text>
-            </TouchableOpacity>
+            <MenuButton icon="📅" label="Programok" onPress={() => { fetchPrograms(); setCurrentView('schedule'); }} />
             
-            <TouchableOpacity style={styles.menuButton} onPress={() => { fetchAllTeams(); setCurrentView('allTeams'); }}>
-              <Text style={styles.menuIcon}>🛡️</Text><Text style={styles.menuText}>Csapatok</Text>
-            </TouchableOpacity>
+            <MenuButton icon="🛡️" label="Csapatok" onPress={() => { fetchAllTeams(); setCurrentView('allTeams'); }} />
 
-            <TouchableOpacity style={styles.menuButton} onPress={() => { fetchMapPoints(); setCurrentView('map'); }}>
-              <Text style={styles.menuIcon}>🗺️</Text><Text style={styles.menuText}>Térkép</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuButton} onPress={() => { setSelectedGalleryFolder(null); setCurrentView('gallery'); }}>
-              <Text style={styles.menuIcon}>📸</Text><Text style={styles.menuText}>Galéria</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.menuButton} onPress={() => { fetchPhotoHuntProgress(); setCurrentView('photohunt'); }}>
-              <Text style={styles.menuIcon}>📷</Text><Text style={styles.menuText}>Photo Hunt</Text>
-            </TouchableOpacity>
+            <MenuButton icon="🗺️" label="Térkép" onPress={() => { fetchMapPoints(); setCurrentView('map'); }} />
+            <MenuButton icon="📸" label="Galéria" onPress={() => { setSelectedGalleryFolder(null); setCurrentView('gallery'); }} />
+            <MenuButton icon="📷" label="Photo Hunt" onPress={() => { fetchPhotoHuntProgress(); setCurrentView('photohunt'); }} />
             
             {isCaptainOrDeputy && (
-              <TouchableOpacity style={styles.menuButton} onPress={() => { fetchTeamData(); setCurrentView('teamManagement'); }}>
-                <Text style={styles.menuIcon}>⚙️</Text><Text style={styles.menuText}>Csapatkezelés</Text>
-              </TouchableOpacity>
+              <MenuButton icon="⚙️" label="Csapatkezelés" onPress={() => { fetchTeamData(); setCurrentView('teamManagement'); }} />
             )}
 
             {isOrganizerOrHead && (
-              <TouchableOpacity style={styles.menuButton} onPress={() => { fetchRegisteredUsers(); setCurrentView('usersList'); }}>
-                <Text style={styles.menuIcon}>👥</Text><Text style={styles.menuText}>Regisztráltak</Text>
-              </TouchableOpacity>
+              <MenuButton icon="👥" label="Regisztráltak" onPress={() => { fetchRegisteredUsers(); setCurrentView('usersList'); }} />
             )}
 
             {userRole === 'Főszervező' && (
-              <TouchableOpacity style={styles.menuButton} onPress={() => setCurrentView('adminDashboard')}>
-                <Text style={styles.menuIcon}>⚙️</Text><Text style={styles.menuText}>Admin Pult</Text>
-              </TouchableOpacity>
+              <MenuButton icon="⚙️" label="Admin Pult" onPress={() => setCurrentView('adminDashboard')} />
             )}
           </View>
         </ScrollView>
@@ -1066,9 +1049,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20 },
   menuGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 },
-  menuButton: { width: '48%', backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 20, alignItems: 'center', marginBottom: 15 },
-  menuIcon: { fontSize: 28, marginBottom: 8 },
-  menuText: { color: '#FFF', fontWeight: 'bold' },
   userCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 14, marginBottom: 10 },
   userName: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 },
   userRole: { fontSize: 14, color: '#aaa' },
@@ -1080,11 +1060,6 @@ const styles = StyleSheet.create({
   programDetail: { fontSize: 13, color: '#aaa', marginBottom: 4 },
 
   filterContainer: { height: 45, marginVertical: 8, justifyContent: 'center' },
-  filterChip: { paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 20, marginRight: 8, height: 36, justifyContent: 'center', alignItems: 'center' },
-  filterChipActive: { backgroundColor: '#EC2127', borderColor: '#EC2127' },
-  filterChipText: { fontSize: 13, color: '#aaa', fontWeight: 'bold' },
-  filterChipTextActive: { color: '#FFF' },
-
   folderCard: { width: '48%', backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 20, alignItems: 'center', marginBottom: 15 },
   folderName: { color: '#FFF', fontWeight: 'bold', fontSize: 14, textAlign: 'center' },
 
