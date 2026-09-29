@@ -4,6 +4,9 @@ import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswo
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { EVENT_DAYS } from '@/constants/event-days';
+import { GALLERY_FOLDERS } from '@/constants/gallery';
+import { PHOTO_HUNT_TASKS } from '@/constants/photo-hunt';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAXrpkSdAD3aqiyViv_AUMxH6OTSiMI1Zk",
@@ -17,34 +20,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-
-const PHOTO_HUNT_TASKS = [
-  { id: 1, title: 'Szamárral a fabudiban', criteria: 'szamár, fabudi' },
-  { id: 2, title: 'Egy csűrbe, szalmába', criteria: 'csűr, szalma' },
-  { id: 3, title: 'Ásó, kapa, nagyharang', criteria: 'ásó, kapa, nagyharang' },
-  { id: 4, title: 'Happy ending (videó)', criteria: 'kreatív' },
-  { id: 5, title: 'Kép juhásszal + nyáj', criteria: 'juhász, nyáj' },
-  { id: 6, title: 'Mezőségi a szervezőkkel (videó)', criteria: 'mezőségi néptánc' },
-  { id: 7, title: 'Kürtőskalács a szervezőknek', criteria: 'kürtőskalács, szervezők' },
-  { id: 8, title: 'Aranybárány', criteria: 'arany színű bárány' },
-  { id: 9, title: 'Békacsókolás (videó)', criteria: 'béka, csókolás' },
-  { id: 10, title: 'Mustkészítés lábbal (videó)', criteria: 'mustkészítés, lábbal' },
-  { id: 11, title: 'Vajköpülés (videó)', criteria: 'vaj, köpülés' },
-  { id: 12, title: 'Kecskefejés (videó)', criteria: 'kecske, fejés' },
-  { id: 13, title: 'Kolbászokkal teli éléskamra', criteria: 'éléskamra, kolbászok' },
-  { id: 14, title: 'Itassatok fröccsel egy szervezőt', criteria: 'fröccs, szervező' },
-  { id: 15, title: 'Kép a legrégebbi szervezővel', criteria: 'Sancy' },
-];
-
-const GALLERY_FOLDERS = [
-  { id: 'Sportok', name: 'Sportok ⚽', icon: '⚽' },
-  { id: 'Felvonulás', name: 'Felvonulás 🚩', icon: '🚩' },
-  { id: 'Harácsolás', name: 'Harácsolás 📜', icon: '📜' },
-  { id: 'PhotoHunt', name: 'Photo Hunt 📷', icon: '📷' },
-  { id: 'Weekend játékok', name: 'Weekend játékok 🎮', icon: '🎮' },
-  { id: 'Party', name: 'Party 🎉', icon: '🎉' },
-  { id: 'Egyéb', name: 'Egyéb pillanatok 📸', icon: '📸' },
-];
 
 export default function App() {
   const [language, setLanguage] = useState<'hu' | 'en' | null>(null);
@@ -827,7 +802,7 @@ export default function App() {
           
           <View style={styles.filterContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 4 }}>
-              {['Szerda', 'Csütörtök', 'Péntek', 'Szombat'].map((cat) => (
+              {EVENT_DAYS.map((cat) => (
                 <TouchableOpacity key={cat} style={[styles.filterChip, selectedCategory === cat && styles.filterChipActive]} onPress={() => setSelectedCategory(cat)}>
                   <Text style={[styles.filterChipText, selectedCategory === cat && styles.filterChipTextActive]}>{cat}</Text>
                 </TouchableOpacity>
@@ -915,7 +890,7 @@ export default function App() {
               
               <Text style={styles.profileLabel}>Válassz napot:</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 }}>
-                {['Szerda', 'Csütörtök', 'Péntek', 'Szombat'].map((day) => (
+                {EVENT_DAYS.map((day) => (
                   <TouchableOpacity 
                     key={day} 
                     style={[styles.filterChip, adminEventDay === day && styles.filterChipActive, { marginBottom: 6 }]} 
