@@ -62,6 +62,7 @@ const en: TranslationShape<typeof hu> = {
     editPhoto: 'Tap the image to change it',
     name: 'Name',
     noName: 'Not provided',
+    individualTeam: 'Individual',
     studentId: 'Student ID',
   },
   home: {

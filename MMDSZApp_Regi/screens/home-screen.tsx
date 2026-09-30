@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { MenuButton } from '@/components/menu-button';
 
@@ -43,66 +44,79 @@ export function HomeScreen({
   onOpenRegisteredUsers,
   onOpenAdmin,
 }: HomeScreenProps) {
+  const { t } = useTranslation();
+  const translatedRole = userRole === 'Főszervező'
+    ? t('roles.headOrganizer')
+    : userRole === 'Szervező'
+      ? t('roles.organizer')
+      : userRole === 'Csapatkapitány'
+        ? t('roles.captain')
+        : userRole === 'Alcsapatkapitány'
+          ? t('roles.deputy')
+          : userRole === 'Csapattag'
+            ? t('roles.member')
+            : userRole;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <View style={styles.headerRow}>
-            <Text style={styles.title}>MMDSZ DIÁKNAPOK ⛺</Text>
+            <Text style={styles.title}>{t('home.title')} ⛺</Text>
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={onOpenProfile} style={styles.profileButton}><Text style={styles.profileText}>Profil</Text></TouchableOpacity>
-              <TouchableOpacity onPress={onLogout}><Text style={styles.logoutText}>Kilépés</Text></TouchableOpacity>
+              <TouchableOpacity onPress={onOpenProfile} style={styles.profileButton}><Text style={styles.profileText}>{t('home.profile')}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={onLogout}><Text style={styles.logoutText}>{t('common.logout')}</Text></TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.subtitle}>Bejelentkezve mint: <Text style={styles.roleText}>{userRole}</Text></Text>
+          <Text style={styles.subtitle}>{t('home.signedInAs')} <Text style={styles.roleText}>{translatedRole}</Text></Text>
 
           <View style={styles.countdownCard}>
-            <Text style={styles.countdownTitle}>🎉 28. MAROSVÁSÁRHELYI DIÁKNAPOK</Text>
-            <Text style={styles.countdownSub}>2027. május 20–24.</Text>
+            <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
+            <Text style={styles.countdownSub}>{t('home.date')}</Text>
             <View style={styles.timerRow}>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>Nap</Text></View>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>Óra</Text></View>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>Perc</Text></View>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>{t('home.days')}</Text></View>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>{t('home.hours')}</Text></View>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>{t('home.minutes')}</Text></View>
             </View>
           </View>
 
           <View style={styles.newsCard}>
-            <Text style={styles.newsBadge}>🚩 Szerda 17:00</Text>
-            <Text style={styles.cardTitle}>Hagyományos Felvonulás</Text>
-            <Text style={styles.cardText}>Indulás a Főtérről a Víkendtelepre! Öltözzetek csapatpólóba.</Text>
+            <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
+            <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
+            <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
             <Image source={require('../app/(tabs)/felvonulas.png')} style={styles.bandImage} resizeMode="cover" />
           </View>
           <View style={styles.newsCard}>
-            <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 Csütörtök 21:00</Text>
-            <Text style={styles.cardTitle}>Döntő Duo Élő Koncert</Text>
-            <Text style={styles.cardText}>A fergeteges hangulat garantált a nagyszínpadon!</Text>
+            <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
+            <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
+            <Text style={styles.cardText}>{t('home.concertBody')}</Text>
             <Image source={require('../app/(tabs)/dondi.png')} style={styles.bandImage} resizeMode="cover" />
           </View>
 
           {showIgazolasUpload && (
             <View style={styles.studentCard}>
-              <Text style={styles.cardTitle}>🎓 Diákigazolvány</Text>
+              <Text style={styles.cardTitle}>🎓 {t('home.studentCard')}</Text>
               {hasIgazolas ? (
                 <Text style={[styles.verificationStatus, { color: isVerified ? '#27AE60' : '#F39C12' }]}>
-                  {isVerified ? '✅ Elfogadva' : '⏳ Ellenőrzés alatt...'}
+                  {isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`}
                 </Text>
               ) : (
                 <TouchableOpacity style={styles.outlineButton} onPress={onUploadIgazolas}>
-                  <Text style={styles.outlineButtonText}>📸 Fénykép kiválasztása</Text>
+                  <Text style={styles.outlineButtonText}>📸 {t('home.uploadPhoto')}</Text>
                 </TouchableOpacity>
               )}
             </View>
           )}
 
           <View style={styles.menuGrid}>
-            <MenuButton icon="📅" label="Programok" onPress={onOpenSchedule} />
-            <MenuButton icon="🛡️" label="Csapatok" onPress={onOpenTeams} />
-            <MenuButton icon="🗺️" label="Térkép" onPress={onOpenMap} />
-            <MenuButton icon="📸" label="Galéria" onPress={onOpenGallery} />
-            <MenuButton icon="📷" label="Photo Hunt" onPress={onOpenPhotoHunt} />
-            {isCaptainOrDeputy && <MenuButton icon="⚙️" label="Csapatkezelés" onPress={onOpenTeamManagement} />}
-            {isOrganizerOrHead && <MenuButton icon="👥" label="Regisztráltak" onPress={onOpenRegisteredUsers} />}
-            {userRole === 'Főszervező' && <MenuButton icon="⚙️" label="Admin Pult" onPress={onOpenAdmin} />}
+            <MenuButton icon="📅" label={t('home.menuPrograms')} onPress={onOpenSchedule} />
+            <MenuButton icon="🛡️" label={t('home.menuTeams')} onPress={onOpenTeams} />
+            <MenuButton icon="🗺️" label={t('home.menuMap')} onPress={onOpenMap} />
+            <MenuButton icon="📸" label={t('home.menuGallery')} onPress={onOpenGallery} />
+            <MenuButton icon="📷" label={t('home.menuPhotoHunt')} onPress={onOpenPhotoHunt} />
+            {isCaptainOrDeputy && <MenuButton icon="⚙️" label={t('home.menuTeamManagement')} onPress={onOpenTeamManagement} />}
+            {isOrganizerOrHead && <MenuButton icon="👥" label={t('home.menuUsers')} onPress={onOpenRegisteredUsers} />}
+            {userRole === 'Főszervező' && <MenuButton icon="⚙️" label={t('home.menuAdmin')} onPress={onOpenAdmin} />}
           </View>
         </ScrollView>
       </View>

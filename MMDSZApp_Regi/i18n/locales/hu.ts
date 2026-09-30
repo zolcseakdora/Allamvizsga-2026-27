@@ -52,6 +52,7 @@ const hu = {
     editPhoto: 'Kattints a képre a módosításhoz',
     name: 'Név',
     noName: 'Nincs megadva',
+    individualTeam: 'Egyéni',
     studentId: 'Diákigazolvány',
   },
   home: {
