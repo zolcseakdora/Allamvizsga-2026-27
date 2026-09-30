@@ -1,4 +1,5 @@
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type RegisteredUser = {
   id: string;
@@ -14,21 +15,23 @@ type RegisteredUsersScreenProps = {
 };
 
 export function RegisteredUsersScreen({ users, onBack, onRefresh }: RegisteredUsersScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← Vissza</Text></TouchableOpacity>
-          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 Frissítés</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>👥 REGISZTRÁLTAK</Text>
+        <Text style={styles.title}>👥 {t('users.title')}</Text>
         <ScrollView style={styles.list}>
           {users.map(user => (
             <View key={user.id} style={styles.userCard}>
               <Text style={styles.userName}>👤 {user.name}</Text>
-              <Text style={styles.userRole}>Szerepkör: {user.role}</Text>
+              <Text style={styles.userRole}>{t('users.role', { role: translateRole(user.role, t) })}</Text>
               <Text style={[styles.verification, { color: user.igazolas ? '#27AE60' : '#EC2127' }]}>
-                {user.igazolas ? '✅ Igazolás feltöltve' : '❌ Nincs igazolás'}
+                {user.igazolas ? `✅ ${t('users.idUploaded')}` : `❌ ${t('users.noId')}`}
               </Text>
             </View>
           ))}
@@ -36,6 +39,17 @@ export function RegisteredUsersScreen({ users, onBack, onRefresh }: RegisteredUs
       </View>
     </SafeAreaView>
   );
+}
+
+function translateRole(role: string | undefined, t: (key: string) => string) {
+  switch (role) {
+    case 'Főszervező': return t('roles.headOrganizer');
+    case 'Szervező': return t('roles.organizer');
+    case 'Csapatkapitány': return t('roles.captain');
+    case 'Alcsapatkapitány': return t('roles.deputy');
+    case 'Csapattag': return t('roles.member');
+    default: return role ?? '';
+  }
 }
 
 const styles = StyleSheet.create({
