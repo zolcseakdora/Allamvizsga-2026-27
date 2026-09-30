@@ -1,20 +1,23 @@
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type LanguageSelectionScreenProps = {
   onSelectLanguage: (language: 'hu' | 'en') => void;
 };
 
 export function LanguageSelectionScreen({ onSelectLanguage }: LanguageSelectionScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <Image source={require('../app/(tabs)/logo.png')} style={styles.logo} resizeMode="contain" />
-        <Text style={styles.title}>Válassz nyelvet / Choose language</Text>
+        <Text style={styles.title}>{t('language.title')}</Text>
         <TouchableOpacity style={styles.outlineButton} onPress={() => onSelectLanguage('hu')}>
-          <Text style={styles.outlineButtonText}>Magyar 🇭🇺</Text>
+          <Text style={styles.outlineButtonText}>{t('language.hungarian')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.outlineButton} onPress={() => onSelectLanguage('en')}>
-          <Text style={styles.outlineButtonText}>English 🇬🇧</Text>
+          <Text style={styles.outlineButtonText}>{t('language.english')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
