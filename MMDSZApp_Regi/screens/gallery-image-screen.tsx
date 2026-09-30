@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type GalleryImage = {
   image: string;
@@ -12,17 +13,19 @@ type GalleryImageScreenProps = {
 };
 
 export function GalleryImageScreen({ image, onBack, onDownloadImage }: GalleryImageScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Vissza a mappába</Text>
+          <Text style={styles.backButtonText}>← {t('galleryImage.back')}</Text>
         </TouchableOpacity>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Image source={{ uri: image.image }} style={styles.fullScreenImage} resizeMode="contain" />
-          <Text style={styles.author}>Feltöltötte: {image.uploadedBy}</Text>
+          <Text style={styles.author}>{t('galleryImage.uploadedBy', { name: image.uploadedBy })}</Text>
           <TouchableOpacity style={styles.downloadButton} onPress={() => onDownloadImage(image.image)}>
-            <Text style={styles.downloadButtonText}>📥 Letöltés</Text>
+            <Text style={styles.downloadButtonText}>📥 {t('common.download')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

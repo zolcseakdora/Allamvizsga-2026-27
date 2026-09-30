@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { GALLERY_FOLDERS } from '@/constants/gallery';
 
@@ -27,25 +28,29 @@ export function GalleryScreen({
   onUploadImage,
   onSelectImage,
 }: GalleryScreenProps) {
+  const { t } = useTranslation();
+  const selectedFolderName = GALLERY_FOLDERS.find(folder => folder.id === selectedFolder);
+  const folderLabel = selectedFolderName ? t(selectedFolderName.nameKey) : selectedFolder ?? '';
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack}>
-            <Text style={styles.backButtonText}>← Vissza</Text>
+            <Text style={styles.backButtonText}>← {t('common.back')}</Text>
           </TouchableOpacity>
           {selectedFolder && (
             <TouchableOpacity onPress={() => onRefresh(selectedFolder)}>
-              <Text style={styles.refreshButtonText}>🔄 Frissítés</Text>
+              <Text style={styles.refreshButtonText}>🔄 {t('common.refresh')}</Text>
             </TouchableOpacity>
           )}
         </View>
 
         <Text style={styles.title}>
-          {selectedFolder ? `📁 ${selectedFolder}` : '📸 KÖZÖSSÉGI GALÉRIA'}
+          {selectedFolder ? `📁 ${folderLabel}` : `📸 ${t('gallery.title')}`}
         </Text>
         <Text style={styles.subtitle}>
-          {selectedFolder ? 'Kattints bármelyik képre a letöltéshez' : 'Válassz egy mappát a megtekintéshez'}
+          {selectedFolder ? t('gallery.imageInstruction') : t('gallery.chooseFolder')}
         </Text>
 
         {!selectedFolder ? (
@@ -54,7 +59,7 @@ export function GalleryScreen({
               {GALLERY_FOLDERS.map(folder => (
                 <TouchableOpacity key={folder.id} style={styles.folderCard} onPress={() => onSelectFolder(folder.id)}>
                   <Text style={styles.folderIcon}>{folder.icon}</Text>
-                  <Text style={styles.folderName}>{folder.name}</Text>
+                  <Text style={styles.folderName}>{t(folder.nameKey)}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -62,16 +67,16 @@ export function GalleryScreen({
         ) : (
           <>
             <TouchableOpacity style={styles.uploadButton} onPress={() => onUploadImage(selectedFolder)}>
-              <Text style={styles.uploadButtonText}>+ Kép feltöltése ide: {selectedFolder}</Text>
+              <Text style={styles.uploadButtonText}>+ {t('gallery.uploadHere', { folder: folderLabel })}</Text>
             </TouchableOpacity>
             <ScrollView style={styles.imageList} showsVerticalScrollIndicator={false}>
               {images.length === 0 ? (
-                <Text style={styles.emptyState}>Még nincsenek képek ebben a mappában.</Text>
+                <Text style={styles.emptyState}>{t('gallery.empty')}</Text>
               ) : (
                 images.map(image => (
                   <TouchableOpacity key={image.id} style={styles.galleryCard} onPress={() => onSelectImage(image)}>
                     <Image source={{ uri: image.image }} style={styles.galleryImage} resizeMode="cover" />
-                    <Text style={styles.galleryAuthor}>Feltöltötte: {image.uploadedBy} (Kattints a megnyitáshoz)</Text>
+                    <Text style={styles.galleryAuthor}>{t('gallery.uploadedBy', { name: image.uploadedBy })}</Text>
                   </TouchableOpacity>
                 ))
               )}
