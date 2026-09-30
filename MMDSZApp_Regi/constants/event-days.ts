@@ -1,0 +1,1 @@
+export const EVENT_DAYS = ['Szerda', 'Csütörtök', 'Péntek', 'Szombat'];
