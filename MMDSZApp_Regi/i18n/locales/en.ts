@@ -143,6 +143,7 @@ const en: TranslationShape<typeof hu> = {
   },
   programs: {
     title: 'SCHEDULE',
+    backToSchedule: 'Back to schedule',
     empty: 'No events for this day.',
     locationComing: 'Location coming soon',
     details: 'Details',

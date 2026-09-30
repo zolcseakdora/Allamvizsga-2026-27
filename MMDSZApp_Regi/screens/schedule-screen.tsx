@@ -1,7 +1,8 @@
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/components/filter-chip';
-import { EVENT_DAYS } from '@/constants/event-days';
+import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
 type ScheduleProgram = {
   id: string;
@@ -28,6 +29,7 @@ export function ScheduleScreen({
   onSelectCategory,
   onSelectProgram,
 }: ScheduleScreenProps) {
+  const { t } = useTranslation();
   const filteredPrograms = programs.filter(program => program.day === selectedCategory);
 
   return (
@@ -35,20 +37,20 @@ export function ScheduleScreen({
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack}>
-            <Text style={styles.backText}>← Vissza</Text>
+            <Text style={styles.backText}>← {t('common.back')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={onRefresh}>
-            <Text style={styles.refreshText}>🔄 Frissítés</Text>
+            <Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.title}>📅 PROGRAMFÜZET</Text>
+        <Text style={styles.title}>📅 {t('programs.title')}</Text>
 
         <View style={styles.filterContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
             {EVENT_DAYS.map(category => (
               <FilterChip
                 key={category}
-                label={category}
+                label={t(EVENT_DAY_LABEL_KEYS[category as keyof typeof EVENT_DAY_LABEL_KEYS])}
                 selected={selectedCategory === category}
                 onPress={() => onSelectCategory(category)}
               />
@@ -58,14 +60,14 @@ export function ScheduleScreen({
 
         <ScrollView style={styles.programList} showsVerticalScrollIndicator={false}>
           {filteredPrograms.length === 0 ? (
-            <Text style={styles.emptyState}>Nincs program erre a napra.</Text>
+            <Text style={styles.emptyState}>{t('programs.empty')}</Text>
           ) : (
             filteredPrograms.map(program => (
               <TouchableOpacity key={program.id} style={styles.programCard} onPress={() => onSelectProgram(program)}>
                 <View style={styles.timeBadge}>
                   <Text style={styles.timeText}>{program.time}</Text>
                 </View>
-                <Text style={styles.programDetail}>📍 {program.helyszín || 'Helyszín hamarosan'}</Text>
+                <Text style={styles.programDetail}>📍 {program.helyszín || t('programs.locationComing')}</Text>
                 <Text style={styles.programTitle}>{program.title}</Text>
               </TouchableOpacity>
             ))

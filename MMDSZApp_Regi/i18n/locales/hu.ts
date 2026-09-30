@@ -133,6 +133,7 @@ const hu = {
   },
   programs: {
     title: 'PROGRAMFÜZET',
+    backToSchedule: 'Vissza a programokhoz',
     empty: 'Nincs program erre a napra.',
     locationComing: 'Helyszín hamarosan',
     details: 'Részletes leírás',
