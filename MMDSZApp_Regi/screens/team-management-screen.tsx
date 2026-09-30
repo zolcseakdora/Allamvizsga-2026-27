@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/components/filter-chip';
 
@@ -39,26 +40,28 @@ export function TeamManagementScreen({
   onInviteRoleChange,
   onSendTeamInvite,
 }: TeamManagementScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← Vissza</Text></TouchableOpacity>
-          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 Frissítés</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>🛡️ {teamName ? teamName.toUpperCase() : 'CSAPAT'} KEZELÉSE</Text>
-        <Text style={styles.subtitle}>Csapatkapitányi felület</Text>
+        <Text style={styles.title}>🛡️ {teamName ? t('teamManagement.title', { teamName: teamName.toUpperCase() }) : t('teamManagement.fallbackTitle')}</Text>
+        <Text style={styles.subtitle}>{t('teamManagement.subtitle')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.imageRow}>
             <View style={styles.imageColumn}>
-              <Text style={styles.cardTitle}>Csapat Logó</Text>
+              <Text style={styles.cardTitle}>{t('teamManagement.logo')}</Text>
               <TouchableOpacity onPress={() => onUploadTeamImage('logo')} style={styles.logoPlaceholder}>
                 {teamLogo ? <Image source={{ uri: teamLogo }} style={styles.teamLogo} /> : <Text style={styles.placeholderText}>📷</Text>}
               </TouchableOpacity>
             </View>
             <View style={styles.imageColumn}>
-              <Text style={styles.cardTitle}>Csapat Zászló</Text>
+              <Text style={styles.cardTitle}>{t('teamManagement.flag')}</Text>
               <TouchableOpacity onPress={() => onUploadTeamImage('flag')} style={styles.flagPlaceholder}>
                 {teamFlag ? <Image source={{ uri: teamFlag }} style={styles.teamFlag} /> : <Text style={styles.placeholderText}>🚩</Text>}
               </TouchableOpacity>
@@ -66,16 +69,16 @@ export function TeamManagementScreen({
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Csapat Leírása</Text>
-            <TextInput style={styles.descriptionInput} placeholder="Írd le a csapatot pár mondatban..." placeholderTextColor="#888" multiline value={teamDescription} onChangeText={onDescriptionChange} />
-            <Text style={styles.videoLabel}>Bemutatkozó Videó Link</Text>
+            <Text style={styles.cardTitle}>{t('teamManagement.description')}</Text>
+            <TextInput style={styles.descriptionInput} placeholder={t('teamManagement.descriptionPlaceholder')} placeholderTextColor="#888" multiline value={teamDescription} onChangeText={onDescriptionChange} />
+            <Text style={styles.videoLabel}>{t('teamManagement.videoLink')}</Text>
             <TextInput style={styles.input} placeholder="https://..." placeholderTextColor="#888" value={teamVideoLink} onChangeText={onVideoLinkChange} />
-            <TouchableOpacity style={styles.solidButton} onPress={onSaveTeamData}><Text style={styles.solidButtonText}>Mentés</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.solidButton} onPress={onSaveTeamData}><Text style={styles.solidButtonText}>{t('common.save')}</Text></TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>✉️ Csapattag Meghívása E-mailen</Text>
-            <Text style={styles.cardText}>Add meg a tag e-mail címét, és válaszd ki a szerepkörét:</Text>
+            <Text style={styles.cardTitle}>✉️ {t('teamManagement.inviteTitle')}</Text>
+            <Text style={styles.cardText}>{t('teamManagement.inviteDescription')}</Text>
             <TextInput
               style={styles.inviteInput}
               placeholder="tag@email.com"
@@ -85,13 +88,13 @@ export function TeamManagementScreen({
               onChangeText={onInviteEmailChange}
               autoCapitalize="none"
             />
-            <Text style={styles.profileLabel}>Szerepkör kiválasztása:</Text>
+            <Text style={styles.profileLabel}>{t('teamManagement.chooseRole')}</Text>
             <View style={styles.roleRow}>
-              <FilterChip label="Csapattag" selected={inviteRole === 'Csapattag'} onPress={() => onInviteRoleChange('Csapattag')} style={styles.roleChip} />
-              <FilterChip label="Alcsapatkapitány" selected={inviteRole === 'Alcsapatkapitány'} onPress={() => onInviteRoleChange('Alcsapatkapitány')} style={styles.roleChip} />
+              <FilterChip label={t('roles.member')} selected={inviteRole === 'Csapattag'} onPress={() => onInviteRoleChange('Csapattag')} style={styles.roleChip} />
+              <FilterChip label={t('roles.deputy')} selected={inviteRole === 'Alcsapatkapitány'} onPress={() => onInviteRoleChange('Alcsapatkapitány')} style={styles.roleChip} />
             </View>
             <TouchableOpacity style={styles.inviteButton} onPress={onSendTeamInvite}>
-              <Text style={styles.solidButtonText}>Meghívó E-mail Küldése</Text>
+              <Text style={styles.solidButtonText}>{t('teamManagement.invite')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
