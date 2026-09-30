@@ -142,6 +142,10 @@ const en: TranslationShape<typeof hu> = {
     inviteDescription: 'Enter the member’s email address and choose their role:',
     chooseRole: 'Choose a role:',
     invite: 'Send invitation email',
+    inviteEmailSubject: 'Invitation to Diáknapok! 🚀',
+    inviteEmailGreeting: 'Hello!',
+    inviteEmailBody: 'You have been invited to the {{teamName}} team as {{role}}.',
+    inviteEmailAction: 'Download the app and register to join your team and stay up to date!',
   },
   gallery: {
     title: 'COMMUNITY GALLERY',

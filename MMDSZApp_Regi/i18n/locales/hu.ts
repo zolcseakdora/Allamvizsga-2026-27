@@ -132,6 +132,10 @@ const hu = {
     inviteDescription: 'Add meg a tag e-mail címét, és válaszd ki a szerepkörét:',
     chooseRole: 'Szerepkör kiválasztása:',
     invite: 'Meghívó e-mail küldése',
+    inviteEmailSubject: 'Meghívás a Diáknapokra! 🚀',
+    inviteEmailGreeting: 'Szia!',
+    inviteEmailBody: 'Meghívást kaptál a(z) {{teamName}} csapatba, mint {{role}}.',
+    inviteEmailAction: 'Töltsd le az appot és regisztrálj, hogy csatlakozhass a csapathoz és ne maradj le semmiről!',
   },
   gallery: {
     title: 'KÖZÖSSÉGI GALÉRIA',
