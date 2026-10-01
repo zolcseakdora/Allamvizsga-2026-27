@@ -294,13 +294,10 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
   };
   const handleDeleteProgram = async (programId: string) => {
       try {
-        // Törlés a Firestore-ból
         await deleteDoc(doc(db, "programs", programId));
         
-        // Lokális lista frissítése azonnal (hogy eltűnjön a képernyőről)
         setPrograms(prev => prev.filter(p => p.id !== programId));
         
-        // Ha épp nyitva volt a részletek nézet, zárjuk be
         if (selectedProgram?.id === programId) {
           setSelectedProgram(null);
         }
@@ -357,7 +354,6 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     try {
       const translatedInviteRole = inviteRole === 'Csapattag' ? t('roles.member') : t('roles.deputy');
       const inviteEmailBody = t('teamManagement.inviteEmailBody', { teamName, role: translatedInviteRole });
-      // 1. Belső meghívó mentése az appnak (opcionális, de jó ha megmarad)
       await addDoc(collection(db, "invites"), {
         email: inviteEmail,
         team: teamName,
@@ -367,7 +363,6 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
         status: 'Függőben'
       });
 
-      // 2. VALÓS E-MAIL KÜLDÉSE a Firebase Trigger Email bővítménynek
       await addDoc(collection(db, "mail"), {
         to: inviteEmail,
         message: {
@@ -514,7 +509,6 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     }
   };
 
-  // 1. Meghatározzuk, hogy éppen melyik képernyőt kell mutatni
   let activeScreen = null;
 
   if (!language) {
@@ -691,7 +685,6 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     );
   }
 
-  // 2. A VÉGLEGES, EGYETLEN RETURN, ami mindig tartalmazza a Toast-ot is a képernyő felett!
   return (
     <View style={{ flex: 1, backgroundColor: '#121212' }}>
       {activeScreen}

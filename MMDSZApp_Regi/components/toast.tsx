@@ -13,17 +13,14 @@ export function Toast({ message, type = 'success', visible, onHide }: ToastProps
 
   useEffect(() => {
     if (visible) {
-      // Becsúszás a képernyő tetejéről
       Animated.timing(translateY, {
         toValue: 50,
         duration: 300,
         useNativeDriver: true,
       }).start();
-
-      // 5 másodperc múlva eltűnés
       const timer = setTimeout(() => {
         hideToast();
-      }, 5000);
+      }, 10000);
 
       return () => clearTimeout(timer);
     }

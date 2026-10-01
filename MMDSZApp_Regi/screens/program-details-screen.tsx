@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
 type ProgramDetails = {
-  id?: string; // Hozzáadtuk az ID-t a törléshez
+  id?: string;
   title?: string;
   time?: string;
   helyszín?: string;
@@ -61,7 +61,6 @@ export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: Pro
             <Text style={styles.cardText}>{program.description || t('programs.noDetails', 'Nincsenek további részletek megadva.')}</Text>
           </View>
 
-          {/* Törlés gomb - Csak adminoknak látszik */}
           {isAdmin && (
             <TouchableOpacity style={styles.deleteButton} onPress={() => setIsDeleteModalVisible(true)}>
               <Text style={styles.deleteButtonText}>🗑️ {t('programs.deleteEvent', 'Esemény törlése')}</Text>
@@ -69,7 +68,7 @@ export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: Pro
           )}
         </ScrollView>
 
-        {/* Egyedi megerősítő Modal (Alert helyett) */}
+        
         <Modal transparent={true} visible={isDeleteModalVisible} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
