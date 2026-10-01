@@ -4,6 +4,7 @@ import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswo
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where, deleteDoc } from 'firebase/firestore';import React, { useEffect, useState } from 'react';
 import { Linking, Platform, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 
 import { AdminDashboardScreen } from '@/screens/admin-dashboard-screen';
 import { AuthScreen } from '@/screens/auth-screen';
@@ -40,6 +41,7 @@ const db = getFirestore(app);
 
 export default function App() {
 const { t } = useTranslation();
+const router = useRouter();
 
 const [toastMessage, setToastMessage] = useState('');
 const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
@@ -185,7 +187,16 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     try { await sendPasswordResetEmail(auth, email); showToast(t('alerts.resetEmailSent'), 'success'); } catch (error: any) { showToast(t('alerts.generic', { message: error.message }), 'error'); }
   };
 
-  const handleLogout = () => { signOut(auth); setCurrentView(null); setSelectedProgram(null); setSelectedGalleryFolder(null); setSelectedGalleryImage(null); resetForm(); };
+  const handleLogout = async () => {
+    await signOut(auth);
+    setCurrentView(null);
+    setSelectedProgram(null);
+    setSelectedGalleryFolder(null);
+    setSelectedGalleryImage(null);
+    resetForm();
+    setLanguage(null);
+    router.replace('/(tabs)');
+  };
 
   const handleUploadIgazolas = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
