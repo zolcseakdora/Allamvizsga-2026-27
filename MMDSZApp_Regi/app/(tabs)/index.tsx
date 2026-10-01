@@ -1,9 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
 import { initializeApp } from 'firebase/app';
 import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
-import { Linking, Platform } from 'react-native';
+import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where, deleteDoc } from 'firebase/firestore';import React, { useEffect, useState } from 'react';
+import { Linking, Platform, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { AdminDashboardScreen } from '@/screens/admin-dashboard-screen';
@@ -22,6 +21,8 @@ import { TeamManagementScreen } from '@/screens/team-management-screen';
 import { TeamsScreen } from '@/screens/teams-screen';
 import { VerificationPendingScreen } from '@/screens/verification-pending-screen';
 
+import { Toast } from '@/components/toast';
+
 import i18n from '@/i18n';
 import { EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
@@ -33,15 +34,25 @@ const firebaseConfig = {
   messagingSenderId: "100668962875",
   appId: "1:100668962875:web:f0472077febd029a64841e"
 };
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 export default function App() {
-  const { t } = useTranslation();
-  const [language, setLanguage] = useState<'hu' | 'en' | null>(null);
-  const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
+const { t } = useTranslation();
+
+const [toastMessage, setToastMessage] = useState('');
+const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+const [isToastVisible, setIsToastVisible] = useState(false);
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  setToastMessage(message);
+  setToastType(type);
+  setIsToastVisible(true);
+};
+const [language, setLanguage] = useState<'hu' | 'en' | null>(null);
+const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
+
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<string>('Csapattag');
   const [hasIgazolas, setHasIgazolas] = useState<boolean>(false);
@@ -150,7 +161,7 @@ export default function App() {
   const resetForm = () => { setFullName(''); setEmail(''); setPassword(''); setTeamName(''); setSecurePassword(true); };
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) return alert(t('alerts.requiredFields'));
+    if (!fullName || !email || !password) return showToast(t('alerts.requiredFields'), 'error');
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, "users", userCredential.user.uid), { 
@@ -161,53 +172,53 @@ export default function App() {
         createdAt: new Date(), 
         isVerified: false 
       });
-    } catch (error: any) { alert(t('alerts.generic', { message: error.message })); }
+    } catch (error: any) { showToast(t('alerts.generic', { message: error.message }), 'error'); }
   };
 
   const handleLogin = async () => {
-    if (!email || !password) return alert(t('alerts.emailPasswordRequired'));
-    try { await signInWithEmailAndPassword(auth, email, password); } catch (error: any) { alert(t('alerts.wrongCredentials')); }
+    if (!email || !password) return showToast(t('alerts.emailPasswordRequired'), 'error');
+    try { await signInWithEmailAndPassword(auth, email, password); } catch (error: any) { showToast(t('alerts.wrongCredentials'), 'error'); }
   };
 
   const handleForgotPassword = async () => {
-    if (!email) return alert(t('alerts.enterEmailForReset'));
-    try { await sendPasswordResetEmail(auth, email); alert(t('alerts.resetEmailSent')); } catch (error: any) { alert(t('alerts.generic', { message: error.message })); }
+    if (!email) return showToast(t('alerts.enterEmailForReset'), 'error');
+    try { await sendPasswordResetEmail(auth, email); showToast(t('alerts.resetEmailSent'), 'success'); } catch (error: any) { showToast(t('alerts.generic', { message: error.message }), 'error'); }
   };
 
   const handleLogout = () => { signOut(auth); setCurrentView(null); setSelectedProgram(null); setSelectedGalleryFolder(null); setSelectedGalleryImage(null); resetForm(); };
 
   const handleUploadIgazolas = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert(t('alerts.permissionRequired'));
+    if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert(t('alerts.imageTooLarge'));
+        if (imgStr.length > 1000000) return showToast(t('alerts.imageTooLarge'), 'error');
         await updateDoc(doc(db, "users", auth.currentUser.uid), { igazolas: imgStr, isVerified: false });
-        alert(t('alerts.idUploaded'));
+        showToast(t('alerts.idUploaded'), 'success');
       }
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const handleUploadProfileImage = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert(t('alerts.permissionRequired'));
+    if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert(t('alerts.imageTooLarge'));
+        if (imgStr.length > 1000000) return showToast(t('alerts.imageTooLarge'), 'error');
         await updateDoc(doc(db, "users", auth.currentUser.uid), { profileImage: imgStr });
         setProfileImage(imgStr);
-        alert(t('alerts.profileUpdated'));
+        showToast(t('alerts.profileUpdated'), 'success');
       }
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const handleUploadGalleryImage = async (folderName: string) => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert(t('alerts.permissionRequired'));
+    if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, quality: 0.15, base64: true });
       if (!result.canceled && result.assets && result.assets.length > 0 && auth.currentUser) {
@@ -224,30 +235,30 @@ export default function App() {
             }
           }
         }
-        alert(t('alerts.galleryUploaded', { count: result.assets.length, folder: folderName }));
+        showToast(t('alerts.galleryUploaded', { count: result.assets.length, folder: folderName }), 'success');
         fetchGallery(folderName);
       }
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const handleUploadPhotoHunt = async (taskId: number) => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert(t('alerts.permissionRequired'));
+    if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const fileStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (fileStr.length > 1000000) return alert(t('alerts.photoTooLarge'));
+        if (fileStr.length > 1000000) return showToast(t('alerts.photoTooLarge'), 'error');
         await setDoc(doc(db, "photohunt_uploads", `${auth.currentUser.uid}_${taskId}`), { taskId: taskId, userId: auth.currentUser.uid, file: fileStr, uploadedAt: new Date() });
-        alert(t('alerts.photoHuntUploaded'));
+        showToast(t('alerts.photoHuntUploaded'), 'success');
         fetchPhotoHuntProgress();
       }
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const handleAddAdminEvent = async () => {
     if (!adminEventTitle || !adminEventTime || !adminEventLocation) {
-      return alert(t('alerts.fillProgramFields'));
+      return showToast(t('alerts.fillProgramFields'), 'error');
     }
     setIsUploading(true);
     try {
@@ -260,17 +271,32 @@ export default function App() {
         createdBy: auth.currentUser?.uid
       });
       const dayKey = EVENT_DAY_LABEL_KEYS[adminEventDay as keyof typeof EVENT_DAY_LABEL_KEYS];
-      alert(t('alerts.programAdded', { day: dayKey ? t(dayKey) : adminEventDay }));
+      showToast(t('alerts.programAdded', { day: dayKey ? t(dayKey) : adminEventDay }), 'success');
       setAdminEventTitle('');
       setAdminEventTime('');
       setAdminEventLocation('');
     } catch (error: any) {
-      alert(t('alerts.generic', { message: error.message }));
+      showToast(t('alerts.generic', { message: error.message }), 'error');
     } finally {
       setIsUploading(false);
     }
   };
-
+  const handleDeleteProgram = async (programId: string) => {
+      try {
+        // Törlés a Firestore-ból
+        await deleteDoc(doc(db, "programs", programId));
+        
+        // Lokális lista frissítése azonnal (hogy eltűnjön a képernyőről)
+        setPrograms(prev => prev.filter(p => p.id !== programId));
+        
+        // Ha épp nyitva volt a részletek nézet, zárjuk be
+        if (selectedProgram?.id === programId) {
+          setSelectedProgram(null);
+        }
+      } catch (error: any) {
+        console.error("Hiba az esemény törlésekor:", error);
+      }
+    };
   const fetchPendingUsers = async () => {
     try {
       const q = query(collection(db, "users"));
@@ -292,31 +318,31 @@ export default function App() {
   const handleApproveId = async (userId: string) => {
     try {
       await updateDoc(doc(db, "users", userId), { isVerified: true });
-      alert(t('alerts.idApproved'));
+      showToast(t('alerts.idApproved'), 'success');
       fetchPendingUsers();
     } catch (error: any) {
-      alert(t('alerts.generic', { message: error.message }));
+      showToast(t('alerts.generic', { message: error.message }), 'error');
     }
   };
 
   const handleSendNotification = async () => {
-    if (!notifTitle || !notifBody) return alert(t('alerts.notificationRequired'));
+    if (!notifTitle || !notifBody) return showToast(t('alerts.notificationRequired'), 'error');
     try {
       await addDoc(collection(db, "notifications"), {
         title: notifTitle,
         body: notifBody,
         createdAt: new Date(),
       });
-      alert(t('alerts.notificationSent'));
+      showToast(t('alerts.notificationSent'), 'success');
       setNotifTitle('');
       setNotifBody('');
     } catch (e: any) {
-      alert(t('alerts.generic', { message: e.message }));
+      showToast(t('alerts.generic', { message: e.message }), 'error');
     }
   };
 
   const handleSendTeamInvite = async () => {
-    if (!inviteEmail || !teamName) return alert(t('alerts.inviteEmailRequired'));
+    if (!inviteEmail || !teamName) return showToast(t('alerts.inviteEmailRequired'), 'error');
     try {
       const translatedInviteRole = inviteRole === 'Csapattag' ? t('roles.member') : t('roles.deputy');
       const inviteEmailBody = t('teamManagement.inviteEmailBody', { teamName, role: translatedInviteRole });
@@ -344,10 +370,10 @@ export default function App() {
         }
       });
       
-      alert(t('alerts.inviteSent', { email: inviteEmail }));
+      showToast(t('alerts.inviteSent', { email: inviteEmail }), 'success');
       setInviteEmail('');
     } catch (e: any) {
-      alert(t('alerts.generic', { message: e.message }));
+      showToast(t('alerts.generic', { message: e.message }), 'error');
     }
   };
 
@@ -367,28 +393,28 @@ export default function App() {
   };
 
   const handleSaveTeamData = async () => {
-    if (!teamName) return alert(t('alerts.teamNameRequired'));
+    if (!teamName) return showToast(t('alerts.teamNameRequired'), 'error');
     try {
       await setDoc(doc(db, "teams", teamName), { description: teamDescription, videoLink: teamVideoLink, updatedAt: new Date(), name: teamName }, { merge: true });
-      alert(t('alerts.teamSaved'));
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+      showToast(t('alerts.teamSaved'), 'success');
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const handleUploadTeamImage = async (type: 'logo' | 'flag') => {
-    if (!teamName) return alert(t('alerts.teamNameRequired'));
+    if (!teamName) return showToast(t('alerts.teamNameRequired'), 'error');
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert(t('alerts.permissionRequired'));
+    if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.15, base64: true });
       if (!result.canceled && result.assets[0].base64) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert(t('alerts.teamImageTooLarge'));
+        if (imgStr.length > 1000000) return showToast(t('alerts.teamImageTooLarge'), 'error');
         await setDoc(doc(db, "teams", teamName), { [type]: imgStr, name: teamName }, { merge: true });
         if (type === 'logo') setTeamLogo(imgStr);
         if (type === 'flag') setTeamFlag(imgStr);
-        alert(t(type === 'logo' ? 'alerts.teamLogoUpdated' : 'alerts.teamFlagUpdated'));
+        showToast(t(type === 'logo' ? 'alerts.teamLogoUpdated' : 'alerts.teamFlagUpdated'), 'success');
       }
-    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
+    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
   };
 
   const fetchAllTeams = async () => {
@@ -473,16 +499,17 @@ export default function App() {
       link.click();
       document.body.removeChild(link);
     } else {
-      Linking.openURL(imageBase64).catch(() => alert(t('alerts.downloadFailed')));
+      Linking.openURL(imageBase64).catch(() => showToast(t('alerts.downloadFailed'), 'error'));
     }
   };
 
-  if (!language) {
-    return <LanguageSelectionScreen onSelectLanguage={handleSelectLanguage} />;
-  }
+  // 1. Meghatározzuk, hogy éppen melyik képernyőt kell mutatni
+  let activeScreen = null;
 
-  if (!isLoggedIn) {
-    return (
+  if (!language) {
+    activeScreen = <LanguageSelectionScreen onSelectLanguage={handleSelectLanguage} />;
+  } else if (!isLoggedIn) {
+    activeScreen = (
       <AuthScreen
         isLoginMode={isLoginMode}
         fullName={fullName}
@@ -499,14 +526,10 @@ export default function App() {
         onToggleMode={() => { setIsLoginMode(!isLoginMode); resetForm(); }}
       />
     );
-  }
-
-  if (isLoggedIn && !isVerified && userRole !== 'Főszervező') {
-    return <VerificationPendingScreen hasIgazolas={hasIgazolas} onUploadIgazolas={handleUploadIgazolas} onLogout={handleLogout} />;
-  }
-
-  if (currentView === 'profile') {
-    return (
+  } else if (isLoggedIn && !isVerified && userRole !== 'Főszervező') {
+    activeScreen = <VerificationPendingScreen hasIgazolas={hasIgazolas} onUploadIgazolas={handleUploadIgazolas} onLogout={handleLogout} />;
+  } else if (currentView === 'profile') {
+    activeScreen = (
       <ProfileScreen
         name={fullName}
         email={auth.currentUser?.email}
@@ -519,24 +542,20 @@ export default function App() {
         onUploadProfileImage={handleUploadProfileImage}
       />
     );
-  }
-
-  if (currentView === 'allTeams') {
-    return (
+  } else if (currentView === 'allTeams') {
+    activeScreen = (
       <TeamsScreen
         teams={allTeams}
         onBack={() => setCurrentView(null)}
         onRefresh={fetchAllTeams}
         onOpenVideo={(videoLink) => {
-          if (videoLink) Linking.openURL(videoLink).catch(() => alert(t('alerts.openLinkFailed')));
-          else alert(t('alerts.noTeamVideo'));
+          if (videoLink) Linking.openURL(videoLink).catch(() => showToast(t('alerts.openLinkFailed'), 'error'));
+          else showToast(t('alerts.noTeamVideo'), 'info');
         }}
       />
     );
-  }
-
-  if (currentView === 'teamManagement') {
-    return (
+  } else if (currentView === 'teamManagement') {
+    activeScreen = (
       <TeamManagementScreen
         teamName={teamName}
         teamDescription={teamDescription}
@@ -556,20 +575,16 @@ export default function App() {
         onSendTeamInvite={handleSendTeamInvite}
       />
     );
-  }
-
-  if (selectedGalleryImage) {
-    return (
+  } else if (selectedGalleryImage) {
+    activeScreen = (
       <GalleryImageScreen
         image={selectedGalleryImage}
         onBack={() => setSelectedGalleryImage(null)}
         onDownloadImage={handleDownloadImage}
       />
     );
-  }
-
-  if (currentView === 'gallery') {
-    return (
+  } else if (currentView === 'gallery') {
+    activeScreen = (
       <GalleryScreen
         selectedFolder={selectedGalleryFolder}
         images={galleryImages}
@@ -580,31 +595,32 @@ export default function App() {
         onSelectImage={setSelectedGalleryImage}
       />
     );
-  }
-
-  if (currentView === 'map') {
-    return <MapScreen points={mapPoints} onBack={() => setCurrentView(null)} onRefresh={fetchMapPoints} />;
-  }
-
-  if (selectedProgram) {
-    return <ProgramDetailsScreen program={selectedProgram} onBack={() => setSelectedProgram(null)} />;
-  }
-
-  if (currentView === 'schedule') {
-    return (
+  } else if (currentView === 'map') {
+    activeScreen = <MapScreen points={mapPoints} onBack={() => setCurrentView(null)} onRefresh={fetchMapPoints} />;
+  } else if (selectedProgram) {
+    activeScreen = (
+      <ProgramDetailsScreen 
+        program={selectedProgram} 
+        isAdmin={isOrganizerOrHead}
+        onDelete={handleDeleteProgram}
+        onBack={() => setSelectedProgram(null)} 
+      />
+    );
+  } else if (currentView === 'schedule') {
+    activeScreen = (
       <ScheduleScreen
         programs={programs}
         selectedCategory={selectedCategory}
+        isAdmin={isOrganizerOrHead}
+        onDelete={handleDeleteProgram}
         onBack={() => setCurrentView(null)}
         onRefresh={fetchPrograms}
         onSelectCategory={setSelectedCategory}
         onSelectProgram={setSelectedProgram}
       />
     );
-  }
-
-  if (currentView === 'photohunt') {
-    return (
+  } else if (currentView === 'photohunt') {
+    activeScreen = (
       <PhotoHuntScreen
         progress={photoHuntProgress}
         onBack={() => setCurrentView(null)}
@@ -612,14 +628,10 @@ export default function App() {
         onUpload={handleUploadPhotoHunt}
       />
     );
-  }
-
-  if (currentView === 'usersList') {
-    return <RegisteredUsersScreen users={registeredUsers} onBack={() => setCurrentView(null)} onRefresh={fetchRegisteredUsers} />;
-  }
-
-  if (currentView === 'adminDashboard') {
-    return (
+  } else if (currentView === 'usersList') {
+    activeScreen = <RegisteredUsersScreen users={registeredUsers} onBack={() => setCurrentView(null)} onRefresh={fetchRegisteredUsers} />;
+  } else if (currentView === 'adminDashboard') {
+    activeScreen = (
       <AdminDashboardScreen
         adminEventDay={adminEventDay}
         adminEventTitle={adminEventTitle}
@@ -643,29 +655,41 @@ export default function App() {
         onApproveUser={handleApproveId}
       />
     );
+  } else {
+    activeScreen = (
+      <HomeScreen
+        userRole={userRole}
+        timeLeft={timeLeft}
+        showIgazolasUpload={showIgazolasUpload}
+        hasIgazolas={hasIgazolas}
+        isVerified={isVerified}
+        isCaptainOrDeputy={isCaptainOrDeputy}
+        isOrganizerOrHead={isOrganizerOrHead}
+        onOpenProfile={() => setCurrentView('profile')}
+        onLogout={handleLogout}
+        onUploadIgazolas={handleUploadIgazolas}
+        onOpenSchedule={() => { fetchPrograms(); setCurrentView('schedule'); }}
+        onOpenTeams={() => { fetchAllTeams(); setCurrentView('allTeams'); }}
+        onOpenMap={() => { fetchMapPoints(); setCurrentView('map'); }}
+        onOpenGallery={() => { setSelectedGalleryFolder(null); setCurrentView('gallery'); }}
+        onOpenPhotoHunt={() => { fetchPhotoHuntProgress(); setCurrentView('photohunt'); }}
+        onOpenTeamManagement={() => { fetchTeamData(); setCurrentView('teamManagement'); }}
+        onOpenRegisteredUsers={() => { fetchRegisteredUsers(); setCurrentView('usersList'); }}
+        onOpenAdmin={() => setCurrentView('adminDashboard')}
+      />
+    );
   }
 
+  // 2. A VÉGLEGES, EGYETLEN RETURN, ami mindig tartalmazza a Toast-ot is a képernyő felett!
   return (
-    <HomeScreen
-      userRole={userRole}
-      timeLeft={timeLeft}
-      showIgazolasUpload={showIgazolasUpload}
-      hasIgazolas={hasIgazolas}
-      isVerified={isVerified}
-      isCaptainOrDeputy={isCaptainOrDeputy}
-      isOrganizerOrHead={isOrganizerOrHead}
-      onOpenProfile={() => setCurrentView('profile')}
-      onLogout={handleLogout}
-      onUploadIgazolas={handleUploadIgazolas}
-      onOpenSchedule={() => { fetchPrograms(); setCurrentView('schedule'); }}
-      onOpenTeams={() => { fetchAllTeams(); setCurrentView('allTeams'); }}
-      onOpenMap={() => { fetchMapPoints(); setCurrentView('map'); }}
-      onOpenGallery={() => { setSelectedGalleryFolder(null); setCurrentView('gallery'); }}
-      onOpenPhotoHunt={() => { fetchPhotoHuntProgress(); setCurrentView('photohunt'); }}
-      onOpenTeamManagement={() => { fetchTeamData(); setCurrentView('teamManagement'); }}
-      onOpenRegisteredUsers={() => { fetchRegisteredUsers(); setCurrentView('usersList'); }}
-      onOpenAdmin={() => setCurrentView('adminDashboard')}
-    />
+    <View style={{ flex: 1, backgroundColor: '#121212' }}>
+      {activeScreen}
+      <Toast 
+        message={toastMessage} 
+        type={toastType} 
+        visible={isToastVisible} 
+        onHide={() => setIsToastVisible(false)} 
+      />
+    </View>
   );
 }
-

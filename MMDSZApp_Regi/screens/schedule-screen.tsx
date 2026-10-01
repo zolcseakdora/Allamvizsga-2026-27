@@ -19,6 +19,8 @@ type ScheduleScreenProps = {
   onRefresh: () => void;
   onSelectCategory: (category: string) => void;
   onSelectProgram: (program: ScheduleProgram) => void;
+  onDelete?: (id: string) => void;
+  isAdmin?: boolean;
 };
 
 export function ScheduleScreen({
@@ -28,6 +30,7 @@ export function ScheduleScreen({
   onRefresh,
   onSelectCategory,
   onSelectProgram,
+  isAdmin,
 }: ScheduleScreenProps) {
   const { t } = useTranslation();
   const filteredPrograms = programs.filter(program => program.day === selectedCategory);
