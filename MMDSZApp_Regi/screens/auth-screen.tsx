@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type AuthScreenProps = {
   isLoginMode: boolean;
@@ -31,34 +32,36 @@ export function AuthScreen({
   onSubmit,
   onToggleMode,
 }: AuthScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <Image source={require('../app/(tabs)/logo.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>{isLoginMode ? 'BEJELENTKEZÉS' : 'REGISZTRÁCIÓ'}</Text>
-          <Text style={styles.subtitle}>MMDSZ Diáknapok</Text>
+          <Text style={styles.title}>{t(isLoginMode ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
+          <Text style={styles.subtitle}>{t('auth.appName')}</Text>
 
           {!isLoginMode && (
             <>
-              <TextInput style={styles.input} placeholder="Teljes név" placeholderTextColor="#888" value={fullName} onChangeText={onFullNameChange} />
-              <TextInput style={styles.input} placeholder="Csapat neve" placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
+              <TextInput style={styles.input} placeholder={t('auth.fullName')} placeholderTextColor="#888" value={fullName} onChangeText={onFullNameChange} />
+              <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
             </>
           )}
-          <TextInput style={styles.input} placeholder="E-mail cím" placeholderTextColor="#888" keyboardType="email-address" value={email} onChangeText={onEmailChange} autoCapitalize="none" />
+          <TextInput style={styles.input} placeholder={t('common.email')} placeholderTextColor="#888" keyboardType="email-address" value={email} onChangeText={onEmailChange} autoCapitalize="none" />
           <View style={styles.passwordContainer}>
-            <TextInput style={styles.passwordInput} placeholder="Jelszó" placeholderTextColor="#888" secureTextEntry={securePassword} value={password} onChangeText={onPasswordChange} />
+            <TextInput style={styles.passwordInput} placeholder={t('common.password')} placeholderTextColor="#888" secureTextEntry={securePassword} value={password} onChangeText={onPasswordChange} />
             <TouchableOpacity onPress={onTogglePassword} style={styles.eyeIconContainer}>
               <Text>👁️</Text>
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity style={styles.solidButton} onPress={onSubmit}>
-            <Text style={styles.solidButtonText}>{isLoginMode ? 'BELÉPÉS' : 'REGISZTRÁCIÓ'}</Text>
+            <Text style={styles.solidButtonText}>{t(isLoginMode ? 'auth.login' : 'auth.register')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.toggleMode} onPress={onToggleMode}>
-            <Text style={styles.toggleModeText}>{isLoginMode ? 'Nincs még fiókod? Regisztrálj!' : 'Már van fiókod? Lépj be!'}</Text>
+            <Text style={styles.toggleModeText}>{t(isLoginMode ? 'auth.switchToRegister' : 'auth.switchToLogin')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

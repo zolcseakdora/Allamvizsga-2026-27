@@ -1,9 +1,9 @@
 export const GALLERY_FOLDERS = [
-  { id: 'Sportok', name: 'Sportok ⚽', icon: '⚽' },
-  { id: 'Felvonulás', name: 'Felvonulás 🚩', icon: '🚩' },
-  { id: 'Harácsolás', name: 'Harácsolás 📜', icon: '📜' },
-  { id: 'PhotoHunt', name: 'Photo Hunt 📷', icon: '📷' },
-  { id: 'Weekend játékok', name: 'Weekend játékok 🎮', icon: '🎮' },
-  { id: 'Party', name: 'Party 🎉', icon: '🎉' },
-  { id: 'Egyéb', name: 'Egyéb pillanatok 📸', icon: '📸' },
+  { id: 'Sportok', nameKey: 'gallery.folders.sports', icon: '⚽' },
+  { id: 'Felvonulás', nameKey: 'gallery.folders.parade', icon: '🚩' },
+  { id: 'Harácsolás', nameKey: 'gallery.folders.scavenging', icon: '📜' },
+  { id: 'PhotoHunt', nameKey: 'gallery.folders.photoHunt', icon: '📷' },
+  { id: 'Weekend játékok', nameKey: 'gallery.folders.weekendGames', icon: '🎮' },
+  { id: 'Party', nameKey: 'gallery.folders.party', icon: '🎉' },
+  { id: 'Egyéb', nameKey: 'gallery.folders.other', icon: '📸' },
 ];

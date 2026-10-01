@@ -1,4 +1,5 @@
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type VerificationPendingScreenProps = {
   hasIgazolas: boolean;
@@ -7,25 +8,27 @@ type VerificationPendingScreenProps = {
 };
 
 export function VerificationPendingScreen({ hasIgazolas, onUploadIgazolas, onLogout }: VerificationPendingScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.card}>
-          <Text style={styles.title}>⏳ FÜGGŐBEN LÉVŐ REGISZTRÁCIÓ</Text>
+          <Text style={styles.title}>⏳ {t('verification.title')}</Text>
           <Text style={styles.cardText}>
-            A fiókod és a diákigazolványod ellenőrzés alatt áll. Kérjük, várd meg, amíg egy főszervező jóváhagyja a regisztrációdat!
+            {t('verification.message')}
           </Text>
 
           {!hasIgazolas ? (
             <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas}>
-              <Text style={styles.solidButtonText}>📸 Diákigazolvány Feltöltése</Text>
+              <Text style={styles.solidButtonText}>📸 {t('verification.uploadId')}</Text>
             </TouchableOpacity>
           ) : (
-            <Text style={styles.uploadedText}>✅ Igazolvány feltöltve. Visszaigazolásra vár.</Text>
+            <Text style={styles.uploadedText}>✅ {t('verification.uploaded')}</Text>
           )}
 
           <TouchableOpacity style={styles.outlineButton} onPress={onLogout}>
-            <Text style={styles.outlineButtonText}>Kilépés</Text>
+            <Text style={styles.outlineButtonText}>{t('common.logout')}</Text>
           </TouchableOpacity>
         </View>
       </View>

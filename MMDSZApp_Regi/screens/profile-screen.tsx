@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type ProfileScreenProps = {
   name: string;
@@ -23,31 +24,44 @@ export function ProfileScreen({
   onBack,
   onUploadProfileImage,
 }: ProfileScreenProps) {
+  const { t } = useTranslation();
+  const translatedRole = role === 'Főszervező'
+    ? t('roles.headOrganizer')
+    : role === 'Szervező'
+      ? t('roles.organizer')
+      : role === 'Csapatkapitány'
+        ? t('roles.captain')
+        : role === 'Alcsapatkapitány'
+          ? t('roles.deputy')
+          : role === 'Csapattag'
+            ? t('roles.member')
+            : role;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Vissza a Főoldalra</Text>
+          <Text style={styles.backButtonText}>← {t('profile.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>👤 SAJÁT PROFIL</Text>
+        <Text style={styles.title}>👤 {t('profile.title')}</Text>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <TouchableOpacity onPress={onUploadProfileImage} style={styles.avatarContainer}>
             {profileImage ? <Image source={{ uri: profileImage }} style={styles.avatar} /> : <Text style={styles.avatarPlaceholder}>📷</Text>}
           </TouchableOpacity>
-          <Text style={styles.avatarHint}>Kattints a képre a módosításhoz</Text>
+          <Text style={styles.avatarHint}>{t('profile.editPhoto')}</Text>
           <View style={styles.profileInfoCard}>
-            <Text style={styles.profileLabel}>Név:</Text>
-            <Text style={styles.profileValue}>{name || 'Nincs megadva'}</Text>
-            <Text style={styles.profileLabel}>E-mail:</Text>
+            <Text style={styles.profileLabel}>{t('profile.name')}:</Text>
+            <Text style={styles.profileValue}>{name || t('profile.noName')}</Text>
+            <Text style={styles.profileLabel}>{t('common.email')}:</Text>
             <Text style={styles.profileValue}>{email}</Text>
-            <Text style={styles.profileLabel}>Csapat:</Text>
-            <Text style={styles.profileValue}>{team || 'Egyéni'}</Text>
-            <Text style={styles.profileLabel}>Szerepkör:</Text>
-            <Text style={[styles.profileValue, styles.roleValue]}>{role}</Text>
+            <Text style={styles.profileLabel}>{t('common.team')}:</Text>
+            <Text style={styles.profileValue}>{team || t('profile.individualTeam')}</Text>
+            <Text style={styles.profileLabel}>{t('common.role')}:</Text>
+            <Text style={[styles.profileValue, styles.roleValue]}>{translatedRole}</Text>
 
-            <Text style={styles.profileLabel}>Diákigazolvány:</Text>
+            <Text style={styles.profileLabel}>{t('profile.studentId')}:</Text>
             <Text style={[styles.verificationStatus, { color: hasIgazolas ? (isVerified ? '#27AE60' : '#F39C12') : '#EC2127' }]}>
-              {hasIgazolas ? (isVerified ? '✅ Elfogadva' : '⏳ Ellenőrzés alatt') : '❌ Nincs feltöltve'}
+              {hasIgazolas ? (isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`) : `❌ ${t('verification.missing')}`}
             </Text>
           </View>
         </ScrollView>

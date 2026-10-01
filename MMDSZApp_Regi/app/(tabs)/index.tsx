@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendPasswo
 import { addDoc, collection, doc, getDoc, getDocs, getFirestore, onSnapshot, orderBy, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { Linking, Platform } from 'react-native';
-import { Alert } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { AdminDashboardScreen } from '@/screens/admin-dashboard-screen';
 import { AuthScreen } from '@/screens/auth-screen';
@@ -22,11 +22,8 @@ import { TeamManagementScreen } from '@/screens/team-management-screen';
 import { TeamsScreen } from '@/screens/teams-screen';
 import { VerificationPendingScreen } from '@/screens/verification-pending-screen';
 
-import { FilterChip } from '@/components/filter-chip';
-import { MenuButton } from '@/components/menu-button';
-import { EVENT_DAYS } from '@/constants/event-days';
-import { GALLERY_FOLDERS } from '@/constants/gallery';
-import { PHOTO_HUNT_TASKS } from '@/constants/photo-hunt';
+import i18n from '@/i18n';
+import { EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAXrpkSdAD3aqiyViv_AUMxH6OTSiMI1Zk",
@@ -42,6 +39,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 export default function App() {
+  const { t } = useTranslation();
   const [language, setLanguage] = useState<'hu' | 'en' | null>(null);
   const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -94,6 +92,10 @@ export default function App() {
   const isOrganizerOrHead = safeRole.includes('szervez');
   const showIgazolasUpload = safeRole.includes('csapat') || safeRole.includes('kapitany') || safeRole.includes('kapitány');
   const isCaptainOrDeputy = safeRole.includes('kapitany') || safeRole.includes('kapitány');
+
+  const handleSelectLanguage = (nextLanguage: 'hu' | 'en') => {
+    void i18n.changeLanguage(nextLanguage).then(() => setLanguage(nextLanguage));
+  };
 
   useEffect(() => {
     const targetDate = new Date('2027-05-20T00:00:00');
@@ -148,7 +150,7 @@ export default function App() {
   const resetForm = () => { setFullName(''); setEmail(''); setPassword(''); setTeamName(''); setSecurePassword(true); };
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) return alert('Minden mező kötelező!');
+    if (!fullName || !email || !password) return alert(t('alerts.requiredFields'));
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await setDoc(doc(db, "users", userCredential.user.uid), { 
@@ -159,53 +161,53 @@ export default function App() {
         createdAt: new Date(), 
         isVerified: false 
       });
-    } catch (error: any) { alert(`Hiba: ${error.message}`); }
+    } catch (error: any) { alert(t('alerts.generic', { message: error.message })); }
   };
 
   const handleLogin = async () => {
-    if (!email || !password) return alert('E-mail és jelszó kötelező!');
-    try { await signInWithEmailAndPassword(auth, email, password); } catch (error: any) { alert('Hibás e-mail vagy jelszó!'); }
+    if (!email || !password) return alert(t('alerts.emailPasswordRequired'));
+    try { await signInWithEmailAndPassword(auth, email, password); } catch (error: any) { alert(t('alerts.wrongCredentials')); }
   };
 
   const handleForgotPassword = async () => {
-    if (!email) return alert('Írd be az e-mail címedet a fenti mezőbe!');
-    try { await sendPasswordResetEmail(auth, email); alert('Visszaállító e-mail elküldve!'); } catch (error: any) { alert(`Hiba: ${error.message}`); }
+    if (!email) return alert(t('alerts.enterEmailForReset'));
+    try { await sendPasswordResetEmail(auth, email); alert(t('alerts.resetEmailSent')); } catch (error: any) { alert(t('alerts.generic', { message: error.message })); }
   };
 
   const handleLogout = () => { signOut(auth); setCurrentView(null); setSelectedProgram(null); setSelectedGalleryFolder(null); setSelectedGalleryImage(null); resetForm(); };
 
   const handleUploadIgazolas = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert("Engedély szükséges!");
+    if (!res.granted) return alert(t('alerts.permissionRequired'));
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert("A kép túl nagy!");
+        if (imgStr.length > 1000000) return alert(t('alerts.imageTooLarge'));
         await updateDoc(doc(db, "users", auth.currentUser.uid), { igazolas: imgStr, isVerified: false });
-        alert("Sikeres feltöltés! Várakozás a jóváhagyásra.");
+        alert(t('alerts.idUploaded'));
       }
-    } catch (e: any) { alert("Hiba: " + e.message); }
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const handleUploadProfileImage = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert("Engedély szükséges!");
+    if (!res.granted) return alert(t('alerts.permissionRequired'));
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, aspect: [1, 1], quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert("A kép túl nagy!");
+        if (imgStr.length > 1000000) return alert(t('alerts.imageTooLarge'));
         await updateDoc(doc(db, "users", auth.currentUser.uid), { profileImage: imgStr });
         setProfileImage(imgStr);
-        alert("Profilkép frissítve!");
+        alert(t('alerts.profileUpdated'));
       }
-    } catch (e: any) { alert("Hiba: " + e.message); }
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const handleUploadGalleryImage = async (folderName: string) => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert("Engedély szükséges!");
+    if (!res.granted) return alert(t('alerts.permissionRequired'));
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsMultipleSelection: true, quality: 0.15, base64: true });
       if (!result.canceled && result.assets && result.assets.length > 0 && auth.currentUser) {
@@ -222,30 +224,30 @@ export default function App() {
             }
           }
         }
-        alert(`Sikeresen feltöltve ${result.assets.length} kép a(z) ${folderName} mappába! 📸`);
+        alert(t('alerts.galleryUploaded', { count: result.assets.length, folder: folderName }));
         fetchGallery(folderName);
       }
-    } catch (e: any) { alert("Hiba: " + e.message); }
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const handleUploadPhotoHunt = async (taskId: number) => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert("Engedély szükséges!");
+    if (!res.granted) return alert(t('alerts.permissionRequired'));
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.All, quality: 0.1, base64: true });
       if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
         const fileStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (fileStr.length > 1000000) return alert("A fájl túl nagy! Kérjük készíts nagyon rövid videót vagy kisebb képet.");
+        if (fileStr.length > 1000000) return alert(t('alerts.photoTooLarge'));
         await setDoc(doc(db, "photohunt_uploads", `${auth.currentUser.uid}_${taskId}`), { taskId: taskId, userId: auth.currentUser.uid, file: fileStr, uploadedAt: new Date() });
-        alert("Sikeres feltöltés! ✅");
+        alert(t('alerts.photoHuntUploaded'));
         fetchPhotoHuntProgress();
       }
-    } catch (e: any) { alert("Hiba: " + e.message); }
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const handleAddAdminEvent = async () => {
     if (!adminEventTitle || !adminEventTime || !adminEventLocation) {
-      return alert("Kérlek, tölts ki minden mezőt!");
+      return alert(t('alerts.fillProgramFields'));
     }
     setIsUploading(true);
     try {
@@ -257,12 +259,13 @@ export default function App() {
         createdAt: new Date(),
         createdBy: auth.currentUser?.uid
       });
-      alert(`Program sikeresen hozzáadva a(z) ${adminEventDay} naphoz! ✅`);
+      const dayKey = EVENT_DAY_LABEL_KEYS[adminEventDay as keyof typeof EVENT_DAY_LABEL_KEYS];
+      alert(t('alerts.programAdded', { day: dayKey ? t(dayKey) : adminEventDay }));
       setAdminEventTitle('');
       setAdminEventTime('');
       setAdminEventLocation('');
     } catch (error: any) {
-      alert("Hiba történt: " + error.message);
+      alert(t('alerts.generic', { message: error.message }));
     } finally {
       setIsUploading(false);
     }
@@ -289,32 +292,34 @@ export default function App() {
   const handleApproveId = async (userId: string) => {
     try {
       await updateDoc(doc(db, "users", userId), { isVerified: true });
-      alert("Diákigazolvány sikeresen jóváhagyva! ✅");
+      alert(t('alerts.idApproved'));
       fetchPendingUsers();
     } catch (error: any) {
-      alert("Hiba: " + error.message);
+      alert(t('alerts.generic', { message: error.message }));
     }
   };
 
   const handleSendNotification = async () => {
-    if (!notifTitle || !notifBody) return alert("Add meg az értesítés címét és szövegét!");
+    if (!notifTitle || !notifBody) return alert(t('alerts.notificationRequired'));
     try {
       await addDoc(collection(db, "notifications"), {
         title: notifTitle,
         body: notifBody,
         createdAt: new Date(),
       });
-      alert("Értesítés sikeresen elküldve minden résztvevőnek! 📯");
+      alert(t('alerts.notificationSent'));
       setNotifTitle('');
       setNotifBody('');
     } catch (e: any) {
-      alert("Hiba: " + e.message);
+      alert(t('alerts.generic', { message: e.message }));
     }
   };
 
   const handleSendTeamInvite = async () => {
-    if (!inviteEmail || !teamName) return alert("Add meg a csapattag e-mail címét!");
+    if (!inviteEmail || !teamName) return alert(t('alerts.inviteEmailRequired'));
     try {
+      const translatedInviteRole = inviteRole === 'Csapattag' ? t('roles.member') : t('roles.deputy');
+      const inviteEmailBody = t('teamManagement.inviteEmailBody', { teamName, role: translatedInviteRole });
       // 1. Belső meghívó mentése az appnak (opcionális, de jó ha megmarad)
       await addDoc(collection(db, "invites"), {
         email: inviteEmail,
@@ -329,20 +334,20 @@ export default function App() {
       await addDoc(collection(db, "mail"), {
         to: inviteEmail,
         message: {
-          subject: "Meghívás a Diáknapokra! 🚀",
-          text: `Szia! Meghívást kaptál a(z) ${teamName} csapatba, mint ${inviteRole}. Töltsd le az appot és regisztrálj!`,
+          subject: t('teamManagement.inviteEmailSubject'),
+          text: `${t('teamManagement.inviteEmailGreeting')} ${inviteEmailBody} ${t('teamManagement.inviteEmailAction')}`,
           html: `
-            <h3>Szia!</h3>
-            <p>Meghívást kaptál a(z) <b>${teamName}</b> csapatba, mint <b>${inviteRole}</b>.</p>
-            <p>Töltsd le az appot és regisztrálj, hogy csatlakozhass a csapathoz és ne maradj le semmiről!</p>
+            <h3>${t('teamManagement.inviteEmailGreeting')}</h3>
+            <p>${inviteEmailBody}</p>
+            <p>${t('teamManagement.inviteEmailAction')}</p>
           `
         }
       });
       
-      alert(`A valós e-mail meghívó sikeresen elküldve ide: ${inviteEmail} ✉️`);
+      alert(t('alerts.inviteSent', { email: inviteEmail }));
       setInviteEmail('');
     } catch (e: any) {
-      alert("Hiba a meghíváskor: " + e.message);
+      alert(t('alerts.generic', { message: e.message }));
     }
   };
 
@@ -362,28 +367,28 @@ export default function App() {
   };
 
   const handleSaveTeamData = async () => {
-    if (!teamName) return alert("Nincs beállítva csapatnév a profilodban!");
+    if (!teamName) return alert(t('alerts.teamNameRequired'));
     try {
       await setDoc(doc(db, "teams", teamName), { description: teamDescription, videoLink: teamVideoLink, updatedAt: new Date(), name: teamName }, { merge: true });
-      alert("Csapat adatok sikeresen elmentve! 🛡️");
-    } catch (e: any) { alert("Hiba: " + e.message); }
+      alert(t('alerts.teamSaved'));
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const handleUploadTeamImage = async (type: 'logo' | 'flag') => {
-    if (!teamName) return alert("Nincs beállítva csapatnév a profilodban!");
+    if (!teamName) return alert(t('alerts.teamNameRequired'));
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!res.granted) return alert("Engedély szükséges!");
+    if (!res.granted) return alert(t('alerts.permissionRequired'));
     try {
       const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.15, base64: true });
       if (!result.canceled && result.assets[0].base64) {
         const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return alert("A kép túl nagy! Kérlek válassz kisebbet.");
+        if (imgStr.length > 1000000) return alert(t('alerts.teamImageTooLarge'));
         await setDoc(doc(db, "teams", teamName), { [type]: imgStr, name: teamName }, { merge: true });
         if (type === 'logo') setTeamLogo(imgStr);
         if (type === 'flag') setTeamFlag(imgStr);
-        alert(`${type === 'logo' ? 'Csapat logó' : 'Csapat zászló'} frissítve!`);
+        alert(t(type === 'logo' ? 'alerts.teamLogoUpdated' : 'alerts.teamFlagUpdated'));
       }
-    } catch (e: any) { alert("Hiba: " + e.message); }
+    } catch (e: any) { alert(t('alerts.generic', { message: e.message })); }
   };
 
   const fetchAllTeams = async () => {
@@ -468,12 +473,12 @@ export default function App() {
       link.click();
       document.body.removeChild(link);
     } else {
-      Linking.openURL(imageBase64).catch(() => alert('A kép letöltése nem sikerült.'));
+      Linking.openURL(imageBase64).catch(() => alert(t('alerts.downloadFailed')));
     }
   };
 
   if (!language) {
-    return <LanguageSelectionScreen onSelectLanguage={setLanguage} />;
+    return <LanguageSelectionScreen onSelectLanguage={handleSelectLanguage} />;
   }
 
   if (!isLoggedIn) {
@@ -523,8 +528,8 @@ export default function App() {
         onBack={() => setCurrentView(null)}
         onRefresh={fetchAllTeams}
         onOpenVideo={(videoLink) => {
-          if (videoLink) Linking.openURL(videoLink).catch(() => alert('Hiba a link megnyitásakor.'));
-          else alert('Ez a csapat még nem töltött fel bemutatkozó videót!');
+          if (videoLink) Linking.openURL(videoLink).catch(() => alert(t('alerts.openLinkFailed')));
+          else alert(t('alerts.noTeamVideo'));
         }}
       />
     );

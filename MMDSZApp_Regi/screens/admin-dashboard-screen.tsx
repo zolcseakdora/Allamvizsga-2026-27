@@ -1,7 +1,8 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/components/filter-chip';
-import { EVENT_DAYS } from '@/constants/event-days';
+import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
 type PendingUser = {
   id: string;
@@ -57,64 +58,66 @@ export function AdminDashboardScreen({
   onFetchPendingUsers,
   onApproveUser,
 }: AdminDashboardScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={onBack}>
-            <Text style={styles.backText}>← Vissza</Text>
+            <Text style={styles.backText}>← {t('common.back')}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.title}>⚙️ ADMIN VEZÉRLŐPULT</Text>
+        <Text style={styles.title}>⚙️ {t('admin.title')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 Új program hozzáadása</Text>
-            <Text style={styles.profileLabel}>Válassz napot:</Text>
+            <Text style={styles.cardTitle}>📅 {t('admin.addProgram')}</Text>
+            <Text style={styles.profileLabel}>{t('admin.chooseDay')}</Text>
             <View style={styles.dayList}>
               {EVENT_DAYS.map(day => (
-                <FilterChip key={day} label={day} selected={adminEventDay === day} onPress={() => onEventDayChange(day)} style={styles.dayChip} />
+                <FilterChip key={day} label={t(EVENT_DAY_LABEL_KEYS[day as keyof typeof EVENT_DAY_LABEL_KEYS])} selected={adminEventDay === day} onPress={() => onEventDayChange(day)} style={styles.dayChip} />
               ))}
             </View>
-            <TextInput style={styles.input} placeholder="Program neve (pl. Koncert)" placeholderTextColor="#888" value={adminEventTitle} onChangeText={onEventTitleChange} />
-            <TextInput style={styles.input} placeholder="Időpont (pl. 20:00)" placeholderTextColor="#888" value={adminEventTime} onChangeText={onEventTimeChange} />
-            <TextInput style={styles.input} placeholder="Helyszín (pl. Nagyszínpad)" placeholderTextColor="#888" value={adminEventLocation} onChangeText={onEventLocationChange} />
+            <TextInput style={styles.input} placeholder={t('admin.programTitlePlaceholder')} placeholderTextColor="#888" value={adminEventTitle} onChangeText={onEventTitleChange} />
+            <TextInput style={styles.input} placeholder={t('admin.timePlaceholder')} placeholderTextColor="#888" value={adminEventTime} onChangeText={onEventTimeChange} />
+            <TextInput style={styles.input} placeholder={t('admin.locationPlaceholder')} placeholderTextColor="#888" value={adminEventLocation} onChangeText={onEventLocationChange} />
             <TouchableOpacity style={[styles.solidButton, { opacity: isUploading ? 0.7 : 1 }]} onPress={onAddEvent} disabled={isUploading}>
-              <Text style={styles.solidButtonText}>{isUploading ? 'Feltöltés folyamatban...' : 'Program Mentése'}</Text>
+              <Text style={styles.solidButtonText}>{isUploading ? t('admin.uploading') : t('admin.saveProgram')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📯 Push Értesítés Küldése</Text>
-            <TextInput style={styles.input} placeholder="Értesítés címe" placeholderTextColor="#888" value={notifTitle} onChangeText={onNotifTitleChange} />
-            <TextInput style={styles.notificationBody} placeholder="Értesítés szövege..." placeholderTextColor="#888" multiline value={notifBody} onChangeText={onNotifBodyChange} />
+            <Text style={styles.cardTitle}>📯 {t('admin.sendNotification')}</Text>
+            <TextInput style={styles.input} placeholder={t('admin.notificationTitlePlaceholder')} placeholderTextColor="#888" value={notifTitle} onChangeText={onNotifTitleChange} />
+            <TextInput style={styles.notificationBody} placeholder={t('admin.notificationBodyPlaceholder')} placeholderTextColor="#888" multiline value={notifBody} onChangeText={onNotifBodyChange} />
             <TouchableOpacity style={styles.solidButton} onPress={onSendNotification}>
-              <Text style={styles.solidButtonText}>Értesítés Kiküldése</Text>
+              <Text style={styles.solidButtonText}>{t('admin.send')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🎓 Diákigazolványok Ellenőrzése</Text>
+            <Text style={styles.cardTitle}>🎓 {t('admin.verifyIds')}</Text>
             <TouchableOpacity style={styles.outlineButton} onPress={onFetchPendingUsers}>
-              <Text style={styles.outlineButtonText}>🔄 Feltöltött igazolványok listázása</Text>
+              <Text style={styles.outlineButtonText}>🔄 {t('admin.listIds')}</Text>
             </TouchableOpacity>
 
             {showPending && (
               <View style={styles.pendingList}>
                 {pendingUsers.length === 0 ? (
-                  <Text style={styles.emptyState}>Még nincsenek feltöltött igazolványok.</Text>
+                  <Text style={styles.emptyState}>{t('admin.emptyIds')}</Text>
                 ) : (
                   pendingUsers.map(user => (
                     <View key={user.id} style={styles.pendingUserCard}>
                       <Text style={styles.pendingUserName}>{user.name} ({user.email})</Text>
-                      <Text style={styles.teamName}>Csapat: {user.team || 'Egyéni'}</Text>
+                      <Text style={styles.teamName}>{t('admin.team', { team: user.team || t('profile.individualTeam') })}</Text>
                       <Text style={[styles.verificationStatus, { color: user.isVerified ? '#27AE60' : '#F39C12' }]}>
-                        Státusz: {user.isVerified ? '✅ Elfogadva' : '⏳ Függőben'}
+                        {t('admin.status', { status: user.isVerified ? t('verification.accepted') : t('verification.pending') })}
                       </Text>
                       <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
                       {!user.isVerified && (
                         <TouchableOpacity style={styles.approveButton} onPress={() => onApproveUser(user.id)}>
-                          <Text style={styles.solidButtonText}>✅ Jóváhagyás (Engedélyezés)</Text>
+                          <Text style={styles.solidButtonText}>✅ {t('admin.approve')}</Text>
                         </TouchableOpacity>
                       )}
                     </View>

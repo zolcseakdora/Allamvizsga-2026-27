@@ -1,4 +1,5 @@
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 import { PHOTO_HUNT_TASKS } from '@/constants/photo-hunt';
 
@@ -10,28 +11,30 @@ type PhotoHuntScreenProps = {
 };
 
 export function PhotoHuntScreen({ progress, onBack, onRefresh, onUpload }: PhotoHuntScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← Vissza</Text></TouchableOpacity>
-          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 Frissítés</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>📷 PHOTO HUNT</Text>
-        <Text style={styles.subtitle}>Minden fotón/videón legalább 2 csapattag szerepeljen!</Text>
+        <Text style={styles.title}>📷 {t('photoHunt.title')}</Text>
+        <Text style={styles.subtitle}>{t('photoHunt.subtitle')}</Text>
         <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
           {PHOTO_HUNT_TASKS.map(task => (
             <View key={task.id} style={styles.card}>
               <View style={styles.taskRow}>
                 <View style={styles.taskDescription}>
-                  <Text style={styles.cardTitle}>{task.title}</Text>
-                  <Text style={styles.cardText}>Kritérium: {task.criteria}</Text>
+                  <Text style={styles.cardTitle}>{t(`photoHunt.tasks.${task.id}.title`)}</Text>
+                  <Text style={styles.cardText}>{t('photoHunt.criteria', { criteria: t(`photoHunt.tasks.${task.id}.criteria`) })}</Text>
                 </View>
                 {progress[task.id] ? (
                   <Text style={styles.completeIcon}>✅</Text>
                 ) : (
                   <TouchableOpacity style={styles.uploadButton} onPress={() => onUpload(task.id)}>
-                    <Text style={styles.uploadButtonText}>Feltöltés</Text>
+                    <Text style={styles.uploadButtonText}>{t('common.upload')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

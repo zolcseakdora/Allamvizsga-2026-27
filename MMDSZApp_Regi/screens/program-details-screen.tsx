@@ -1,4 +1,7 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+
+import { EVENT_DAY_LABEL_KEYS } from '@/constants/event-days';
 
 type ProgramDetails = {
   title?: string;
@@ -15,26 +18,31 @@ type ProgramDetailsScreenProps = {
 };
 
 export function ProgramDetailsScreen({ program, onBack }: ProgramDetailsScreenProps) {
+  const { t } = useTranslation();
+  const dayLabel = program.day && program.day in EVENT_DAY_LABEL_KEYS
+    ? t(EVENT_DAY_LABEL_KEYS[program.day as keyof typeof EVENT_DAY_LABEL_KEYS])
+    : program.day;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Vissza a programokhoz</Text>
+          <Text style={styles.backButtonText}>← {t('programs.backToSchedule')}</Text>
         </TouchableOpacity>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{program.title}</Text>
           <View style={styles.timeBadge}>
             <Text style={styles.timeText}>{program.time}</Text>
           </View>
-          <Text style={styles.programDetail}>📍 {program.helyszín || 'Helyszín hamarosan'} | {program.day}</Text>
+          <Text style={styles.programDetail}>📍 {program.helyszín || t('programs.locationComing')} | {dayLabel}</Text>
 
           {program.image ? (
             <Image source={{ uri: program.image }} style={styles.programImage} resizeMode="cover" />
           ) : null}
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Részletes leírás</Text>
-            <Text style={styles.cardText}>{program.description || 'Ehhez a programhoz még nem került feltöltésre leírás.'}</Text>
+            <Text style={styles.cardTitle}>{t('programs.details')}</Text>
+            <Text style={styles.cardText}>{program.description || t('programs.noDetails')}</Text>
           </View>
         </ScrollView>
       </View>

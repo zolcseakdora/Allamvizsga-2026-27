@@ -1,4 +1,5 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type TeamSummary = {
   name?: string;
@@ -15,20 +16,22 @@ type TeamsScreenProps = {
 };
 
 export function TeamsScreen({ teams, onBack, onRefresh, onOpenVideo }: TeamsScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← Vissza</Text></TouchableOpacity>
-          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 Frissítés</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>🛡️ CSAPATOK TÁBORA</Text>
-        <Text style={styles.subtitle}>Kattints a logóra a csapat videójáért!</Text>
+        <Text style={styles.title}>🛡️ {t('teams.title')}</Text>
+        <Text style={styles.subtitle}>{t('teams.instruction')}</Text>
 
         <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.grid}>
             {teams.length === 0 ? (
-              <Text style={styles.emptyState}>Még nincsenek feltöltött csapatok.</Text>
+              <Text style={styles.emptyState}>{t('teams.empty')}</Text>
             ) : (
               teams.map((team, index) => (
                 <View key={index} style={styles.teamCard}>
@@ -40,8 +43,8 @@ export function TeamsScreen({ teams, onBack, onRefresh, onOpenVideo }: TeamsScre
                     <View style={[styles.sponsorBubble, styles.bubbleTopRight]}><Text style={styles.bubbleText}>💸</Text></View>
                     <View style={[styles.sponsorBubble, styles.bubbleBottomLeft]}><Text style={styles.bubbleText}>⚡</Text></View>
                   </View>
-                  <Text style={styles.teamName}>{team.name || 'Névtelen Csapat'}</Text>
-                  <Text style={styles.teamDescription} numberOfLines={2}>{team.description || 'Nincs leírás'}</Text>
+                  <Text style={styles.teamName}>{team.name || t('teams.unnamed')}</Text>
+                  <Text style={styles.teamDescription} numberOfLines={2}>{team.description || t('common.noDescription')}</Text>
                 </View>
               ))
             )}
