@@ -310,7 +310,7 @@ const [isLoginMode, setIsLoginMode] = useState<boolean>(true);
     };
   const fetchPendingUsers = async () => {
     try {
-      const q = query(collection(db, "users"));
+      const q = query(collection(db, "users"), where('status', '==', 'pending'));
       const snapshot = await getDocs(q);
       const list: any[] = [];
       snapshot.forEach(doc => {
