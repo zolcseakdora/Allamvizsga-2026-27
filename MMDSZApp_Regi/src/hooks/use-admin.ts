@@ -2,23 +2,28 @@ import { collection, doc, getDocs, orderBy, query, addDoc, updateDoc } from 'fir
 import { useCallback, useState } from 'react';
 
 import { auth, db } from '@/src/config/firebase';
+import { UserRole } from '@/src/types/auth';
 
 export type RegisteredUser = {
   id: string;
   name?: string;
-  role?: string;
+  role?: UserRole;
   igazolas?: string;
 };
 
 export type PendingUser = {
   id: string;
   name?: string;
-  role?: string;
+  role?: UserRole;
   email?: string;
   team?: string;
   isVerified?: boolean;
   igazolas: string;
 };
+
+function toUserRole(value: unknown): UserRole | undefined {
+  return Object.values(UserRole).find((role) => role === value);
+}
 
 export function useAdmin() {
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
@@ -26,7 +31,10 @@ export function useAdmin() {
 
   const refreshRegisteredUsers = useCallback(async () => {
     const snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
-    setRegisteredUsers(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })) as RegisteredUser[]);
+    setRegisteredUsers(snapshot.docs.map((item) => {
+      const data = item.data();
+      return { id: item.id, ...data, role: toUserRole(data.role) } as RegisteredUser;
+    }));
   }, []);
 
   const refreshPendingUsers = useCallback(async () => {
@@ -39,7 +47,7 @@ export function useAdmin() {
       pending.push({
         id: item.id,
         name: typeof data.name === 'string' ? data.name : undefined,
-        role: typeof data.role === 'string' ? data.role : undefined,
+        role: toUserRole(data.role),
         email: typeof data.email === 'string' ? data.email : undefined,
         team: typeof data.team === 'string' ? data.team : undefined,
         isVerified: data.isVerified === true,
