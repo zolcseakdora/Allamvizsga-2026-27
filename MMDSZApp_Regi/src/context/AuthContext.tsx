@@ -32,11 +32,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function toUserProfile(user: User, data: Record<string, unknown>): UserProfile {
   const rawRole = data.role as string;
-  const resolvedRole: UserRole = user.email === 'dorazolcseak@gmail.com'
-    ? UserRole.FOSZERVEZO
-    : Object.values(UserRole).includes(rawRole as UserRole)
-      ? (rawRole as UserRole)
-      : UserRole.CSAPATTAG;
+  const resolvedRole: UserRole = Object.values(UserRole).includes(rawRole as UserRole)
+    ? (rawRole as UserRole)
+    : UserRole.CSAPATTAG;
 
   return {
     name: typeof data.name === 'string' ? data.name : '',
