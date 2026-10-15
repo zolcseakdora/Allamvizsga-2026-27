@@ -5,6 +5,8 @@ type VerificationPendingScreenProps = {
   hasIgazolas: boolean;
   emailVerified: boolean;
   isCheckingEmail: boolean;
+  isResendingEmail: boolean;
+  onResendVerificationEmail: () => void;
   onConfirmEmail: () => void;
   onUploadIgazolas: () => void;
   onLogout: () => void;
@@ -14,6 +16,8 @@ export function VerificationPendingScreen({
   hasIgazolas,
   emailVerified,
   isCheckingEmail,
+  isResendingEmail,
+  onResendVerificationEmail,
   onConfirmEmail,
   onUploadIgazolas,
   onLogout,
@@ -30,18 +34,30 @@ export function VerificationPendingScreen({
           </Text>
 
           <Text style={[styles.emailStatus, { color: emailVerified ? '#27AE60' : '#F39C12' }]}>
-            {emailVerified ? t('verification.emailVerified') : t('verification.emailPending')}
+            {emailVerified ? t('verification.emailVerified') : t('verification.emailWarning')}
           </Text>
           {!emailVerified && (
-            <TouchableOpacity
-              style={styles.outlineButton}
-              onPress={onConfirmEmail}
-              disabled={isCheckingEmail}
-            >
-              <Text style={styles.outlineButtonText}>
-                {isCheckingEmail ? t('verification.checkingEmail') : t('verification.confirmEmail')}
-              </Text>
-            </TouchableOpacity>
+            <>
+              <Text style={styles.cardText}>{t('verification.emailPending')}</Text>
+              <TouchableOpacity
+                style={styles.outlineButton}
+                onPress={onResendVerificationEmail}
+                disabled={isResendingEmail}
+              >
+                <Text style={styles.outlineButtonText}>
+                  {isResendingEmail ? t('verification.resendingEmail') : t('verification.resendEmail')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.outlineButton}
+                onPress={onConfirmEmail}
+                disabled={isCheckingEmail}
+              >
+                <Text style={styles.outlineButtonText}>
+                  {isCheckingEmail ? t('verification.checkingEmail') : t('verification.confirmEmail')}
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {!hasIgazolas ? (

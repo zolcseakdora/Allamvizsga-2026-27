@@ -17,8 +17,16 @@ export default function App() {
   const { showToast } = useToast();
   const { t } = useTranslation();
   const router = useRouter();
-  const { profile, logout } = useAuth();
+  const {
+    profile,
+    user,
+    logout,
+    resendVerificationEmail,
+    confirmEmailAndRedeem,
+  } = useAuth();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const userRole = profile?.role ?? UserRole.CSAPATTAG;
   const hasIgazolas = Boolean(profile?.igazolas);
@@ -48,6 +56,38 @@ export default function App() {
     void logout(); 
   };
 
+  const handleResendVerificationEmail = async () => {
+    setIsResendingEmail(true);
+    try {
+      await resendVerificationEmail();
+      showToast(t('alerts.verificationEmailSent'), 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsResendingEmail(false);
+    }
+  };
+
+  const handleConfirmEmail = async () => {
+    setIsCheckingEmail(true);
+    try {
+      const result = await confirmEmailAndRedeem();
+      if (result === 'unverified') {
+        showToast(t('alerts.emailNotVerified'), 'error');
+      } else if (result === 'none') {
+        showToast(t('alerts.noPendingInvite'), 'success');
+      } else {
+        showToast(t('alerts.inviteAccepted', { team: result.team }), 'success');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
   const handleUploadIgazolas = async () => {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
@@ -66,6 +106,9 @@ export default function App() {
     <View style={{ flex: 1, backgroundColor: '#121212' }}>
       <HomeScreen
         userRole={userRole}
+        emailVerified={user?.emailVerified ?? false}
+        isCheckingEmail={isCheckingEmail}
+        isResendingEmail={isResendingEmail}
         timeLeft={timeLeft}
         showIgazolasUpload={showIgazolasUpload}
         hasIgazolas={hasIgazolas}
@@ -76,6 +119,8 @@ export default function App() {
         onOpenProfile={() => router.push('/profile')}
         onLogout={handleLogout}
         onUploadIgazolas={handleUploadIgazolas}
+        onResendVerificationEmail={() => void handleResendVerificationEmail()}
+        onConfirmEmail={() => void handleConfirmEmail()}
         onOpenSchedule={() => router.push('/schedule')}
         onOpenTeams={() => router.push('/teams')}
         onOpenMap={() => router.push('/map')}

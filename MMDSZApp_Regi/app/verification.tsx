@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { doc, getDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -8,18 +8,14 @@ import { VerificationPendingScreen } from '@/src/screens/verification-pending-sc
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
-import { UserRole } from '@/src/types/auth';
-
-function isUserRole(value: unknown): value is UserRole {
-  return Object.values(UserRole).some((role) => role === value);
-}
 
 export default function VerificationRoute() {
   const { t } = useTranslation();
-  const { profile, user, logout } = useAuth();
+  const { profile, user, logout, resendVerificationEmail, confirmEmailAndRedeem } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
 
   const hasIgazolas = Boolean(profile?.igazolas);
   const emailVerified = user?.emailVerified ?? false;
@@ -53,41 +49,30 @@ export default function VerificationRoute() {
     }
   };
 
-  const handleConfirmEmail = async () => {
-    if (!user?.email) {
-      showToast(t('alerts.emailNotAvailable'), 'error');
-      return;
+  const handleResendVerificationEmail = async () => {
+    setIsResendingEmail(true);
+    try {
+      await resendVerificationEmail();
+      showToast(t('alerts.verificationEmailSent'), 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsResendingEmail(false);
     }
+  };
 
+  const handleConfirmEmail = async () => {
     setIsCheckingEmail(true);
     try {
-      await user.reload();
-      await user.getIdToken(true);
-      if (!user.emailVerified) {
+      const result = await confirmEmailAndRedeem();
+      if (result === 'unverified') {
         showToast(t('alerts.emailNotVerified'), 'error');
-        return;
-      }
-
-      const normalizedEmail = user.email.toLowerCase();
-      const inviteRef = doc(db, 'invites', normalizedEmail);
-      const inviteSnapshot = await getDoc(inviteRef);
-      if (!inviteSnapshot.exists() || inviteSnapshot.data().status !== 'Függőben') {
+      } else if (result === 'none') {
         showToast(t('alerts.noPendingInvite'), 'success');
-        return;
+      } else {
+        showToast(t('alerts.inviteAccepted', { team: result.team }), 'success');
       }
-
-      const invite = inviteSnapshot.data();
-      const role = invite.role;
-      const team = invite.team;
-      if (!isUserRole(role) || typeof team !== 'string') {
-        throw new Error(t('alerts.invalidInvite'));
-      }
-
-      const batch = writeBatch(db);
-      batch.update(doc(db, 'users', user.uid), { role, team });
-      batch.update(inviteRef, { status: 'Elfogadva' });
-      await batch.commit();
-      showToast(t('alerts.inviteAccepted', { team }), 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('alerts.generic', { message }), 'error');
@@ -101,6 +86,8 @@ export default function VerificationRoute() {
       hasIgazolas={hasIgazolas}
       emailVerified={emailVerified}
       isCheckingEmail={isCheckingEmail}
+      isResendingEmail={isResendingEmail}
+      onResendVerificationEmail={() => void handleResendVerificationEmail()}
       onConfirmEmail={() => void handleConfirmEmail()}
       onUploadIgazolas={handleUploadIgazolas}
       onLogout={handleLogout}

@@ -7,6 +7,9 @@ import { UserRole } from '@/src/types/auth';
 
 type HomeScreenProps = {
   userRole: UserRole;
+  emailVerified: boolean;
+  isCheckingEmail: boolean;
+  isResendingEmail: boolean;
   timeLeft: { days: number; hours: number; minutes: number };
   showIgazolasUpload: boolean;
   hasIgazolas: boolean;
@@ -17,6 +20,8 @@ type HomeScreenProps = {
   onOpenProfile: () => void;
   onLogout: () => void;
   onUploadIgazolas: () => void;
+  onResendVerificationEmail: () => void;
+  onConfirmEmail: () => void;
   onOpenSchedule: () => void;
   onOpenTeams: () => void;
   onOpenMap: () => void;
@@ -30,6 +35,9 @@ type HomeScreenProps = {
 
 export function HomeScreen({
   userRole,
+  emailVerified,
+  isCheckingEmail,
+  isResendingEmail,
   timeLeft,
   showIgazolasUpload,
   hasIgazolas,
@@ -40,6 +48,8 @@ export function HomeScreen({
   onOpenProfile,
   onLogout,
   onUploadIgazolas,
+  onResendVerificationEmail,
+  onConfirmEmail,
   onOpenSchedule,
   onOpenTeams,
   onOpenMap,
@@ -75,6 +85,31 @@ export function HomeScreen({
             </View>
           </View>
           <Text style={styles.subtitle}>{t('home.signedInAs')} <Text style={styles.roleText}>{translatedRole}</Text></Text>
+
+          {!emailVerified && (
+            <View style={styles.emailWarningCard}>
+              <Text style={styles.emailWarningTitle}>⚠️ {t('verification.emailWarning')}</Text>
+              <Text style={styles.cardText}>{t('verification.emailPending')}</Text>
+              <TouchableOpacity
+                style={styles.outlineButton}
+                onPress={onResendVerificationEmail}
+                disabled={isResendingEmail}
+              >
+                <Text style={styles.outlineButtonText}>
+                  {isResendingEmail ? t('verification.resendingEmail') : t('verification.resendEmail')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.outlineButton}
+                onPress={onConfirmEmail}
+                disabled={isCheckingEmail}
+              >
+                <Text style={styles.outlineButtonText}>
+                  {isCheckingEmail ? t('verification.checkingEmail') : t('verification.confirmEmail')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           <View style={styles.countdownCard}>
             <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
@@ -142,6 +177,8 @@ const styles = StyleSheet.create({
   profileText: { color: '#EC2127', fontWeight: 'bold' },
   logoutText: { color: '#888', fontWeight: 'bold' },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
+  emailWarningCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#F39C12', borderRadius: 10, padding: 16, marginBottom: 15 },
+  emailWarningTitle: { fontSize: 16, fontWeight: 'bold', color: '#F39C12', textAlign: 'center', marginBottom: 8 },
   roleText: { fontWeight: 'bold', color: '#EC2127' },
   countdownCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 15 },
   countdownTitle: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },

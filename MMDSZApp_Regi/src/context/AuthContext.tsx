@@ -8,7 +8,7 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { auth, db } from '@/src/config/firebase';
@@ -25,11 +25,44 @@ type AuthContextValue = AuthState & {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegistrationInput) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  confirmEmailAndRedeem: () => Promise<InviteRedemptionResult>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
+export type InviteRedemptionResult = 'none' | 'unverified' | { status: 'accepted'; team: string };
+
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+function isUserRole(value: unknown): value is UserRole {
+  return Object.values(UserRole).some((role) => role === value);
+}
+
+async function redeemPendingInvite(user: User): Promise<InviteRedemptionResult> {
+  if (!user.emailVerified || !user.email) return 'unverified';
+
+  const email = user.email.toLowerCase();
+  const inviteRef = doc(db, 'invites', email);
+  const inviteSnapshot = await getDoc(inviteRef);
+  if (!inviteSnapshot.exists() || inviteSnapshot.data().status !== 'Függőben') {
+    return 'none';
+  }
+
+  const invite = inviteSnapshot.data();
+  if (!isUserRole(invite.role) || typeof invite.team !== 'string') {
+    throw new Error(`Invalid invite document for ${email}`);
+  }
+
+  const batch = writeBatch(db);
+  batch.update(doc(db, 'users', user.uid), {
+    role: invite.role,
+    team: invite.team,
+  });
+  batch.update(inviteRef, { status: 'Elfogadva' });
+  await batch.commit();
+  return { status: 'accepted', team: invite.team };
+}
 
 function toUserProfile(user: User, data: Record<string, unknown>): UserProfile {
   const rawRole = data.role as string;
@@ -63,6 +96,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
         return;
       }
 
+      if (user.emailVerified) {
+        void redeemPendingInvite(user).catch((error: unknown) => {
+          console.error('Failed to redeem pending invitation on sign-in', error);
+        });
+      }
+
       unsubscribeProfile = onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
         const profile = snapshot.exists() ? toUserProfile(user, snapshot.data()) : null;
         setAuthState({ user, profile, status: 'authenticated' });
@@ -94,6 +133,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
         isVerified: false,
       });
       await sendEmailVerification(userCredential.user);
+    },
+    resendVerificationEmail: async () => {
+      const user = auth.currentUser;
+      if (!user?.email) throw new Error('The signed-in user has no email address');
+      await sendEmailVerification(user);
+    },
+    confirmEmailAndRedeem: async () => {
+      const user = auth.currentUser;
+      if (!user?.email) return 'unverified';
+
+      await user.reload();
+      await user.getIdToken(true);
+      setAuthState((current) => (
+        current.user?.uid === user.uid ? { ...current, user } : current
+      ));
+      if (!user.emailVerified) return 'unverified';
+      return redeemPendingInvite(user);
     },
     resetPassword: async (email) => {
       await sendPasswordResetEmail(auth, email);
