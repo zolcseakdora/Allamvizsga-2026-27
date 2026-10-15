@@ -2,6 +2,8 @@ import { collection, doc, getDocs, orderBy, query, addDoc, updateDoc } from 'fir
 import { useCallback, useState } from 'react';
 
 import { auth, db } from '@/src/config/firebase';
+import { useAuth } from '@/src/context/AuthContext';
+import { createNotification } from '@/src/services/notifications';
 import { UserRole } from '@/src/types/auth';
 
 export type RegisteredUser = {
@@ -26,6 +28,7 @@ function toUserRole(value: unknown): UserRole | undefined {
 }
 
 export function useAdmin() {
+  const { user, profile } = useAuth();
   const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>([]);
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
 
@@ -74,8 +77,9 @@ export function useAdmin() {
   }, []);
 
   const sendNotification = useCallback(async (title: string, body: string) => {
-    await addDoc(collection(db, 'notifications'), { title, body, createdAt: new Date() });
-  }, []);
+    if (!user) throw new Error('A signed-in user is required to send notifications');
+    await createNotification(title, body, user.uid, profile?.name || user.displayName || '');
+  }, [profile?.name, user]);
 
   return {
     registeredUsers,

@@ -9,6 +9,7 @@ import { HomeScreen } from '@/src/screens/home-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
+import { useNotifications } from '@/src/hooks/use-notifications';
 
 import { UserRole } from '@/src/types/auth';
 import { canRole } from '@/src/constants/roles';
@@ -24,6 +25,7 @@ export default function App() {
     resendVerificationEmail,
     confirmEmailAndRedeem,
   } = useAuth();
+  const { unreadCount, latestNotification } = useNotifications();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
@@ -106,6 +108,8 @@ export default function App() {
     <View style={{ flex: 1, backgroundColor: '#121212' }}>
       <HomeScreen
         userRole={userRole}
+        unreadCount={unreadCount}
+        latestNotification={latestNotification}
         emailVerified={user?.emailVerified ?? false}
         isCheckingEmail={isCheckingEmail}
         isResendingEmail={isResendingEmail}
@@ -121,6 +125,7 @@ export default function App() {
         onUploadIgazolas={handleUploadIgazolas}
         onResendVerificationEmail={() => void handleResendVerificationEmail()}
         onConfirmEmail={() => void handleConfirmEmail()}
+        onOpenNotifications={() => router.push('/notifications')}
         onOpenSchedule={() => router.push('/schedule')}
         onOpenTeams={() => router.push('/teams')}
         onOpenMap={() => router.push('/map')}

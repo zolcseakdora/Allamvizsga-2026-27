@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
 import { ToastProvider } from '@/src/context/ToastContext';
+import { NotificationsProvider } from '@/src/hooks/use-notifications';
 import { UserRole } from '@/src/types/auth';
 
 function RootLayoutNav() {
@@ -68,6 +69,7 @@ function RootLayoutNav() {
         <Stack.Screen name="language" />
         <Stack.Screen name="auth" />
         <Stack.Screen name="verification" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: t('modal.title'), headerShown: true }} />
       </Stack>
       <StatusBar style="auto" />
@@ -79,7 +81,9 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <RootLayoutNav />
+        <NotificationsProvider>
+          <RootLayoutNav />
+        </NotificationsProvider>
       </ToastProvider>
     </AuthProvider>
   );

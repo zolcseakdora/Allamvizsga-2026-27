@@ -2,11 +2,14 @@ import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, Vi
 import { useTranslation } from 'react-i18next';
 
 import { MenuButton } from '@/src/components/features/home/menu-button';
+import type { Notification } from '@/src/hooks/use-notifications';
 
 import { UserRole } from '@/src/types/auth';
 
 type HomeScreenProps = {
   userRole: UserRole;
+  unreadCount: number;
+  latestNotification: Notification | null;
   emailVerified: boolean;
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
@@ -22,6 +25,7 @@ type HomeScreenProps = {
   onUploadIgazolas: () => void;
   onResendVerificationEmail: () => void;
   onConfirmEmail: () => void;
+  onOpenNotifications: () => void;
   onOpenSchedule: () => void;
   onOpenTeams: () => void;
   onOpenMap: () => void;
@@ -35,6 +39,8 @@ type HomeScreenProps = {
 
 export function HomeScreen({
   userRole,
+  unreadCount,
+  latestNotification,
   emailVerified,
   isCheckingEmail,
   isResendingEmail,
@@ -50,6 +56,7 @@ export function HomeScreen({
   onUploadIgazolas,
   onResendVerificationEmail,
   onConfirmEmail,
+  onOpenNotifications,
   onOpenSchedule,
   onOpenTeams,
   onOpenMap,
@@ -60,7 +67,7 @@ export function HomeScreen({
   onOpenAdmin,
   onOpenInvites,
 }: HomeScreenProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const translatedRole = userRole === 'Főszervező'
     ? t('roles.headOrganizer')
     : userRole === UserRole.SZERVEZO
@@ -111,6 +118,30 @@ export function HomeScreen({
             </View>
           )}
 
+          <TouchableOpacity style={styles.latestNotificationCard} onPress={onOpenNotifications}>
+            <View style={styles.latestNotificationHeader}>
+              <Text style={styles.cardTitle}>🔔 {t('notifications.latest')}</Text>
+              {unreadCount > 0 && (
+                <Text style={styles.latestNotificationBadge}>{unreadCount}</Text>
+              )}
+            </View>
+            {latestNotification ? (
+              <>
+                <Text style={styles.cardText}>{latestNotification.title}</Text>
+                <Text style={styles.notificationTime}>
+                  {latestNotification.createdAt
+                    ? latestNotification.createdAt.toDate().toLocaleString(i18n.language, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })
+                    : t('notifications.sendingTime')}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.cardText}>{t('notifications.empty')}</Text>
+            )}
+          </TouchableOpacity>
+
           <View style={styles.countdownCard}>
             <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
             <Text style={styles.countdownSub}>{t('home.date')}</Text>
@@ -159,6 +190,7 @@ export function HomeScreen({
             {isOrganizerOrHead && <MenuButton icon="👥" label={t('home.menuUsers')} onPress={onOpenRegisteredUsers} />}
             {userRole === UserRole.FOSZERVEZO && <MenuButton icon="⚙️" label={t('home.menuAdmin')} onPress={onOpenAdmin} />}
             {canInviteOrganizers && <MenuButton icon="✉️" label={t('home.menuInvites')} onPress={onOpenInvites} />}
+            <MenuButton icon="🔔" label={t('notifications.title')} badge={unreadCount} onPress={onOpenNotifications} />
           </View>
         </ScrollView>
       </View>
@@ -179,6 +211,10 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
   emailWarningCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#F39C12', borderRadius: 10, padding: 16, marginBottom: 15 },
   emailWarningTitle: { fontSize: 16, fontWeight: 'bold', color: '#F39C12', textAlign: 'center', marginBottom: 8 },
+  latestNotificationCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
+  latestNotificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  latestNotificationBadge: { minWidth: 24, overflow: 'hidden', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#EC2127', color: '#FFF', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
+  notificationTime: { color: '#999', fontSize: 12, marginTop: 5 },
   roleText: { fontWeight: 'bold', color: '#EC2127' },
   countdownCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 15 },
   countdownTitle: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
