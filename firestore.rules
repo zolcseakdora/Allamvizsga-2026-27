@@ -1,3 +1,5 @@
+
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -96,7 +98,6 @@ service cloud.firestore {
             && request.resource.data.role == get(inviteRef()).data.role
             && request.resource.data.team == get(inviteRef()).data.team
             && request.resource.data.email == resource.data.email
-            // A jóváhagyási állapot nem változhat (nem lehet magát jóváhagyni)
             && request.resource.data.isVerified == resource.data.isVerified);
 
       allow delete: if isAdmin();
@@ -150,10 +151,10 @@ service cloud.firestore {
       allow create: if inviteId == request.resource.data.email
         && validInvite(request.resource.data);
 
-      // Függő meghívó felülírható (újraküldés), ugyanazokkal a korlátokkal
+      // Meglévő meghívó felülírható (újraküldés, később új szerepkör),
+      // az új meghívónak is meg kell felelnie a korlátoknak
       allow update: if
-        (resource.data.status == 'Függőben'
-          && inviteId == request.resource.data.email
+        (inviteId == request.resource.data.email
           && validInvite(request.resource.data))
         // A meghívott elfogadhatja a sajátját (csak a status változhat)
         || (signedIn()
