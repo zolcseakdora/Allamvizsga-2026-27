@@ -13,6 +13,7 @@ type HomeScreenProps = {
   isVerified: boolean;
   isCaptainOrDeputy: boolean;
   isOrganizerOrHead: boolean;
+  canInviteOrganizers: boolean;
   onOpenProfile: () => void;
   onLogout: () => void;
   onUploadIgazolas: () => void;
@@ -24,6 +25,7 @@ type HomeScreenProps = {
   onOpenTeamManagement: () => void;
   onOpenRegisteredUsers: () => void;
   onOpenAdmin: () => void;
+  onOpenInvites: () => void;
 };
 
 export function HomeScreen({
@@ -34,6 +36,7 @@ export function HomeScreen({
   isVerified,
   isCaptainOrDeputy,
   isOrganizerOrHead,
+  canInviteOrganizers,
   onOpenProfile,
   onLogout,
   onUploadIgazolas,
@@ -45,6 +48,7 @@ export function HomeScreen({
   onOpenTeamManagement,
   onOpenRegisteredUsers,
   onOpenAdmin,
+  onOpenInvites,
 }: HomeScreenProps) {
   const { t } = useTranslation();
   const translatedRole = userRole === 'Főszervező'
@@ -119,6 +123,7 @@ export function HomeScreen({
             {isCaptainOrDeputy && <MenuButton icon="⚙️" label={t('home.menuTeamManagement')} onPress={onOpenTeamManagement} />}
             {isOrganizerOrHead && <MenuButton icon="👥" label={t('home.menuUsers')} onPress={onOpenRegisteredUsers} />}
             {userRole === UserRole.FOSZERVEZO && <MenuButton icon="⚙️" label={t('home.menuAdmin')} onPress={onOpenAdmin} />}
+            {canInviteOrganizers && <MenuButton icon="✉️" label={t('home.menuInvites')} onPress={onOpenInvites} />}
           </View>
         </ScrollView>
       </View>

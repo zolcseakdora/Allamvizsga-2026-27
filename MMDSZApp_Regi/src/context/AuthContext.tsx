@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type PropsWithChildren 
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
@@ -82,15 +83,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
       await signInWithEmailAndPassword(auth, email, password);
     },
     register: async ({ name, email, password, team }) => {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const normalizedEmail = email.trim().toLowerCase();
+      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
-        email,
+        email: normalizedEmail,
         team: team || 'Egyéni',
         role: UserRole.CSAPATTAG,
         createdAt: new Date(),
         isVerified: false,
       });
+      await sendEmailVerification(userCredential.user);
     },
     resetPassword: async (email) => {
       await sendPasswordResetEmail(auth, email);

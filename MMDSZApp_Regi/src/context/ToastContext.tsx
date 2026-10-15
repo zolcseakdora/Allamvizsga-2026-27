@@ -15,12 +15,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [toastId, setToastId] = useState(0);
 
-  const showToast = (message: string, type: ToastType = 'success') => {
+  const showToast = useCallback((message: string, type: ToastType = 'success') => {
     setToastMessage(message);
     setToastType(type);
     setToastId(prev => prev + 1);
     setIsToastVisible(true);
-  };
+  }, []);
 
   const handleHide = useCallback(() => {
     setIsToastVisible(false);

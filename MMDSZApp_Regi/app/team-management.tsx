@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { TeamManagementScreen } from '@/src/screens/team-management-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { db } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
+import { canRole } from '@/src/constants/roles';
 
 import { UserRole } from '@/src/types/auth';
 
@@ -19,6 +20,7 @@ export default function TeamManagementRoute() {
   const { t } = useTranslation();
   const { profile } = useAuth();
   const { getTeam, saveTeam } = useTeams();
+  const canInviteMembers = canRole(profile?.role, 'inviteMembers');
   const teamName = profile?.team ?? '';
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
@@ -78,16 +80,21 @@ export default function TeamManagementRoute() {
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail || !teamName) {
+    if (!canInviteMembers) {
+      Alert.alert(t('alerts.inviteNotAllowed'));
+      return;
+    }
+    if (!inviteEmail.trim() || !teamName) {
       Alert.alert(t('alerts.inviteEmailRequired'));
       return;
     }
 
     try {
+      const normalizedEmail = inviteEmail.trim().toLowerCase();
       const translatedRole = inviteRole === UserRole.CSAPATTAG ? t('roles.member') : t('roles.deputy');
       const body = t('teamManagement.inviteEmailBody', { teamName, role: translatedRole });
-      await addDoc(collection(db, 'invites'), {
-        email: inviteEmail,
+      await setDoc(doc(db, 'invites', normalizedEmail), {
+        email: normalizedEmail,
         team: teamName,
         role: inviteRole,
         invitedBy: profile?.name || UserRole.CSAPATKAPITANY,
@@ -95,7 +102,7 @@ export default function TeamManagementRoute() {
         status: 'Függőben',
       });
       await addDoc(collection(db, 'mail'), {
-        to: inviteEmail,
+        to: normalizedEmail,
         message: {
           subject: t('teamManagement.inviteEmailSubject'),
           text: `${t('teamManagement.inviteEmailGreeting')} ${body} ${t('teamManagement.inviteEmailAction')}`,
@@ -103,7 +110,7 @@ export default function TeamManagementRoute() {
         },
       });
       setInviteEmail('');
-      Alert.alert(t('alerts.inviteSent', { email: inviteEmail }));
+      Alert.alert(t('alerts.inviteSent', { email: normalizedEmail }));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Alert.alert(t('alerts.generic', { message }));

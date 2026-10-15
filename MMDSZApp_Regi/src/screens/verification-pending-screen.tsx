@@ -3,11 +3,21 @@ import { useTranslation } from 'react-i18next';
 
 type VerificationPendingScreenProps = {
   hasIgazolas: boolean;
+  emailVerified: boolean;
+  isCheckingEmail: boolean;
+  onConfirmEmail: () => void;
   onUploadIgazolas: () => void;
   onLogout: () => void;
 };
 
-export function VerificationPendingScreen({ hasIgazolas, onUploadIgazolas, onLogout }: VerificationPendingScreenProps) {
+export function VerificationPendingScreen({
+  hasIgazolas,
+  emailVerified,
+  isCheckingEmail,
+  onConfirmEmail,
+  onUploadIgazolas,
+  onLogout,
+}: VerificationPendingScreenProps) {
   const { t } = useTranslation();
 
   return (
@@ -18,6 +28,21 @@ export function VerificationPendingScreen({ hasIgazolas, onUploadIgazolas, onLog
           <Text style={styles.cardText}>
             {t('verification.message')}
           </Text>
+
+          <Text style={[styles.emailStatus, { color: emailVerified ? '#27AE60' : '#F39C12' }]}>
+            {emailVerified ? t('verification.emailVerified') : t('verification.emailPending')}
+          </Text>
+          {!emailVerified && (
+            <TouchableOpacity
+              style={styles.outlineButton}
+              onPress={onConfirmEmail}
+              disabled={isCheckingEmail}
+            >
+              <Text style={styles.outlineButtonText}>
+                {isCheckingEmail ? t('verification.checkingEmail') : t('verification.confirmEmail')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {!hasIgazolas ? (
             <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas}>
@@ -42,6 +67,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#F39C12', marginBottom: 6, textAlign: 'center', letterSpacing: 1 },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20, textAlign: 'center', marginVertical: 15 },
+  emailStatus: { textAlign: 'center', fontWeight: 'bold', marginBottom: 12 },
   solidButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
   solidButtonText: { color: '#FFFFFF', fontWeight: 'bold', letterSpacing: 1, textAlign: 'center' },
   uploadedText: { color: '#27AE60', textAlign: 'center', fontWeight: 'bold', marginBottom: 15 },

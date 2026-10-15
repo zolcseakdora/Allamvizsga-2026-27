@@ -11,6 +11,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
 
 import { UserRole } from '@/src/types/auth';
+import { canRole } from '@/src/constants/roles';
 
 export default function App() {
   const { showToast } = useToast();
@@ -71,6 +72,7 @@ export default function App() {
         isVerified={isVerified}
         isCaptainOrDeputy={isCaptainOrDeputy}
         isOrganizerOrHead={isOrganizerOrHead}
+        canInviteOrganizers={canRole(userRole, 'inviteOrganizers')}
         onOpenProfile={() => router.push('/profile')}
         onLogout={handleLogout}
         onUploadIgazolas={handleUploadIgazolas}
@@ -82,6 +84,7 @@ export default function App() {
         onOpenTeamManagement={() => router.push('/team-management')}
         onOpenRegisteredUsers={() => router.push('/users')}
         onOpenAdmin={() => router.push('/admin')}
+        onOpenInvites={() => router.push('/invites')}
       />
     </View>
   );
