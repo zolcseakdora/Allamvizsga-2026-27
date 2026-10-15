@@ -96,7 +96,8 @@ service cloud.firestore {
             && request.resource.data.role == get(inviteRef()).data.role
             && request.resource.data.team == get(inviteRef()).data.team
             && request.resource.data.email == resource.data.email
-            && request.resource.data.isVerified == false);
+            // A jóváhagyási állapot nem változhat (nem lehet magát jóváhagyni)
+            && request.resource.data.isVerified == resource.data.isVerified);
 
       allow delete: if isAdmin();
     }
