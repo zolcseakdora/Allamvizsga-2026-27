@@ -4,10 +4,15 @@ import { useRouter } from 'expo-router';
 
 import { TeamsScreen } from '@/src/screens/teams-screen';
 import { useTeams } from '@/src/hooks/use-teams';
+import { useAuth } from '@/src/context/AuthContext';
+import { canRole } from '@/src/constants/roles';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function TeamsRoute() {
   const router = useRouter();
   const { teams, refresh } = useTeams();
+  const { profile } = useAuth();
+  const canManageTeam = canRole(profile?.role, 'inviteMembers');
 
   useEffect(() => {
     void refresh();
@@ -22,9 +27,11 @@ export default function TeamsRoute() {
   return (
     <TeamsScreen
       teams={teams}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onRefresh={() => void refresh()}
       onOpenVideo={handleOpenVideo}
+      canManageTeam={canManageTeam}
+      onOpenTeamManagement={() => router.push('/team-management')}
     />
   );
 }

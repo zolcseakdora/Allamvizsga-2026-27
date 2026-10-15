@@ -1,4 +1,5 @@
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserRole } from '@/src/types/auth';
 
@@ -10,8 +11,11 @@ type ProfileScreenProps = {
   profileImage: string | null;
   hasIgazolas: boolean;
   isVerified: boolean;
+  canManageAdmin: boolean;
   onBack: () => void;
   onUploadProfileImage: () => void;
+  onSaveName: (name: string) => void;
+  onOpenAdmin: () => void;
 };
 
 export function ProfileScreen({
@@ -22,10 +26,15 @@ export function ProfileScreen({
   profileImage,
   hasIgazolas,
   isVerified,
+  canManageAdmin,
   onBack,
   onUploadProfileImage,
+  onSaveName,
+  onOpenAdmin,
 }: ProfileScreenProps) {
   const { t } = useTranslation();
+  const [editedName, setEditedName] = useState(name);
+
   const translatedRole = role === 'Főszervező'
     ? t('roles.headOrganizer')
     : role === UserRole.SZERVEZO
@@ -52,7 +61,17 @@ export function ProfileScreen({
           <Text style={styles.avatarHint}>{t('profile.editPhoto')}</Text>
           <View style={styles.profileInfoCard}>
             <Text style={styles.profileLabel}>{t('profile.name')}:</Text>
-            <Text style={styles.profileValue}>{name || t('profile.noName')}</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={editedName}
+              onChangeText={setEditedName}
+              placeholder={t('profile.noName')}
+              placeholderTextColor="#888"
+              accessibilityLabel={t('profile.name')}
+            />
+            <TouchableOpacity style={styles.saveNameButton} onPress={() => onSaveName(editedName)}>
+              <Text style={styles.saveNameText}>{t('profile.saveName')}</Text>
+            </TouchableOpacity>
             <Text style={styles.profileLabel}>{t('common.email')}:</Text>
             <Text style={styles.profileValue}>{email}</Text>
             <Text style={styles.profileLabel}>{t('common.team')}:</Text>
@@ -65,6 +84,11 @@ export function ProfileScreen({
               {hasIgazolas ? (isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`) : `❌ ${t('verification.missing')}`}
             </Text>
           </View>
+          {canManageAdmin && (
+            <TouchableOpacity style={styles.adminButton} onPress={onOpenAdmin}>
+              <Text style={styles.adminButtonText}>⚙️ {t('profile.adminPanel')}</Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -85,6 +109,11 @@ const styles = StyleSheet.create({
   profileInfoCard: { width: '100%', backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginTop: 10 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   profileValue: { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' },
+  nameInput: { borderWidth: 1, borderColor: '#444', borderRadius: 8, padding: 10, color: '#FFF', marginTop: 4 },
+  saveNameButton: { alignSelf: 'flex-start', backgroundColor: '#EC2127', borderRadius: 7, paddingHorizontal: 14, paddingVertical: 9, marginTop: 8 },
+  saveNameText: { color: '#FFF', fontWeight: 'bold' },
   roleValue: { color: '#EC2127' },
   verificationStatus: { fontWeight: 'bold' },
+  adminButton: { width: '100%', backgroundColor: '#EC2127', padding: 14, borderRadius: 8, marginTop: 18, alignItems: 'center' },
+  adminButtonText: { color: '#FFF', fontWeight: 'bold' },
 });

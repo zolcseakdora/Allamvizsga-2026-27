@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { GalleryImageScreen } from '@/src/screens/gallery-image-screen';
 import { useGallery } from '@/src/hooks/use-gallery';
 import type { GalleryImage } from '@/src/types/gallery';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function GalleryImageRoute() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function GalleryImageRoute() {
   return (
     <GalleryImageScreen
       image={image}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onDownloadImage={handleDownload}
     />
   );

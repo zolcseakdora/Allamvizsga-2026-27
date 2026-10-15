@@ -2,14 +2,12 @@ import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { HomeScreen } from '@/src/screens/home-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
-import { useNotifications } from '@/src/hooks/use-notifications';
 
 import { UserRole } from '@/src/types/auth';
 import { canRole } from '@/src/constants/roles';
@@ -17,15 +15,12 @@ import { canRole } from '@/src/constants/roles';
 export default function App() {
   const { showToast } = useToast();
   const { t } = useTranslation();
-  const router = useRouter();
   const {
     profile,
     user,
-    logout,
     resendVerificationEmail,
     confirmEmailAndRedeem,
   } = useAuth();
-  const { unreadCount, latestNotification } = useNotifications();
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
@@ -33,11 +28,8 @@ export default function App() {
   const userRole = profile?.role ?? UserRole.CSAPATTAG;
   const hasIgazolas = Boolean(profile?.igazolas);
   const isVerified = profile?.isVerified ?? false;
-  const safeRole = userRole.toLowerCase();
   
-  const isOrganizerOrHead = userRole === UserRole.FOSZERVEZO || userRole === UserRole.SZERVEZO;
-  const isCaptainOrDeputy = userRole === UserRole.CSAPATKAPITANY || userRole === UserRole.ALCSAPATKAPITANY;
-  const showIgazolasUpload = userRole === UserRole.CSAPATTAG || isCaptainOrDeputy;
+  const showIgazolasUpload = canRole(userRole, 'uploadIgazolas');
 
   useEffect(() => {
     const targetDate = new Date('2027-05-20T00:00:00');
@@ -53,10 +45,6 @@ export default function App() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const handleLogout = () => { 
-    void logout(); 
-  };
 
   const handleResendVerificationEmail = async () => {
     setIsResendingEmail(true);
@@ -107,9 +95,6 @@ export default function App() {
   return (
     <View style={{ flex: 1, backgroundColor: '#121212' }}>
       <HomeScreen
-        userRole={userRole}
-        unreadCount={unreadCount}
-        latestNotification={latestNotification}
         emailVerified={user?.emailVerified ?? false}
         isCheckingEmail={isCheckingEmail}
         isResendingEmail={isResendingEmail}
@@ -117,24 +102,9 @@ export default function App() {
         showIgazolasUpload={showIgazolasUpload}
         hasIgazolas={hasIgazolas}
         isVerified={isVerified}
-        isCaptainOrDeputy={isCaptainOrDeputy}
-        isOrganizerOrHead={isOrganizerOrHead}
-        canInviteOrganizers={canRole(userRole, 'inviteOrganizers')}
-        onOpenProfile={() => router.push('/profile')}
-        onLogout={handleLogout}
         onUploadIgazolas={handleUploadIgazolas}
         onResendVerificationEmail={() => void handleResendVerificationEmail()}
         onConfirmEmail={() => void handleConfirmEmail()}
-        onOpenNotifications={() => router.push('/notifications')}
-        onOpenSchedule={() => router.push('/schedule')}
-        onOpenTeams={() => router.push('/teams')}
-        onOpenMap={() => router.push('/map')}
-        onOpenGallery={() => router.push('/gallery')}
-        onOpenPhotoHunt={() => router.push('/photo-hunt')}
-        onOpenTeamManagement={() => router.push('/team-management')}
-        onOpenRegisteredUsers={() => router.push('/users')}
-        onOpenAdmin={() => router.push('/admin')}
-        onOpenInvites={() => router.push('/invites')}
       />
     </View>
   );

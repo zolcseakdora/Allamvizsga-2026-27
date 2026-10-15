@@ -6,6 +6,7 @@ import { useNotifications } from '@/src/hooks/use-notifications';
 import { useToast } from '@/src/context/ToastContext';
 import { NotificationsScreen } from '@/src/screens/notifications-screen';
 import type { Notification } from '@/src/hooks/use-notifications';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function NotificationsRoute() {
   const router = useRouter();
@@ -73,7 +74,7 @@ export default function NotificationsRoute() {
       title={title}
       body={body}
       isSending={isSending}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onTitleChange={setTitle}
       onBodyChange={setBody}
       onSend={() => void handleSend()}

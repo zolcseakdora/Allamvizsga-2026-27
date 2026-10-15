@@ -7,6 +7,8 @@ import { ProgramDetailsScreen } from '@/src/screens/program-details-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { usePrograms } from '@/src/hooks/use-programs';
 import type { Program } from '@/src/types/program';
+import { canRole } from '@/src/constants/roles';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function ProgramDetailsRoute() {
   const router = useRouter();
@@ -29,7 +31,7 @@ export default function ProgramDetailsRoute() {
     };
   }, [getProgram, programId]);
 
-  const isAdmin = profile?.role === 'Szervező' || profile?.role === 'Főszervező';
+  const isAdmin = canRole(profile?.role, 'managePrograms');
 
   if (!program) {
     return null;
@@ -39,10 +41,10 @@ export default function ProgramDetailsRoute() {
     <ProgramDetailsScreen
       program={program}
       isAdmin={isAdmin}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onDelete={(id) => {
         void deleteProgram(id)
-          .then(() => router.back())
+          .then(() => goBackOrHome(router))
           .catch((error: unknown) => {
             const message = error instanceof Error ? error.message : String(error);
             Alert.alert(t('alerts.generic', { message }));

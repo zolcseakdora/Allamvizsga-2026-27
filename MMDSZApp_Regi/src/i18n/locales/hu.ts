@@ -7,6 +7,14 @@ const hu = {
   navigation: {
     home: 'Főoldal',
     explore: 'Felfedezés',
+    brand: 'MMDSZ DIÁKNAPOK',
+    menu: 'NAVIGÁCIÓ',
+    programs: 'Programok',
+    gallery: 'Galéria',
+    games: 'Játékok',
+    teams: 'Csapatok',
+    map: 'Térkép',
+    notifications: 'Értesítések',
   },
   explore: {
     title: 'Felfedezés',
@@ -85,6 +93,8 @@ const hu = {
     title: 'SAJÁT PROFIL',
     back: 'Vissza a főoldalra',
     editPhoto: 'Kattints a képre a módosításhoz',
+    saveName: 'Név mentése',
+    adminPanel: 'Admin pult',
     name: 'Név',
     noName: 'Nincs megadva',
     individualTeam: 'Egyéni',
@@ -126,6 +136,7 @@ const hu = {
   teams: {
     title: 'CSAPATOK TÁBORA',
     instruction: 'Kattints a logóra a csapat videójáért!',
+    manageTeam: 'Csapatkezelés',
     empty: 'Még nincsenek feltöltött csapatok.',
     unnamed: 'Névtelen csapat',
   },
@@ -220,6 +231,10 @@ const hu = {
   },
   admin: {
     title: 'ADMIN VEZÉRLŐPULT',
+    management: 'Kezelés',
+    managePrograms: 'Programok kezelése / esemény törlése',
+    registeredUsers: 'Regisztrált felhasználók',
+    invites: 'Meghívók',
     addProgram: 'Új program hozzáadása',
     chooseDay: 'Válassz napot:',
     programTitlePlaceholder: 'Program neve (pl. Koncert)',

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { GalleryScreen } from '@/src/screens/gallery-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { useGallery } from '@/src/hooks/use-gallery';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function GalleryFolderRoute() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function GalleryFolderRoute() {
     <GalleryScreen
       selectedFolder={folder}
       images={images}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onRefresh={() => void refresh(folder)}
       onSelectFolder={() => undefined}
       onUploadImage={() => void handleUpload()}

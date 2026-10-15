@@ -1,15 +1,7 @@
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { MenuButton } from '@/src/components/features/home/menu-button';
-import type { Notification } from '@/src/hooks/use-notifications';
-
-import { UserRole } from '@/src/types/auth';
-
 type HomeScreenProps = {
-  userRole: UserRole;
-  unreadCount: number;
-  latestNotification: Notification | null;
   emailVerified: boolean;
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
@@ -17,30 +9,12 @@ type HomeScreenProps = {
   showIgazolasUpload: boolean;
   hasIgazolas: boolean;
   isVerified: boolean;
-  isCaptainOrDeputy: boolean;
-  isOrganizerOrHead: boolean;
-  canInviteOrganizers: boolean;
-  onOpenProfile: () => void;
-  onLogout: () => void;
   onUploadIgazolas: () => void;
   onResendVerificationEmail: () => void;
   onConfirmEmail: () => void;
-  onOpenNotifications: () => void;
-  onOpenSchedule: () => void;
-  onOpenTeams: () => void;
-  onOpenMap: () => void;
-  onOpenGallery: () => void;
-  onOpenPhotoHunt: () => void;
-  onOpenTeamManagement: () => void;
-  onOpenRegisteredUsers: () => void;
-  onOpenAdmin: () => void;
-  onOpenInvites: () => void;
 };
 
 export function HomeScreen({
-  userRole,
-  unreadCount,
-  latestNotification,
   emailVerified,
   isCheckingEmail,
   isResendingEmail,
@@ -48,50 +22,40 @@ export function HomeScreen({
   showIgazolasUpload,
   hasIgazolas,
   isVerified,
-  isCaptainOrDeputy,
-  isOrganizerOrHead,
-  canInviteOrganizers,
-  onOpenProfile,
-  onLogout,
   onUploadIgazolas,
   onResendVerificationEmail,
   onConfirmEmail,
-  onOpenNotifications,
-  onOpenSchedule,
-  onOpenTeams,
-  onOpenMap,
-  onOpenGallery,
-  onOpenPhotoHunt,
-  onOpenTeamManagement,
-  onOpenRegisteredUsers,
-  onOpenAdmin,
-  onOpenInvites,
 }: HomeScreenProps) {
-  const { t, i18n } = useTranslation();
-  const translatedRole = userRole === 'Főszervező'
-    ? t('roles.headOrganizer')
-    : userRole === UserRole.SZERVEZO
-      ? t('roles.organizer')
-      : userRole === UserRole.CSAPATKAPITANY
-        ? t('roles.captain')
-        : userRole === UserRole.ALCSAPATKAPITANY
-          ? t('roles.deputy')
-          : userRole === UserRole.CSAPATTAG
-            ? t('roles.member')
-            : userRole;
+  const { t } = useTranslation();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.headerRow}>
-            <Text style={styles.title}>{t('home.title')} ⛺</Text>
-            <View style={styles.headerActions}>
-              <TouchableOpacity onPress={onOpenProfile} style={styles.profileButton}><Text style={styles.profileText}>{t('home.profile')}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={onLogout}><Text style={styles.logoutText}>{t('common.logout')}</Text></TouchableOpacity>
+          <Text style={styles.title}>{t('home.title')} ⛺</Text>
+
+          <View style={styles.countdownCard}>
+            <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
+            <Text style={styles.countdownSub}>{t('home.date')}</Text>
+            <View style={styles.timerRow}>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>{t('home.days')}</Text></View>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>{t('home.hours')}</Text></View>
+              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>{t('home.minutes')}</Text></View>
             </View>
           </View>
-          <Text style={styles.subtitle}>{t('home.signedInAs')} <Text style={styles.roleText}>{translatedRole}</Text></Text>
+
+          <View style={styles.newsCard}>
+            <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
+            <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
+            <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
+            <Image source={require('@/assets/images/felvonulas.png')} style={styles.bandImage} resizeMode="cover" />
+          </View>
+          <View style={styles.newsCard}>
+            <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
+            <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
+            <Text style={styles.cardText}>{t('home.concertBody')}</Text>
+            <Image source={require('@/assets/images/dondi.png')} style={styles.bandImage} resizeMode="cover" />
+          </View>
 
           {!emailVerified && (
             <View style={styles.emailWarningCard}>
@@ -118,53 +82,6 @@ export function HomeScreen({
             </View>
           )}
 
-          <TouchableOpacity style={styles.latestNotificationCard} onPress={onOpenNotifications}>
-            <View style={styles.latestNotificationHeader}>
-              <Text style={styles.cardTitle}>🔔 {t('notifications.latest')}</Text>
-              {unreadCount > 0 && (
-                <Text style={styles.latestNotificationBadge}>{unreadCount}</Text>
-              )}
-            </View>
-            {latestNotification ? (
-              <>
-                <Text style={styles.cardText}>{latestNotification.title}</Text>
-                <Text style={styles.notificationTime}>
-                  {latestNotification.createdAt
-                    ? latestNotification.createdAt.toDate().toLocaleString(i18n.language, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })
-                    : t('notifications.sendingTime')}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.cardText}>{t('notifications.empty')}</Text>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.countdownCard}>
-            <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
-            <Text style={styles.countdownSub}>{t('home.date')}</Text>
-            <View style={styles.timerRow}>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>{t('home.days')}</Text></View>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>{t('home.hours')}</Text></View>
-              <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>{t('home.minutes')}</Text></View>
-            </View>
-          </View>
-
-          <View style={styles.newsCard}>
-            <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
-            <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
-            <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
-            <Image source={require('@/assets/images/felvonulas.png')} style={styles.bandImage} resizeMode="cover" />
-          </View>
-          <View style={styles.newsCard}>
-            <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
-            <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
-            <Text style={styles.cardText}>{t('home.concertBody')}</Text>
-            <Image source={require('@/assets/images/dondi.png')} style={styles.bandImage} resizeMode="cover" />
-          </View>
-
           {showIgazolasUpload && (
             <View style={styles.studentCard}>
               <Text style={styles.cardTitle}>🎓 {t('home.studentCard')}</Text>
@@ -180,18 +97,6 @@ export function HomeScreen({
             </View>
           )}
 
-          <View style={styles.menuGrid}>
-            <MenuButton icon="📅" label={t('home.menuPrograms')} onPress={onOpenSchedule} />
-            <MenuButton icon="🛡️" label={t('home.menuTeams')} onPress={onOpenTeams} />
-            <MenuButton icon="🗺️" label={t('home.menuMap')} onPress={onOpenMap} />
-            <MenuButton icon="📸" label={t('home.menuGallery')} onPress={onOpenGallery} />
-            <MenuButton icon="📷" label={t('home.menuPhotoHunt')} onPress={onOpenPhotoHunt} />
-            {isCaptainOrDeputy && <MenuButton icon="⚙️" label={t('home.menuTeamManagement')} onPress={onOpenTeamManagement} />}
-            {isOrganizerOrHead && <MenuButton icon="👥" label={t('home.menuUsers')} onPress={onOpenRegisteredUsers} />}
-            {userRole === UserRole.FOSZERVEZO && <MenuButton icon="⚙️" label={t('home.menuAdmin')} onPress={onOpenAdmin} />}
-            {canInviteOrganizers && <MenuButton icon="✉️" label={t('home.menuInvites')} onPress={onOpenInvites} />}
-            <MenuButton icon="🔔" label={t('notifications.title')} badge={unreadCount} onPress={onOpenNotifications} />
-          </View>
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -200,22 +105,11 @@ export function HomeScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
-  scrollContainer: { flexGrow: 1, paddingVertical: 20 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6, textAlign: 'center', letterSpacing: 1 },
-  profileButton: { marginRight: 15 },
-  profileText: { color: '#EC2127', fontWeight: 'bold' },
-  logoutText: { color: '#888', fontWeight: 'bold' },
-  subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
+  webWrapper: { width: '100%', maxWidth: 900, flex: 1, paddingHorizontal: 20, alignSelf: 'center' },
+  scrollContainer: { flexGrow: 1, paddingVertical: 20, paddingBottom: 32 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12, textAlign: 'center', letterSpacing: 1 },
   emailWarningCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#F39C12', borderRadius: 10, padding: 16, marginBottom: 15 },
   emailWarningTitle: { fontSize: 16, fontWeight: 'bold', color: '#F39C12', textAlign: 'center', marginBottom: 8 },
-  latestNotificationCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
-  latestNotificationHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  latestNotificationBadge: { minWidth: 24, overflow: 'hidden', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, backgroundColor: '#EC2127', color: '#FFF', fontSize: 12, fontWeight: 'bold', textAlign: 'center' },
-  notificationTime: { color: '#999', fontSize: 12, marginTop: 5 },
-  roleText: { fontWeight: 'bold', color: '#EC2127' },
   countdownCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 15 },
   countdownTitle: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5 },
   countdownSub: { color: '#aaa', fontSize: 13, marginBottom: 10 },
@@ -233,5 +127,4 @@ const styles = StyleSheet.create({
   verificationStatus: { fontWeight: 'bold', marginTop: 5 },
   outlineButton: { borderWidth: 2, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center', marginBottom: 14, backgroundColor: '#1E1E1E' },
   outlineButtonText: { color: '#FFF', fontWeight: 'bold' },
-  menuGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 10 },
 });

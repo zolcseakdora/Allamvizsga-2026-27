@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 
 import { RegisteredUsersScreen } from '@/src/screens/registered-users-screen';
 import { useAdmin } from '@/src/hooks/use-admin';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function RegisteredUsersRoute() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export default function RegisteredUsersRoute() {
   return (
     <RegisteredUsersScreen
       users={registeredUsers}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onRefresh={() => void refreshRegisteredUsers()}
     />
   );

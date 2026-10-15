@@ -17,6 +17,14 @@ const en: TranslationShape<typeof hu> = {
   navigation: {
     home: 'Home',
     explore: 'Explore',
+    brand: 'MMDSZ DIÁKNAPOK',
+    menu: 'NAVIGATION',
+    programs: 'Schedule',
+    gallery: 'Gallery',
+    games: 'Games',
+    teams: 'Teams',
+    map: 'Map',
+    notifications: 'Notifications',
   },
   explore: {
     title: 'Explore',
@@ -95,6 +103,8 @@ const en: TranslationShape<typeof hu> = {
     title: 'MY PROFILE',
     back: 'Back to home',
     editPhoto: 'Tap the image to change it',
+    saveName: 'Save name',
+    adminPanel: 'Admin panel',
     name: 'Name',
     noName: 'Not provided',
     individualTeam: 'Individual',
@@ -136,6 +146,7 @@ const en: TranslationShape<typeof hu> = {
   teams: {
     title: 'TEAM CAMP',
     instruction: 'Tap a logo to watch the team video!',
+    manageTeam: 'Manage team',
     empty: 'No teams have been added yet.',
     unnamed: 'Unnamed team',
   },
@@ -230,6 +241,10 @@ const en: TranslationShape<typeof hu> = {
   },
   admin: {
     title: 'ADMIN DASHBOARD',
+    management: 'Management',
+    managePrograms: 'Manage programs / delete events',
+    registeredUsers: 'Registered users',
+    invites: 'Invitations',
     addProgram: 'Add a new event',
     chooseDay: 'Choose a day:',
     programTitlePlaceholder: 'Event name (e.g. concert)',

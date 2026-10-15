@@ -10,6 +10,7 @@ import { useToast } from '@/src/context/ToastContext';
 import { db } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { UserRole } from '@/src/types/auth';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function InvitesRoute() {
   const { t } = useTranslation();
@@ -81,7 +82,7 @@ export default function InvitesRoute() {
       teamName={selectedTeamName}
       email={email}
       role={role}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onTeamChange={setTeamName}
       onEmailChange={setEmail}
       onRoleChange={setRole}

@@ -13,9 +13,18 @@ type TeamsScreenProps = {
   onBack: () => void;
   onRefresh: () => void;
   onOpenVideo: (videoLink?: string) => void;
+  canManageTeam: boolean;
+  onOpenTeamManagement: () => void;
 };
 
-export function TeamsScreen({ teams, onBack, onRefresh, onOpenVideo }: TeamsScreenProps) {
+export function TeamsScreen({
+  teams,
+  onBack,
+  onRefresh,
+  onOpenVideo,
+  canManageTeam,
+  onOpenTeamManagement,
+}: TeamsScreenProps) {
   const { t } = useTranslation();
 
   return (
@@ -27,6 +36,11 @@ export function TeamsScreen({ teams, onBack, onRefresh, onOpenVideo }: TeamsScre
         </View>
         <Text style={styles.title}>🛡️ {t('teams.title')}</Text>
         <Text style={styles.subtitle}>{t('teams.instruction')}</Text>
+        {canManageTeam && (
+          <TouchableOpacity style={styles.manageButton} onPress={onOpenTeamManagement}>
+            <Text style={styles.manageButtonText}>⚙️ {t('teams.manageTeam')}</Text>
+          </TouchableOpacity>
+        )}
 
         <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
           <View style={styles.grid}>
@@ -63,6 +77,8 @@ const styles = StyleSheet.create({
   refreshText: { color: '#27AE60', fontSize: 15, fontWeight: 'bold' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#EC2127', marginBottom: 6, textAlign: 'center', letterSpacing: 1, marginTop: 15 },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
+  manageButton: { backgroundColor: '#EC2127', padding: 12, borderRadius: 8, alignItems: 'center' },
+  manageButtonText: { color: '#FFF', fontWeight: 'bold' },
   list: { width: '100%', marginTop: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   emptyState: { textAlign: 'center', width: '100%', color: '#888', marginTop: 20 },

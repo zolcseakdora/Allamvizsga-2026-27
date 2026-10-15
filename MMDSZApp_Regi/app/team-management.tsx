@@ -12,6 +12,7 @@ import { useTeams } from '@/src/hooks/use-teams';
 import { canRole } from '@/src/constants/roles';
 
 import { UserRole } from '@/src/types/auth';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 
@@ -141,7 +142,7 @@ export default function TeamManagementRoute() {
       teamFlag={teamFlag}
       inviteEmail={inviteEmail}
       inviteRole={inviteRole}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onRefresh={() => void refresh()}
       onDescriptionChange={setTeamDescription}
       onVideoLinkChange={setTeamVideoLink}

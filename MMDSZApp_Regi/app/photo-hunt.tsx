@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PhotoHuntScreen } from '@/src/screens/photo-hunt-screen';
 import { usePhotoHunt } from '@/src/hooks/use-photo-hunt';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function PhotoHuntRoute() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function PhotoHuntRoute() {
   return (
     <PhotoHuntScreen
       progress={progress}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onRefresh={() => void refresh()}
       onUpload={handleUpload}
     />

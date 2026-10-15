@@ -34,6 +34,9 @@ type AdminDashboardScreenProps = {
   onSendNotification: () => void;
   onFetchPendingUsers: () => void;
   onApproveUser: (userId: string) => void;
+  onOpenPrograms: () => void;
+  onOpenUsers: () => void;
+  onOpenInvites: () => void;
 };
 
 export function AdminDashboardScreen({
@@ -57,6 +60,9 @@ export function AdminDashboardScreen({
   onSendNotification,
   onFetchPendingUsers,
   onApproveUser,
+  onOpenPrograms,
+  onOpenUsers,
+  onOpenInvites,
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
 
@@ -71,6 +77,19 @@ export function AdminDashboardScreen({
         <Text style={styles.title}>⚙️ {t('admin.title')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🧰 {t('admin.management')}</Text>
+            <TouchableOpacity style={styles.outlineButton} onPress={onOpenPrograms}>
+              <Text style={styles.outlineButtonText}>📅 {t('admin.managePrograms')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
+              <Text style={styles.outlineButtonText}>👥 {t('admin.registeredUsers')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
+              <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 {t('admin.addProgram')}</Text>
             <Text style={styles.profileLabel}>{t('admin.chooseDay')}</Text>
@@ -149,6 +168,7 @@ const styles = StyleSheet.create({
   solidButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
   solidButtonText: { color: '#FFFFFF', fontWeight: 'bold', letterSpacing: 1, textAlign: 'center' },
   outlineButton: { borderWidth: 2, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center', marginBottom: 14, backgroundColor: '#1E1E1E' },
+  lastOutlineButton: { marginBottom: 0 },
   outlineButtonText: { color: '#FFF', fontWeight: 'bold' },
   pendingList: { marginTop: 10 },
   emptyState: { color: '#888', textAlign: 'center', marginTop: 10 },

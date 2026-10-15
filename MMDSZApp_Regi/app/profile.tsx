@@ -8,11 +8,24 @@ import { ProfileScreen } from '@/src/screens/profile-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { UserRole } from '@/src/types/auth';
+import { canRole } from '@/src/constants/roles';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function ProfileRoute() {
   const router = useRouter();
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+
+  const handleSaveName = async (name: string) => {
+    if (!auth.currentUser) return;
+    try {
+      await updateDoc(doc(db, 'users', auth.currentUser.uid), { name: name.trim() });
+      Alert.alert(t('alerts.profileUpdated'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t('alerts.generic', { message }));
+    }
+  };
 
   const handleUploadProfileImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -56,8 +69,11 @@ export default function ProfileRoute() {
       profileImage={profile?.profileImage ?? null}
       hasIgazolas={Boolean(profile?.igazolas)}
       isVerified={profile?.isVerified ?? false}
-      onBack={() => router.back()}
+      canManageAdmin={canRole(profile?.role, 'manageAdmin')}
+      onBack={() => goBackOrHome(router)}
       onUploadProfileImage={handleUploadProfileImage}
+      onSaveName={handleSaveName}
+      onOpenAdmin={() => router.push('/admin')}
     />
   );
 }

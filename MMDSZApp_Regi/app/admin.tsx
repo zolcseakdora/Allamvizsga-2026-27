@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AdminDashboardScreen } from '@/src/screens/admin-dashboard-screen';
 import { useAdmin } from '@/src/hooks/use-admin';
+import { useAuth } from '@/src/context/AuthContext';
+import { canRole } from '@/src/constants/roles';
+import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function AdminRoute() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { profile } = useAuth();
+  const canManageAdmin = canRole(profile?.role, 'manageAdmin');
   const {
     pendingUsers,
     refreshPendingUsers,
@@ -25,6 +30,10 @@ export default function AdminRoute() {
   const [notifBody, setNotifBody] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showPending, setShowPending] = useState(false);
+
+  useEffect(() => {
+    if (profile && !canManageAdmin) router.replace('/');
+  }, [canManageAdmin, profile, router]);
 
   const handleAddEvent = async () => {
     if (!adminEventTitle || !adminEventTime || !adminEventLocation) {
@@ -79,6 +88,8 @@ export default function AdminRoute() {
     }
   };
 
+  if (!canManageAdmin) return null;
+
   return (
     <AdminDashboardScreen
       adminEventDay={adminEventDay}
@@ -90,7 +101,7 @@ export default function AdminRoute() {
       notifBody={notifBody}
       showPending={showPending}
       pendingUsers={pendingUsers}
-      onBack={() => router.back()}
+      onBack={() => goBackOrHome(router)}
       onEventDayChange={setAdminEventDay}
       onEventTitleChange={setAdminEventTitle}
       onEventTimeChange={setAdminEventTime}
@@ -101,6 +112,9 @@ export default function AdminRoute() {
       onSendNotification={handleSendNotification}
       onFetchPendingUsers={() => void handleFetchPending()}
       onApproveUser={(userId) => void handleApprove(userId)}
+      onOpenPrograms={() => router.push('/schedule')}
+      onOpenUsers={() => router.push('/users')}
+      onOpenInvites={() => router.push('/invites')}
     />
   );
 }
