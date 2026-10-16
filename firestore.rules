@@ -131,6 +131,13 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ---------- Galéria, nagy képek ----------
+    match /gallery_images/{docId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update, delete: if isAdmin();
+    }
+    
     // ---------- Térkép ----------
     match /map_points/{pointId} {
       allow read: if isApproved();
