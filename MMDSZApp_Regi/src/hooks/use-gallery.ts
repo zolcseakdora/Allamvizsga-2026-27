@@ -1,8 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import {
-  addDoc,
   collection,
-  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
@@ -13,6 +11,7 @@ import {
   startAfter,
   Timestamp,
   where,
+  writeBatch,
   type QueryDocumentSnapshot,
   type DocumentData,
 } from 'firebase/firestore';
@@ -128,12 +127,25 @@ export function useGallery() {
   }, []);
 
   const getImage = useCallback(async (imageId: string) => {
-    const snapshot = await getDoc(doc(db, 'gallery', imageId));
-    return snapshot.exists() ? toGalleryImage(snapshot.id, snapshot.data()) : null;
+    const [gallerySnapshot, imageSnapshot] = await Promise.all([
+      getDoc(doc(db, 'gallery', imageId)),
+      getDoc(doc(db, 'gallery_images', imageId)),
+    ]);
+    const galleryData = gallerySnapshot.exists() ? gallerySnapshot.data() : {};
+    const fullImage = imageSnapshot.exists()
+      ? imageSnapshot.data().image
+      : galleryData.image;
+
+    if (typeof fullImage !== 'string' || fullImage.length <= 10) return null;
+
+    return toGalleryImage(imageId, { ...galleryData, image: fullImage });
   }, []);
 
   const deleteImage = useCallback(async (imageId: string) => {
-    await deleteDoc(doc(db, 'gallery', imageId));
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'gallery', imageId));
+    batch.delete(doc(db, 'gallery_images', imageId));
+    await batch.commit();
   }, []);
 
   const upload = useCallback(async (folder: string, uploadedBy: string) => {
@@ -158,13 +170,16 @@ export function useGallery() {
           makeThumbnail(asset.uri),
         ]);
 
-        await addDoc(collection(db, 'gallery'), {
-          image,
+        const imageId = doc(collection(db, 'gallery')).id;
+        const batch = writeBatch(db);
+        batch.set(doc(db, 'gallery', imageId), {
           thumb,
           category: folder,
           uploadedBy: uploadedBy || 'Névtelen',
           createdAt: new Date(),
         });
+        batch.set(doc(db, 'gallery_images', imageId), { image });
+        await batch.commit();
         uploadedCount += 1;
       }
 
