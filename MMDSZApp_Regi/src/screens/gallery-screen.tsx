@@ -1,7 +1,8 @@
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { ImageAspectFrame } from '@/src/components/image-aspect-frame';
 import { GALLERY_FOLDERS } from '@/src/constants/gallery';
 
 type GalleryImage = {
@@ -87,9 +88,7 @@ export function GalleryScreen({
               ) : (
                 images.map(image => (
                   <TouchableOpacity key={image.id} style={styles.galleryCard} onPress={() => onSelectImage(image)}>
-                    <View style={styles.galleryImageFrame}>
-                      <Image source={{ uri: image.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                    </View>
+                    <ImageAspectFrame source={{ uri: image.image }} style={styles.galleryImageFrame} />
                     <Text style={styles.galleryAuthor}>{t('gallery.uploadedBy', { name: image.uploadedBy })}</Text>
                   </TouchableOpacity>
                 ))
@@ -123,6 +122,6 @@ const styles = StyleSheet.create({
   imageList: { flex: 1, width: '100%' },
   emptyState: { textAlign: 'center', marginTop: 30, color: '#888' },
   galleryCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, marginBottom: 15, overflow: 'hidden', paddingBottom: 10 },
-  galleryImageFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 10, overflow: 'hidden' },
+  galleryImageFrame: { borderRadius: 10 },
   galleryAuthor: { color: '#aaa', fontSize: 12, paddingHorizontal: 12, marginTop: 8 },
 });

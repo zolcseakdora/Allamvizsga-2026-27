@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
+import { ImageAspectFrame } from '@/src/components/image-aspect-frame';
 import { EVENT_DAY_LABEL_KEYS } from '@/src/constants/event-days';
 
 type ProgramDetails = {
@@ -54,9 +55,7 @@ export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: Pro
           <Text style={styles.programDetail}>📍 {program.helyszín || t('programs.locationComing')} | {dayLabel}</Text>
 
           {program.image ? (
-            <View style={styles.programImageFrame}>
-              <Image source={{ uri: program.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            </View>
+            <ImageAspectFrame source={{ uri: program.image }} style={styles.programImageFrame} />
           ) : null}
 
           <View style={styles.card}>
@@ -108,7 +107,7 @@ const styles = StyleSheet.create({
   timeBadge: { alignSelf: 'flex-start', backgroundColor: '#EC2127', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'center' },
   timeText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
   programDetail: { fontSize: 13, color: '#aaa', marginBottom: 4 },
-  programImageFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 10, marginVertical: 15, overflow: 'hidden' },
+  programImageFrame: { borderRadius: 10, marginVertical: 15 },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20 },

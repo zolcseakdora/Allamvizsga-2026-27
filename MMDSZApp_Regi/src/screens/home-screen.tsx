@@ -1,6 +1,8 @@
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+
+import { ImageAspectFrame } from '@/src/components/image-aspect-frame';
 
 type HomeScreenProps = {
   emailVerified: boolean;
@@ -54,17 +56,13 @@ export function HomeScreen({
               <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
               <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
               <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
-              <View style={styles.bandImageFrame}>
-                <Image source={require('@/assets/images/felvonulas.png')} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              </View>
+              <ImageAspectFrame source={require('@/assets/images/felvonulas.png')} style={styles.bandImageFrame} />
             </View>
             <View style={[styles.newsCard, !isDesktop && styles.mobileNewsCard, isDesktop && styles.desktopNewsCard, isWideDesktop && styles.desktopNewsCardWide]}>
               <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
               <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
               <Text style={styles.cardText}>{t('home.concertBody')}</Text>
-              <View style={styles.bandImageFrame}>
-                <Image source={require('@/assets/images/dondi.png')} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              </View>
+              <ImageAspectFrame source={require('@/assets/images/dondi.png')} style={styles.bandImageFrame} />
             </View>
           </View>
 
@@ -138,7 +136,7 @@ const styles = StyleSheet.create({
   concertBadge: { backgroundColor: '#27AE60' },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20 },
-  bandImageFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 8, marginTop: 10, overflow: 'hidden' },
+  bandImageFrame: { borderRadius: 8, marginTop: 10 },
   studentCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15, alignItems: 'center' },
   verificationStatus: { fontWeight: 'bold', marginTop: 5 },
   outlineButton: { borderWidth: 2, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center', marginBottom: 14, backgroundColor: '#1E1E1E' },
