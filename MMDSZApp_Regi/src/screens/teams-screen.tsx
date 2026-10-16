@@ -1,4 +1,5 @@
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 type TeamSummary = {
@@ -26,15 +27,15 @@ export function TeamsScreen({
   onOpenTeamManagement,
 }: TeamsScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.webWrapper}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
+      <View style={[styles.webWrapper, width < 900 && styles.mobileWebWrapper]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
           <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
-        <Text style={styles.title}>🛡️ {t('teams.title')}</Text>
+        <Text style={[styles.title, width < 900 && styles.mobileTitle]}>🛡️ {t('teams.title')}</Text>
         <Text style={styles.subtitle}>{t('teams.instruction')}</Text>
         {canManageTeam && (
           <TouchableOpacity style={styles.manageButton} onPress={onOpenTeamManagement}>
@@ -42,7 +43,11 @@ export function TeamsScreen({
           </TouchableOpacity>
         )}
 
-        <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.grid}>
             {teams.length === 0 ? (
               <Text style={styles.emptyState}>{t('teams.empty')}</Text>
@@ -71,15 +76,18 @@ export function TeamsScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
+  webWrapper: { width: '100%', maxWidth: 1200, flex: 1, padding: 24, alignSelf: 'flex-start' },
+  mobileWebWrapper: { paddingTop: 12, paddingHorizontal: 12, paddingBottom: 0 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   refreshText: { color: '#27AE60', fontSize: 15, fontWeight: 'bold' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#EC2127', marginBottom: 6, textAlign: 'center', letterSpacing: 1, marginTop: 15 },
+  mobileTitle: { marginTop: 0 },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
   manageButton: { backgroundColor: '#EC2127', padding: 12, borderRadius: 8, alignItems: 'center' },
   manageButtonText: { color: '#FFF', fontWeight: 'bold' },
-  list: { width: '100%', marginTop: 10 },
+  list: { flex: 1, width: '100%', marginTop: 10 },
+  listContent: { paddingBottom: 16 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
   emptyState: { textAlign: 'center', width: '100%', color: '#888', marginTop: 20 },
   teamCard: { width: '48%', backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12, padding: 15, alignItems: 'center', marginBottom: 15 },

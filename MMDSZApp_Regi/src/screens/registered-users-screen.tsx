@@ -1,4 +1,5 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { UserRole } from '@/src/types/auth';
 
@@ -17,12 +18,13 @@ type RegisteredUsersScreenProps = {
 
 export function RegisteredUsersScreen({ users, onBack, onRefresh }: RegisteredUsersScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          {width < 900 && <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>}
           <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
         <Text style={styles.title}>👥 {t('users.title')}</Text>
@@ -55,7 +57,7 @@ function translateRole(role: UserRole | undefined, t: (key: string) => string) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
+  webWrapper: { width: '100%', maxWidth: 1200, flex: 1, padding: 24, alignSelf: 'flex-start' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   refreshText: { color: '#27AE60', fontSize: 15, fontWeight: 'bold' },

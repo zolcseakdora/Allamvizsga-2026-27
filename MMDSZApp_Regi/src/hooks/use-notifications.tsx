@@ -59,7 +59,10 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
   const { showToast } = useToast();
   const { user, profile } = useAuth();
   const canRead = Boolean(
-    user && (profile?.isVerified === true || profile?.role === UserRole.FOSZERVEZO),
+    user
+    && profile
+    && canRole(profile.role, 'readNotifications')
+    && (profile.isVerified || profile.role === UserRole.FOSZERVEZO),
   );
   const canSend = canRole(profile?.role, 'sendNotifications');
   const [notificationData, setNotificationData] = useState<{
@@ -149,7 +152,7 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
   }, [canRead, showToast, t, user]);
 
   const markAllSeen = useCallback(async () => {
-    if (!user) return;
+    if (!user || !canRead) return;
     const previousLocalSeenAt = localSeenAtRef.current?.uid === user.uid
       ? localSeenAtRef.current
       : null;
@@ -165,7 +168,7 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
       setLocalSeenAtData(previousLocalSeenAt);
       throw snapshotError;
     }
-  }, [user]);
+  }, [canRead, user]);
 
   const sendNotification = useCallback(async (title: string, body: string) => {
     if (!canSend || !user) {

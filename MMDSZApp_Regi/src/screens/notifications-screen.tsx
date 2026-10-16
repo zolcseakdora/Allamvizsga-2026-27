@@ -1,4 +1,5 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,15 +47,16 @@ export function NotificationsScreen({
   onDelete,
 }: NotificationsScreenProps) {
   const { t, i18n } = useTranslation();
+  const { width } = useWindowDimensions();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}>
+          {width < 900 && <TouchableOpacity onPress={onBack}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
         <Text style={styles.title}>🔔 {t('notifications.title')}</Text>
 

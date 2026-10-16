@@ -1,4 +1,5 @@
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/src/components/controls/filter-chip';
@@ -34,6 +35,7 @@ type AdminDashboardScreenProps = {
   onSendNotification: () => void;
   onFetchPendingUsers: () => void;
   onApproveUser: (userId: string) => void;
+  onOpenVerifications: () => void;
   onOpenPrograms: () => void;
   onOpenUsers: () => void;
   onOpenInvites: () => void;
@@ -60,19 +62,21 @@ export function AdminDashboardScreen({
   onSendNotification,
   onFetchPendingUsers,
   onApproveUser,
+  onOpenVerifications,
   onOpenPrograms,
   onOpenUsers,
   onOpenInvites,
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}>
+          {width < 900 && <TouchableOpacity onPress={onBack}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>}
         </View>
         <Text style={styles.title}>⚙️ {t('admin.title')}</Text>
 
@@ -81,6 +85,9 @@ export function AdminDashboardScreen({
             <Text style={styles.cardTitle}>🧰 {t('admin.management')}</Text>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenPrograms}>
               <Text style={styles.outlineButtonText}>📅 {t('admin.managePrograms')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.outlineButton} onPress={onOpenVerifications}>
+              <Text style={styles.outlineButtonText}>🎓 {t('more.verification')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
               <Text style={styles.outlineButtonText}>👥 {t('admin.registeredUsers')}</Text>
@@ -153,7 +160,7 @@ export function AdminDashboardScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
+  webWrapper: { width: '100%', maxWidth: 1000, flex: 1, padding: 24, alignSelf: 'flex-start' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#EC2127', marginBottom: 6, textAlign: 'center', letterSpacing: 1, marginTop: 15 },

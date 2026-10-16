@@ -8,7 +8,6 @@ import { ProfileScreen } from '@/src/screens/profile-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { UserRole } from '@/src/types/auth';
-import { canRole } from '@/src/constants/roles';
 import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function ProfileRoute() {
@@ -69,11 +68,9 @@ export default function ProfileRoute() {
       profileImage={profile?.profileImage ?? null}
       hasIgazolas={Boolean(profile?.igazolas)}
       isVerified={profile?.isVerified ?? false}
-      canManageAdmin={canRole(profile?.role, 'manageAdmin')}
       onBack={() => goBackOrHome(router)}
       onUploadProfileImage={handleUploadProfileImage}
       onSaveName={handleSaveName}
-      onOpenAdmin={() => router.push('/admin')}
     />
   );
 }

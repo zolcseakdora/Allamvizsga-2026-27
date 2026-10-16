@@ -1,4 +1,5 @@
-import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UserRole } from '@/src/types/auth';
@@ -11,11 +12,9 @@ type ProfileScreenProps = {
   profileImage: string | null;
   hasIgazolas: boolean;
   isVerified: boolean;
-  canManageAdmin: boolean;
   onBack: () => void;
   onUploadProfileImage: () => void;
   onSaveName: (name: string) => void;
-  onOpenAdmin: () => void;
 };
 
 export function ProfileScreen({
@@ -26,13 +25,12 @@ export function ProfileScreen({
   profileImage,
   hasIgazolas,
   isVerified,
-  canManageAdmin,
   onBack,
   onUploadProfileImage,
   onSaveName,
-  onOpenAdmin,
 }: ProfileScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const [editedName, setEditedName] = useState(name);
 
   const translatedRole = role === 'Főszervező'
@@ -48,11 +46,13 @@ export function ProfileScreen({
             : role;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← {t('profile.back')}</Text>
-        </TouchableOpacity>
+        {width < 900 && (
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← {t('profile.back')}</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.title}>👤 {t('profile.title')}</Text>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <TouchableOpacity onPress={onUploadProfileImage} style={styles.avatarContainer}>
@@ -84,11 +84,6 @@ export function ProfileScreen({
               {hasIgazolas ? (isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`) : `❌ ${t('verification.missing')}`}
             </Text>
           </View>
-          {canManageAdmin && (
-            <TouchableOpacity style={styles.adminButton} onPress={onOpenAdmin}>
-              <Text style={styles.adminButtonText}>⚙️ {t('profile.adminPanel')}</Text>
-            </TouchableOpacity>
-          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -97,7 +92,7 @@ export function ProfileScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
+  webWrapper: { width: '100%', maxWidth: 1000, flex: 1, padding: 24, alignSelf: 'flex-start' },
   backButton: { marginBottom: 15 },
   backButtonText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6, textAlign: 'center', letterSpacing: 1 },
@@ -114,6 +109,4 @@ const styles = StyleSheet.create({
   saveNameText: { color: '#FFF', fontWeight: 'bold' },
   roleValue: { color: '#EC2127' },
   verificationStatus: { fontWeight: 'bold' },
-  adminButton: { width: '100%', backgroundColor: '#EC2127', padding: 14, borderRadius: 8, marginTop: 18, alignItems: 'center' },
-  adminButtonText: { color: '#FFF', fontWeight: 'bold' },
 });

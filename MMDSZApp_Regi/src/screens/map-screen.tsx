@@ -1,4 +1,5 @@
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 type MapPoint = {
@@ -16,13 +17,14 @@ type MapScreenProps = {
 
 export function MapScreen({ points, onBack, onRefresh }: MapScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const mapHtml = `<!DOCTYPE html><html><head><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script><style>body { margin: 0; padding: 0; background: #121212; }</style></head><body><div id="map" style="width: 100vw; height: 100vh;"></div><script>var map = L.map('map').setView([46.5435, 24.5772], 15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);var points = ${JSON.stringify(points)};points.forEach(function(p) { L.marker([p.lat, p.lng]).addTo(map).bindPopup('<b>' + p.title + '</b><br>' + p.description); });</script></body></html>`;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>
+          {width < 900 && <TouchableOpacity onPress={onBack}><Text style={styles.backText}>← {t('common.back')}</Text></TouchableOpacity>}
           <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
         <Text style={styles.title}>🗺️ {t('map.title')}</Text>
@@ -47,7 +49,7 @@ export function MapScreen({ points, onBack, onRefresh }: MapScreenProps) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
+  webWrapper: { width: '100%', maxWidth: 1200, flex: 1, padding: 24, alignSelf: 'flex-start' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   refreshText: { color: '#27AE60', fontSize: 15, fontWeight: 'bold' },

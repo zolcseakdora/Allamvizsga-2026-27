@@ -1,4 +1,5 @@
-import { SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/src/components/controls/filter-chip';
@@ -33,6 +34,7 @@ export function InviteManagementScreen({
   onSendInvite,
 }: InviteManagementScreenProps) {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
   const inviteRoles: OrganizerInviteRole[] = [
     UserRole.SZERVEZO,
     UserRole.CSAPATKAPITANY,
@@ -53,12 +55,14 @@ export function InviteManagementScreen({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.headerRow}>
+          {width < 900 && (
           <TouchableOpacity onPress={onBack}>
             <Text style={styles.backText}>← {t('common.back')}</Text>
           </TouchableOpacity>
+          )}
         </View>
         <Text style={styles.title}>✉️ {t('inviteManagement.title')}</Text>
         <Text style={styles.description}>{t('inviteManagement.description')}</Text>
@@ -121,7 +125,7 @@ export function InviteManagementScreen({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#121212', justifyContent: 'center', alignItems: 'center' },
-  webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20 },
+  webWrapper: { width: '100%', maxWidth: 1000, flex: 1, padding: 24, alignSelf: 'flex-start' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 20, fontWeight: 'bold', color: '#EC2127', marginVertical: 15, textAlign: 'center' },

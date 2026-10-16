@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AdminDashboardScreen } from '@/src/screens/admin-dashboard-screen';
@@ -11,8 +11,9 @@ import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function AdminRoute() {
   const router = useRouter();
+  const { section } = useLocalSearchParams<{ section?: string }>();
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, isLoading } = useAuth();
   const canManageAdmin = canRole(profile?.role, 'manageAdmin');
   const {
     pendingUsers,
@@ -32,8 +33,8 @@ export default function AdminRoute() {
   const [showPending, setShowPending] = useState(false);
 
   useEffect(() => {
-    if (profile && !canManageAdmin) router.replace('/');
-  }, [canManageAdmin, profile, router]);
+    if (!isLoading && (!profile || !canManageAdmin)) router.replace('/');
+  }, [canManageAdmin, isLoading, profile, router]);
 
   const handleAddEvent = async () => {
     if (!adminEventTitle || !adminEventTime || !adminEventLocation) {
@@ -73,10 +74,21 @@ export default function AdminRoute() {
     }
   };
 
-  const handleFetchPending = async () => {
+  const handleFetchPending = useCallback(async () => {
     await refreshPendingUsers();
     setShowPending(true);
-  };
+  }, [refreshPendingUsers]);
+
+  useEffect(() => {
+    if (!isLoading && canManageAdmin && (section === 'verifications' || section === 'verification')) {
+      void refreshPendingUsers()
+        .then(() => setShowPending(true))
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          Alert.alert(t('alerts.generic', { message }));
+        });
+    }
+  }, [canManageAdmin, isLoading, refreshPendingUsers, section, t]);
 
   const handleApprove = async (userId: string) => {
     try {
@@ -88,7 +100,7 @@ export default function AdminRoute() {
     }
   };
 
-  if (!canManageAdmin) return null;
+  if (isLoading || !canManageAdmin) return null;
 
   return (
     <AdminDashboardScreen
@@ -112,6 +124,7 @@ export default function AdminRoute() {
       onSendNotification={handleSendNotification}
       onFetchPendingUsers={() => void handleFetchPending()}
       onApproveUser={(userId) => void handleApprove(userId)}
+      onOpenVerifications={() => router.replace({ pathname: '/admin', params: { section: 'verifications' } })}
       onOpenPrograms={() => router.push('/schedule')}
       onOpenUsers={() => router.push('/users')}
       onOpenInvites={() => router.push('/invites')}

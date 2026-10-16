@@ -85,6 +85,7 @@ function RootLayoutNav() {
               <Stack.Screen name="auth" />
               <Stack.Screen name="verification" />
               <Stack.Screen name="notifications" />
+              <Stack.Screen name="more" />
               <Stack.Screen
                 name="admin"
                 options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
@@ -102,7 +103,7 @@ function RootLayoutNav() {
 
 const styles = {
   app: { flex: 1, backgroundColor: '#121212' },
-  contentRow: { flex: 1 },
+  contentRow: { flex: 1, minHeight: 0 },
   desktopRow: { flexDirection: 'row' as const },
   stack: { flex: 1, minWidth: 0 },
 };
