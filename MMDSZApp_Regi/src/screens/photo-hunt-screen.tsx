@@ -6,12 +6,13 @@ import { PHOTO_HUNT_TASKS } from '@/src/constants/photo-hunt';
 
 type PhotoHuntScreenProps = {
   progress: Record<number, boolean>;
+  uploadingTaskId: number | null;
   onBack: () => void;
   onRefresh: () => void;
   onUpload: (taskId: number) => void;
 };
 
-export function PhotoHuntScreen({ progress, onBack, onRefresh, onUpload }: PhotoHuntScreenProps) {
+export function PhotoHuntScreen({ progress, uploadingTaskId, onBack, onRefresh, onUpload }: PhotoHuntScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
 
@@ -38,8 +39,8 @@ export function PhotoHuntScreen({ progress, onBack, onRefresh, onUpload }: Photo
                 {progress[task.id] ? (
                   <Text style={styles.completeIcon}>✅</Text>
                 ) : (
-                  <TouchableOpacity style={styles.uploadButton} onPress={() => onUpload(task.id)}>
-                    <Text style={styles.uploadButtonText}>{t('common.upload')}</Text>
+                  <TouchableOpacity style={styles.uploadButton} onPress={() => onUpload(task.id)} disabled={uploadingTaskId !== null}>
+                    <Text style={styles.uploadButtonText}>{uploadingTaskId === task.id ? t('common.uploading') : t('common.upload')}</Text>
                   </TouchableOpacity>
                 )}
               </View>

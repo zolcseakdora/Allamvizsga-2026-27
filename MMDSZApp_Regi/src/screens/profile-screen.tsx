@@ -12,6 +12,7 @@ type ProfileScreenProps = {
   profileImage: string | null;
   hasIgazolas: boolean;
   isVerified: boolean;
+  isUploading: boolean;
   onBack: () => void;
   onUploadProfileImage: () => void;
   onSaveName: (name: string) => void;
@@ -25,6 +26,7 @@ export function ProfileScreen({
   profileImage,
   hasIgazolas,
   isVerified,
+  isUploading,
   onBack,
   onUploadProfileImage,
   onSaveName,
@@ -55,10 +57,10 @@ export function ProfileScreen({
         )}
         <Text style={styles.title}>👤 {t('profile.title')}</Text>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <TouchableOpacity onPress={onUploadProfileImage} style={styles.avatarContainer}>
+          <TouchableOpacity onPress={onUploadProfileImage} style={styles.avatarContainer} disabled={isUploading}>
             {profileImage ? <Image source={{ uri: profileImage }} style={styles.avatar} /> : <Text style={styles.avatarPlaceholder}>📷</Text>}
           </TouchableOpacity>
-          <Text style={styles.avatarHint}>{t('profile.editPhoto')}</Text>
+          <Text style={styles.avatarHint}>{isUploading ? t('common.uploading') : t('profile.editPhoto')}</Text>
           <View style={styles.profileInfoCard}>
             <Text style={styles.profileLabel}>{t('profile.name')}:</Text>
             <TextInput

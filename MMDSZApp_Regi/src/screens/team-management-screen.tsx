@@ -12,6 +12,7 @@ type TeamManagementScreenProps = {
   teamVideoLink: string;
   teamLogo: string | null;
   teamFlag: string | null;
+  uploadingImage: 'logo' | 'flag' | null;
   inviteEmail: string;
   inviteRole: UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
   onBack: () => void;
@@ -31,6 +32,7 @@ export function TeamManagementScreen({
   teamVideoLink,
   teamLogo,
   teamFlag,
+  uploadingImage,
   inviteEmail,
   inviteRole,
   onBack,
@@ -62,15 +64,17 @@ export function TeamManagementScreen({
             <View style={styles.imageRow}>
               <View style={styles.imageColumn}>
                 <Text style={styles.cardTitle}>{t('teamManagement.logo')}</Text>
-                <TouchableOpacity onPress={() => onUploadTeamImage('logo')} style={styles.logoPlaceholder}>
+                <TouchableOpacity onPress={() => onUploadTeamImage('logo')} style={styles.logoPlaceholder} disabled={uploadingImage !== null}>
                   {teamLogo ? <Image source={{ uri: teamLogo }} style={styles.teamLogo} /> : <Text style={styles.placeholderText}>📷</Text>}
                 </TouchableOpacity>
+                {uploadingImage === 'logo' && <Text style={styles.placeholderText}>{t('common.uploading')}</Text>}
               </View>
               <View style={styles.imageColumn}>
                 <Text style={styles.cardTitle}>{t('teamManagement.flag')}</Text>
-                <TouchableOpacity onPress={() => onUploadTeamImage('flag')} style={styles.flagPlaceholder}>
+                <TouchableOpacity onPress={() => onUploadTeamImage('flag')} style={styles.flagPlaceholder} disabled={uploadingImage !== null}>
                   {teamFlag ? <Image source={{ uri: teamFlag }} style={styles.teamFlag} /> : <Text style={styles.placeholderText}>🚩</Text>}
                 </TouchableOpacity>
+                {uploadingImage === 'flag' && <Text style={styles.placeholderText}>{t('common.uploading')}</Text>}
               </View>
             </View>
 

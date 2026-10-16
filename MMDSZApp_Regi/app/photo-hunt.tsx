@@ -10,7 +10,7 @@ import { goBackOrHome } from '@/src/utils/navigation';
 export default function PhotoHuntRoute() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { progress, refresh, upload } = usePhotoHunt();
+  const { progress, uploadingTaskId, refresh, upload } = usePhotoHunt();
 
   useEffect(() => {
     void refresh();
@@ -20,11 +20,15 @@ export default function PhotoHuntRoute() {
     try {
       await upload(taskId);
     } catch (error) {
-      const message = error instanceof Error && error.message === 'permission-required'
-        ? t('alerts.permissionRequired')
-        : error instanceof Error && error.message === 'photo-too-large'
-          ? t('alerts.photoTooLarge')
-          : error instanceof Error ? error.message : String(error);
+      if (error instanceof Error && error.message === 'permission-required') {
+        Alert.alert(t('alerts.permissionRequired'));
+        return;
+      }
+      if (error instanceof Error && error.message === 'image-too-large') {
+        Alert.alert(t('alerts.imageTooLarge'));
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
       Alert.alert(t('alerts.generic', { message }));
     }
   };
@@ -32,6 +36,7 @@ export default function PhotoHuntRoute() {
   return (
     <PhotoHuntScreen
       progress={progress}
+      uploadingTaskId={uploadingTaskId}
       onBack={() => goBackOrHome(router)}
       onRefresh={() => void refresh()}
       onUpload={handleUpload}

@@ -12,6 +12,7 @@ type HomeScreenProps = {
   showIgazolasUpload: boolean;
   hasIgazolas: boolean;
   isVerified: boolean;
+  isUploadingIgazolas: boolean;
   onUploadIgazolas: () => void;
   onResendVerificationEmail: () => void;
   onConfirmEmail: () => void;
@@ -25,6 +26,7 @@ export function HomeScreen({
   showIgazolasUpload,
   hasIgazolas,
   isVerified,
+  isUploadingIgazolas,
   onUploadIgazolas,
   onResendVerificationEmail,
   onConfirmEmail,
@@ -99,8 +101,8 @@ export function HomeScreen({
                   {isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`}
                 </Text>
               ) : (
-                <TouchableOpacity style={styles.outlineButton} onPress={onUploadIgazolas}>
-                  <Text style={styles.outlineButtonText}>📸 {t('home.uploadPhoto')}</Text>
+                <TouchableOpacity style={styles.outlineButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
+                  <Text style={styles.outlineButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('home.uploadPhoto')}</Text>
                 </TouchableOpacity>
               )}
             </View>

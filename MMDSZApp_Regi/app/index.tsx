@@ -11,6 +11,7 @@ import { useToast } from '@/src/context/ToastContext';
 
 import { UserRole } from '@/src/types/auth';
 import { canRole } from '@/src/constants/roles';
+import { processImage } from '@/src/services/images';
 
 export default function App() {
   const { showToast } = useToast();
@@ -24,6 +25,7 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [isUploadingIgazolas, setIsUploadingIgazolas] = useState(false);
 
   const userRole = profile?.role ?? UserRole.CSAPATTAG;
   const hasIgazolas = Boolean(profile?.igazolas);
@@ -82,14 +84,30 @@ export default function App() {
     const res = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!res.granted) return showToast(t('alerts.permissionRequired'), 'error');
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, allowsEditing: true, quality: 0.1, base64: true });
-      if (!result.canceled && result.assets[0].base64 && auth.currentUser) {
-        const imgStr = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        if (imgStr.length > 1000000) return showToast(t('alerts.imageTooLarge'), 'error');
-        await updateDoc(doc(db, "users", auth.currentUser.uid), { igazolas: imgStr, isVerified: false });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+        base64: false,
+      });
+      const uri = result.canceled ? undefined : result.assets[0]?.uri;
+      const uid = auth.currentUser?.uid;
+      if (uri && uid) {
+        setIsUploadingIgazolas(true);
+        const { dataUrl } = await processImage(uri, { maxSide: 1600, quality: 0.7, maxBytes: 700000 });
+        await updateDoc(doc(db, 'users', uid), { igazolas: dataUrl, isVerified: false });
         showToast(t('alerts.idUploaded'), 'success');
       }
-    } catch (e: any) { showToast(t('alerts.generic', { message: e.message }), 'error'); }
+    } catch (error) {
+      if (error instanceof Error && error.message === 'image-too-large') {
+        showToast(t('alerts.imageTooLarge'), 'error');
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsUploadingIgazolas(false);
+    }
   };
 
   return (
@@ -102,6 +120,7 @@ export default function App() {
         showIgazolasUpload={showIgazolasUpload}
         hasIgazolas={hasIgazolas}
         isVerified={isVerified}
+        isUploadingIgazolas={isUploadingIgazolas}
         onUploadIgazolas={handleUploadIgazolas}
         onResendVerificationEmail={() => void handleResendVerificationEmail()}
         onConfirmEmail={() => void handleConfirmEmail()}

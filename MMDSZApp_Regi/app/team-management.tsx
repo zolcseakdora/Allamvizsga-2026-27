@@ -13,6 +13,7 @@ import { canRole } from '@/src/constants/roles';
 
 import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
+import { processImage } from '@/src/services/images';
 
 type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 
@@ -29,6 +30,7 @@ export default function TeamManagementRoute() {
   const [teamFlag, setTeamFlag] = useState<string | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<InviteRole>(UserRole.CSAPATTAG);
+  const [uploadingImage, setUploadingImage] = useState<'logo' | 'flag' | null>(null);
 
   const refresh = useCallback(async () => {
     if (!teamName) return;
@@ -59,24 +61,31 @@ export default function TeamManagementRoute() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        quality: 0.15,
-        base64: true,
+        quality: 1,
+        base64: false,
       });
-      const base64 = result.canceled ? undefined : result.assets[0]?.base64;
-      if (!base64) return;
+      const uri = result.canceled ? undefined : result.assets[0]?.uri;
+      if (!uri) return;
 
-      const image = `data:image/jpeg;base64,${base64}`;
-      if (image.length > 1000000) {
-        Alert.alert(t('alerts.teamImageTooLarge'));
+      setUploadingImage(type);
+      const { dataUrl } = await processImage(uri, {
+        maxSide: type === 'logo' ? 512 : 768,
+        quality: 0.8,
+        maxBytes: 700000,
+      });
+
+      await saveTeam(teamName, { [type]: dataUrl });
+      if (type === 'logo') setTeamLogo(dataUrl);
+      else setTeamFlag(dataUrl);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'image-too-large') {
+        Alert.alert(t('alerts.imageTooLarge'));
         return;
       }
-
-      await saveTeam(teamName, { [type]: image });
-      if (type === 'logo') setTeamLogo(image);
-      else setTeamFlag(image);
-    } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       Alert.alert(t('alerts.generic', { message }));
+    } finally {
+      setUploadingImage(null);
     }
   };
 
@@ -140,6 +149,7 @@ export default function TeamManagementRoute() {
       teamVideoLink={teamVideoLink}
       teamLogo={teamLogo}
       teamFlag={teamFlag}
+      uploadingImage={uploadingImage}
       inviteEmail={inviteEmail}
       inviteRole={inviteRole}
       onBack={() => goBackOrHome(router)}

@@ -6,6 +6,7 @@ export type Permission =
   | 'readNotifications'
   | 'sendNotifications'
   | 'manageAdmin'
+  | 'manageGallery'
   | 'managePrograms'
   | 'manageUsers'
   | 'uploadIgazolas';
@@ -54,6 +55,7 @@ export const can: Record<Permission, readonly UserRole[]> = {
   readNotifications: [...allRoles],
   sendNotifications: [UserRole.FOSZERVEZO],
   manageAdmin: [UserRole.FOSZERVEZO],
+  manageGallery: [UserRole.FOSZERVEZO],
   managePrograms: [...organizers],
   manageUsers: [...organizers],
   uploadIgazolas: [...captains, UserRole.CSAPATTAG],

@@ -7,6 +7,7 @@ type VerificationPendingScreenProps = {
   emailVerified: boolean;
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
+  isUploadingIgazolas: boolean;
   onResendVerificationEmail: () => void;
   onConfirmEmail: () => void;
   onUploadIgazolas: () => void;
@@ -18,6 +19,7 @@ export function VerificationPendingScreen({
   emailVerified,
   isCheckingEmail,
   isResendingEmail,
+  isUploadingIgazolas,
   onResendVerificationEmail,
   onConfirmEmail,
   onUploadIgazolas,
@@ -62,8 +64,8 @@ export function VerificationPendingScreen({
           )}
 
           {!hasIgazolas ? (
-            <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas}>
-              <Text style={styles.solidButtonText}>📸 {t('verification.uploadId')}</Text>
+            <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
+              <Text style={styles.solidButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('verification.uploadId')}</Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.uploadedText}>✅ {t('verification.uploaded')}</Text>
