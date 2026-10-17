@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -20,10 +20,21 @@ type ProgramDetailsScreenProps = {
   program: ProgramDetails;
   isAdmin?: boolean;
   onDelete?: (id: string) => void;
+  onEdit?: (id: string) => void;
   onBack: () => void;
+  image?: string;
+  isImageLoading?: boolean;
 };
 
-export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: ProgramDetailsScreenProps) {
+export function ProgramDetailsScreen({
+  program,
+  isAdmin,
+  onDelete,
+  onEdit,
+  onBack,
+  image,
+  isImageLoading,
+}: ProgramDetailsScreenProps) {
   const { t } = useTranslation();
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
 
@@ -49,13 +60,13 @@ export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: Pro
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{program.title}</Text>
-          <View style={styles.timeBadge}>
-            <Text style={styles.timeText}>{program.time}</Text>
-          </View>
-          <Text style={styles.programDetail}>📍 {program.helyszín || t('programs.locationComing')} | {dayLabel}</Text>
+          <Text style={styles.programDetail}>{dayLabel} · {program.time}</Text>
+          <Text style={styles.programDetail}>📍 {program.helyszín || t('programs.locationComing')}</Text>
 
-          {program.image ? (
-            <ImageAspectFrame source={{ uri: program.image }} style={styles.programImageFrame} />
+          {isImageLoading ? (
+            <View style={styles.imageLoading}><ActivityIndicator color="#EC2127" /></View>
+          ) : (image ?? program.image) ? (
+            <ImageAspectFrame source={{ uri: (image ?? program.image)! }} style={styles.programImageFrame} />
           ) : null}
 
           <View style={styles.card}>
@@ -63,15 +74,22 @@ export function ProgramDetailsScreen({ program, isAdmin, onDelete, onBack }: Pro
             <Text style={styles.cardText}>{program.description || t('programs.noDetails', 'Nincsenek további részletek megadva.')}</Text>
           </View>
 
-          {/* Törlés gomb - Csak adminoknak látszik */}
           {isAdmin && (
-            <TouchableOpacity style={styles.deleteButton} onPress={() => setIsDeleteModalVisible(true)}>
-              <Text style={styles.deleteButtonText}>🗑️ {t('programs.deleteEvent', 'Esemény törlése')}</Text>
-            </TouchableOpacity>
+            <View style={styles.adminActions}>
+              {program.id && onEdit && (
+                <TouchableOpacity style={styles.editButton} onPress={() => onEdit(program.id!)}>
+                  <Text style={styles.editButtonText}>✏️ {t('programs.editEvent')}</Text>
+                </TouchableOpacity>
+              )}
+              {program.id && onDelete && (
+                <TouchableOpacity style={styles.deleteButton} onPress={() => setIsDeleteModalVisible(true)}>
+                  <Text style={styles.deleteButtonText}>🗑️ {t('programs.deleteEvent')}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </ScrollView>
 
-        {/* Egyedi megerősítő Modal (Alert helyett) */}
         <Modal transparent={true} visible={isDeleteModalVisible} animationType="fade">
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
@@ -104,19 +122,19 @@ const styles = StyleSheet.create({
   backButtonText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   scrollContent: { paddingBottom: 20 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 10, textAlign: 'left', letterSpacing: 1 },
-  timeBadge: { alignSelf: 'flex-start', backgroundColor: '#EC2127', borderRadius: 6, paddingVertical: 6, paddingHorizontal: 10, marginBottom: 10, alignItems: 'center', justifyContent: 'center' },
-  timeText: { color: '#FFF', fontWeight: 'bold', fontSize: 13 },
-  programDetail: { fontSize: 13, color: '#aaa', marginBottom: 4 },
+  programDetail: { fontSize: 14, color: '#aaa', marginBottom: 6 },
   programImageFrame: { borderRadius: 10, marginVertical: 15 },
+  imageLoading: { height: 180, alignItems: 'center', justifyContent: 'center' },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20 },
   
-  // Törlés gomb stílusai
-  deleteButton: { backgroundColor: 'rgba(236, 33, 39, 0.1)', borderWidth: 1, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
+  adminActions: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  editButton: { flex: 1, backgroundColor: '#1A2A3A', borderWidth: 1, borderColor: '#2980B9', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  editButtonText: { color: '#5DADE2', fontWeight: 'bold' },
+  deleteButton: { flex: 1, backgroundColor: 'rgba(236, 33, 39, 0.1)', borderWidth: 1, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
   deleteButtonText: { color: '#EC2127', fontWeight: 'bold', letterSpacing: 1 },
   
-  // Modal stílusok
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
   modalContent: { backgroundColor: '#1E1E1E', width: '100%', maxWidth: 350, borderRadius: 12, padding: 24, borderWidth: 1, borderColor: '#333' },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#FFF', marginBottom: 10, textAlign: 'center' },

@@ -20,6 +20,9 @@ export function PhotoHuntScreen({ progress, uploadingTaskId, onBack, onRefresh, 
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={[styles.webWrapper, width < 900 && styles.mobileWebWrapper]}>
         <View style={styles.headerRow}>
+          <TouchableOpacity onPress={onBack} accessibilityRole="button">
+            <Text style={styles.backText}>← {t('common.back')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onRefresh}><Text style={styles.refreshText}>🔄 {t('common.refresh')}</Text></TouchableOpacity>
         </View>
         <Text style={[styles.title, width < 900 && styles.mobileTitle]}>📷 {t('photoHunt.title')}</Text>

@@ -17,7 +17,7 @@ export default function ScheduleRoute() {
     void refresh();
   }, [refresh]);
 
-  const isAdmin = canRole(profile?.role, 'managePrograms');
+  const isAdmin = canRole(profile?.role, 'manageAdmin');
 
   return (
     <ScheduleScreen
@@ -30,6 +30,7 @@ export default function ScheduleRoute() {
       onSelectProgram={(program) => {
         router.push({ pathname: '/schedule/[programId]', params: { programId: program.id } });
       }}
+      onCreateProgram={() => router.push('/admin')}
     />
   );
 }

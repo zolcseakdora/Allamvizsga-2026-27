@@ -5,5 +5,6 @@ export type Program = {
   helyszín?: string;
   day?: string;
   image?: string;
+  thumb?: string;
   description?: string;
 };

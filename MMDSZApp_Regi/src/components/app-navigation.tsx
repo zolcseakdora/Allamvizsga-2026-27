@@ -219,6 +219,7 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
     item.route && (
       pathname === item.route
       || pathname.startsWith(`${item.route}/`)
+      || (item.key === 'games' && pathname === '/photo-hunt')
     ),
   );
 

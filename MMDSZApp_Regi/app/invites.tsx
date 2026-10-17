@@ -11,6 +11,7 @@ import { db } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
+import { normalizeTeamName } from '@/src/utils/team-name';
 
 export default function InvitesRoute() {
   const { t } = useTranslation();
@@ -29,7 +30,7 @@ export default function InvitesRoute() {
     });
   }, [refresh, showToast, t]);
 
-  const teamNames = teams.map((team) => team.name ?? team.id);
+  const teamNames = [...new Set(teams.map((team) => normalizeTeamName(team.name ?? team.id)).filter(Boolean))];
   const firstTeamName = teamNames[0] ?? '';
   const selectedTeamName = teamNames.includes(teamName) ? teamName : firstTeamName;
 
@@ -54,7 +55,7 @@ export default function InvitesRoute() {
     try {
       await setDoc(doc(db, 'invites', normalizedEmail), {
         email: normalizedEmail,
-        team: selectedTeamName,
+        team: normalizeTeamName(selectedTeamName),
         role,
         invitedBy: profile?.name || UserRole.FOSZERVEZO,
         createdAt: new Date(),

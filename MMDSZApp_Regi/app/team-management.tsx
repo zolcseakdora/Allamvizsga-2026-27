@@ -14,6 +14,7 @@ import { canRole } from '@/src/constants/roles';
 import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { processImage } from '@/src/services/images';
+import { normalizeTeamName } from '@/src/utils/team-name';
 
 type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 
@@ -23,7 +24,7 @@ export default function TeamManagementRoute() {
   const { profile } = useAuth();
   const { getTeam, saveTeam } = useTeams();
   const canInviteMembers = canRole(profile?.role, 'inviteMembers');
-  const teamName = profile?.team ?? '';
+  const teamName = normalizeTeamName(profile?.team ?? '');
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
@@ -102,10 +103,11 @@ export default function TeamManagementRoute() {
     try {
       const normalizedEmail = inviteEmail.trim().toLowerCase();
       const translatedRole = inviteRole === UserRole.CSAPATTAG ? t('roles.member') : t('roles.deputy');
-      const body = t('teamManagement.inviteEmailBody', { teamName, role: translatedRole });
+      const normalizedTeamName = normalizeTeamName(teamName);
+      const body = t('teamManagement.inviteEmailBody', { teamName: normalizedTeamName, role: translatedRole });
       await setDoc(doc(db, 'invites', normalizedEmail), {
         email: normalizedEmail,
-        team: teamName,
+        team: normalizedTeamName,
         role: inviteRole,
         invitedBy: profile?.name || UserRole.CSAPATKAPITANY,
         createdAt: new Date(),

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/src/components/controls/filter-chip';
 import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/src/constants/event-days';
+import type { Sponsor } from '@/src/types/sponsor';
+import type { Team } from '@/src/types/team';
 
 type PendingUser = {
   id: string;
@@ -19,16 +21,27 @@ type AdminDashboardScreenProps = {
   adminEventTitle: string;
   adminEventTime: string;
   adminEventLocation: string;
+  adminEventDescription: string;
+  adminEventImage?: string;
+  isEditingEvent: boolean;
   isUploading: boolean;
   notifTitle: string;
   notifBody: string;
   showPending: boolean;
   pendingUsers: PendingUser[];
+  sponsors: Sponsor[];
+  teams: Team[];
+  sponsorName: string;
+  sponsorLink: string;
+  sponsorLogo?: string;
+  isManagingSponsors: boolean;
   onBack: () => void;
   onEventDayChange: (day: string) => void;
   onEventTitleChange: (value: string) => void;
   onEventTimeChange: (value: string) => void;
   onEventLocationChange: (value: string) => void;
+  onEventDescriptionChange: (value: string) => void;
+  onPickEventImage: () => void;
   onAddEvent: () => void;
   onNotifTitleChange: (value: string) => void;
   onNotifBodyChange: (value: string) => void;
@@ -39,23 +52,42 @@ type AdminDashboardScreenProps = {
   onOpenPrograms: () => void;
   onOpenUsers: () => void;
   onOpenInvites: () => void;
-};
+  onCreateMissingTeams: () => void;
+  onNormalizeUserTeamNames: () => void;
+  onDeleteTeam: (team: Team) => void;
+  onSponsorNameChange: (value: string) => void;
+  onSponsorLinkChange: (value: string) => void;
+  onPickSponsorLogo: () => void;
+  onAddSponsor: () => void;
+  onDeleteSponsor: (sponsor: Sponsor) => void;
+}
 
 export function AdminDashboardScreen({
   adminEventDay,
   adminEventTitle,
   adminEventTime,
   adminEventLocation,
+  adminEventDescription,
+  adminEventImage,
+  isEditingEvent,
   isUploading,
   notifTitle,
   notifBody,
   showPending,
   pendingUsers,
+  sponsors,
+  teams,
+  sponsorName,
+  sponsorLink,
+  sponsorLogo,
+  isManagingSponsors,
   onBack,
   onEventDayChange,
   onEventTitleChange,
   onEventTimeChange,
   onEventLocationChange,
+  onEventDescriptionChange,
+  onPickEventImage,
   onAddEvent,
   onNotifTitleChange,
   onNotifBodyChange,
@@ -66,6 +98,14 @@ export function AdminDashboardScreen({
   onOpenPrograms,
   onOpenUsers,
   onOpenInvites,
+  onCreateMissingTeams,
+  onNormalizeUserTeamNames,
+  onDeleteTeam,
+  onSponsorNameChange,
+  onSponsorLinkChange,
+  onPickSponsorLogo,
+  onAddSponsor,
+  onDeleteSponsor,
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -92,13 +132,66 @@ export function AdminDashboardScreen({
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
               <Text style={styles.outlineButtonText}>👥 {t('admin.registeredUsers')}</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.outlineButton} onPress={onCreateMissingTeams}>
+              <Text style={styles.outlineButtonText}>🛡️ {t('admin.createMissingTeams')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.outlineButton} onPress={onNormalizeUserTeamNames}>
+              <Text style={styles.outlineButtonText}>🧹 {t('admin.normalizeUserTeamNames')}</Text>
+            </TouchableOpacity>
+            <Text style={styles.sectionSubtitle}>{t('admin.manageTeams')}</Text>
+            {teams.length === 0 ? (
+              <Text style={styles.emptyState}>{t('admin.noTeams')}</Text>
+            ) : (
+              <View style={styles.teamList}>
+                {teams.map((team) => (
+                  <View key={team.id} style={styles.teamRow}>
+                    <Text style={styles.teamName}>{team.name || team.id}</Text>
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteTeam(team)}>
+                      <Text style={styles.deleteButtonText}>{t('admin.deleteTeam')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
             <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
               <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📅 {t('admin.addProgram')}</Text>
+            <Text style={styles.cardTitle}>🤝 {t('admin.manageSponsors')}</Text>
+            <TextInput style={styles.input} placeholder={t('admin.sponsorNamePlaceholder')} placeholderTextColor="#888" value={sponsorName} onChangeText={onSponsorNameChange} />
+            <TextInput style={styles.input} placeholder={t('admin.sponsorLinkPlaceholder')} placeholderTextColor="#888" value={sponsorLink} onChangeText={onSponsorLinkChange} autoCapitalize="none" keyboardType="url" />
+            <TouchableOpacity style={styles.outlineButton} onPress={onPickSponsorLogo}>
+              <Text style={styles.outlineButtonText}>{t('admin.chooseSponsorLogo')}</Text>
+            </TouchableOpacity>
+            {sponsorLogo && <Image source={{ uri: sponsorLogo }} style={styles.sponsorPreview} resizeMode="contain" />}
+            <TouchableOpacity
+              style={[styles.solidButton, { opacity: isManagingSponsors ? 0.7 : 1 }]}
+              onPress={onAddSponsor}
+              disabled={isManagingSponsors}
+            >
+              <Text style={styles.solidButtonText}>{isManagingSponsors ? t('admin.uploading') : t('admin.addSponsor')}</Text>
+            </TouchableOpacity>
+            {sponsors.length === 0 ? (
+              <Text style={styles.emptyState}>{t('admin.noSponsors')}</Text>
+            ) : (
+              <View style={styles.sponsorList}>
+                {sponsors.map((sponsor) => (
+                  <View key={sponsor.id} style={styles.sponsorRow}>
+                    <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
+                    <Text style={styles.sponsorName}>{sponsor.name}</Text>
+                    <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteSponsor(sponsor)}>
+                      <Text style={styles.deleteButtonText}>{t('admin.deleteSponsor')}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📅 {t(isEditingEvent ? 'admin.editProgram' : 'admin.addProgram')}</Text>
             <Text style={styles.profileLabel}>{t('admin.chooseDay')}</Text>
             <View style={styles.dayList}>
               {EVENT_DAYS.map(day => (
@@ -106,10 +199,22 @@ export function AdminDashboardScreen({
               ))}
             </View>
             <TextInput style={styles.input} placeholder={t('admin.programTitlePlaceholder')} placeholderTextColor="#888" value={adminEventTitle} onChangeText={onEventTitleChange} />
-            <TextInput style={styles.input} placeholder={t('admin.timePlaceholder')} placeholderTextColor="#888" value={adminEventTime} onChangeText={onEventTimeChange} />
+            <TextInput style={styles.input} placeholder={t('admin.timePlaceholder')} placeholderTextColor="#888" value={adminEventTime} onChangeText={onEventTimeChange} keyboardType="numbers-and-punctuation" />
             <TextInput style={styles.input} placeholder={t('admin.locationPlaceholder')} placeholderTextColor="#888" value={adminEventLocation} onChangeText={onEventLocationChange} />
+            <TextInput
+              style={styles.notificationBody}
+              placeholder={t('admin.programDescriptionPlaceholder')}
+              placeholderTextColor="#888"
+              multiline
+              value={adminEventDescription}
+              onChangeText={onEventDescriptionChange}
+            />
+            <TouchableOpacity style={styles.outlineButton} onPress={onPickEventImage} disabled={isUploading}>
+              <Text style={styles.outlineButtonText}>{t('admin.chooseProgramImage')}</Text>
+            </TouchableOpacity>
+            {adminEventImage && <Image source={{ uri: adminEventImage }} style={styles.programImagePreview} resizeMode="cover" />}
             <TouchableOpacity style={[styles.solidButton, { opacity: isUploading ? 0.7 : 1 }]} onPress={onAddEvent} disabled={isUploading}>
-              <Text style={styles.solidButtonText}>{isUploading ? t('admin.uploading') : t('admin.saveProgram')}</Text>
+              <Text style={styles.solidButtonText}>{isUploading ? t('admin.uploading') : t(isEditingEvent ? 'admin.updateProgram' : 'admin.saveProgram')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -167,6 +272,7 @@ const styles = StyleSheet.create({
   scroll: { width: '100%' },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
+  sectionSubtitle: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginTop: 4, marginBottom: 6 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   dayList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 },
   dayChip: { marginBottom: 6 },
@@ -185,4 +291,14 @@ const styles = StyleSheet.create({
   verificationStatus: { fontSize: 12, fontWeight: 'bold', marginBottom: 10 },
   idImage: { width: '100%', height: 150, borderRadius: 8, marginBottom: 10 },
   approveButton: { backgroundColor: '#27AE60', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  sponsorPreview: { width: 100, height: 70, alignSelf: 'center', marginBottom: 12 },
+  sponsorList: { marginTop: 12 },
+  teamList: { marginBottom: 12 },
+  teamRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#333', paddingVertical: 6 },
+  sponsorRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#333', paddingVertical: 10 },
+  sponsorLogo: { width: 48, height: 40, marginRight: 10 },
+  sponsorName: { color: '#FFF', flex: 1, fontWeight: '600' },
+  deleteButton: { paddingVertical: 8, paddingHorizontal: 10 },
+  deleteButtonText: { color: '#EC2127', fontWeight: 'bold' },
+  programImagePreview: { width: 120, height: 80, borderRadius: 8, alignSelf: 'center', marginBottom: 12 },
 });

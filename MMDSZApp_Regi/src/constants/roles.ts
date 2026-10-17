@@ -14,7 +14,7 @@ export type Permission =
 export type NavigationItem = {
   key: string;
   labelKey: string;
-  route: '/' | '/schedule' | '/gallery' | '/photo-hunt' | '/teams' | '/map'
+  route: '/' | '/schedule' | '/gallery' | '/games' | '/photo-hunt' | '/teams' | '/map'
     | '/notifications' | '/profile' | '/team-management' | '/admin' | '/users' | '/invites'
     | '/more' | null;
   icon: string;
@@ -36,8 +36,7 @@ export const navigationItems: readonly NavigationItem[] = [
   { key: 'home', labelKey: 'navigation.home', route: '/', icon: '🏠', roles: allRoles, mobile: 'more', desktop: 'main' },
   { key: 'programs', labelKey: 'navigation.programs', route: '/schedule', icon: '📅', roles: allRoles, mobile: 'tab', desktop: 'main' },
   { key: 'gallery', labelKey: 'navigation.gallery', route: '/gallery', icon: '🖼️', roles: allRoles, mobile: 'tab', desktop: 'main' },
-  // TODO: Replace the Photo Hunt destination when the dedicated games module is available.
-  { key: 'games', labelKey: 'navigation.games', route: '/photo-hunt', icon: '🎮', roles: allRoles, mobile: 'tab', desktop: 'main' },
+  { key: 'games', labelKey: 'navigation.games', route: '/games', icon: '🎮', roles: allRoles, mobile: 'tab', desktop: 'main' },
   { key: 'teams', labelKey: 'navigation.teams', route: '/teams', icon: '🛡️', roles: allRoles, mobile: 'tab', desktop: 'main' },
   { key: 'map', labelKey: 'navigation.map', route: '/map', icon: '🗺️', roles: allRoles, mobile: 'more', desktop: 'main' },
   { key: 'notifications', labelKey: 'navigation.notifications', route: '/notifications', icon: '🔔', roles: allRoles, mobile: 'more', desktop: 'main', navigation: 'push' },

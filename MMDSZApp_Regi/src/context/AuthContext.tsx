@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { auth, db } from '@/src/config/firebase';
 import { AuthState, RegistrationInput, UserProfile, UserRole } from '@/src/types/auth';
+import { normalizeTeamName } from '@/src/utils/team-name';
 
 const initialAuthState: AuthState = {
   user: null,
@@ -53,15 +54,17 @@ async function redeemPendingInvite(user: User): Promise<InviteRedemptionResult> 
   if (!isUserRole(invite.role) || typeof invite.team !== 'string') {
     throw new Error(`Invalid invite document for ${email}`);
   }
+  const team = normalizeTeamName(invite.team);
+  if (!team) throw new Error(`Invalid team name in invite document for ${email}`);
 
   const batch = writeBatch(db);
   batch.update(doc(db, 'users', user.uid), {
     role: invite.role,
-    team: invite.team,
+    team,
   });
   batch.update(inviteRef, { status: 'Elfogadva' });
   await batch.commit();
-  return { status: 'accepted', team: invite.team };
+  return { status: 'accepted', team };
 }
 
 function toUserProfile(user: User, data: Record<string, unknown>): UserProfile {
@@ -123,11 +126,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
     },
     register: async ({ name, email, password, team }) => {
       const normalizedEmail = email.trim().toLowerCase();
+      const normalizedTeam = normalizeTeamName(team) || 'Egyéni';
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
         email: normalizedEmail,
-        team: team || 'Egyéni',
+        team: normalizedTeam,
         role: UserRole.CSAPATTAG,
         createdAt: new Date(),
         isVerified: false,

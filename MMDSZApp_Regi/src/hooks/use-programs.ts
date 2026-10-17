@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, query } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, writeBatch } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
 
 import { db } from '@/src/config/firebase';
@@ -25,6 +25,7 @@ function toProgram(id: string, data: Record<string, unknown>): Program {
     helyszín: typeof data.helyszín === 'string' ? data.helyszín : undefined,
     day: typeof data.day === 'string' ? data.day : undefined,
     image: typeof data.image === 'string' ? data.image : undefined,
+    thumb: typeof data.thumb === 'string' ? data.thumb : undefined,
     description: typeof data.description === 'string' ? data.description : undefined,
   };
 }
@@ -56,10 +57,19 @@ export function usePrograms() {
     return snapshot.exists() ? toProgram(snapshot.id, snapshot.data()) : null;
   }, []);
 
+  const getProgramImage = useCallback(async (programId: string) => {
+    const snapshot = await getDoc(doc(db, 'program_images', programId));
+    const image = snapshot.exists() ? snapshot.data().image : undefined;
+    return typeof image === 'string' ? image : null;
+  }, []);
+
   const deleteProgram = useCallback(async (programId: string) => {
-    await deleteDoc(doc(db, 'programs', programId));
+    const batch = writeBatch(db);
+    batch.delete(doc(db, 'programs', programId));
+    batch.delete(doc(db, 'program_images', programId));
+    await batch.commit();
     setPrograms((currentPrograms) => currentPrograms.filter((program) => program.id !== programId));
   }, []);
 
-  return { programs, isLoading, error, refresh, getProgram, deleteProgram };
+  return { programs, isLoading, error, refresh, getProgram, getProgramImage, deleteProgram };
 }

@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 
 import { db } from '@/src/config/firebase';
 import type { Team } from '@/src/types/team';
+import { normalizeTeamName } from '@/src/utils/team-name';
 
 function toTeam(id: string, data: Record<string, unknown>): Team {
   return {
@@ -24,12 +25,16 @@ export function useTeams() {
   }, []);
 
   const getTeam = useCallback(async (teamName: string) => {
-    const snapshot = await getDoc(doc(db, 'teams', teamName));
+    const normalizedName = normalizeTeamName(teamName);
+    if (!normalizedName) return null;
+    const snapshot = await getDoc(doc(db, 'teams', normalizedName));
     return snapshot.exists() ? toTeam(snapshot.id, snapshot.data()) : null;
   }, []);
 
   const saveTeam = useCallback(async (teamName: string, data: Partial<Team>) => {
-    await setDoc(doc(db, 'teams', teamName), { ...data, name: teamName }, { merge: true });
+    const normalizedName = normalizeTeamName(teamName);
+    if (!normalizedName) throw new Error('Team name cannot be empty');
+    await setDoc(doc(db, 'teams', normalizedName), { ...data, name: normalizedName }, { merge: true });
   }, []);
 
   return { teams, refresh, getTeam, saveTeam };
