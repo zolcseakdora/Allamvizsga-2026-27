@@ -1,5 +1,3 @@
-
-
 rules_version = '2';
 
 service cloud.firestore {
@@ -98,6 +96,7 @@ service cloud.firestore {
             && request.resource.data.role == get(inviteRef()).data.role
             && request.resource.data.team == get(inviteRef()).data.team
             && request.resource.data.email == resource.data.email
+            // A jóváhagyási állapot nem változhat (nem lehet magát jóváhagyni)
             && request.resource.data.isVerified == resource.data.isVerified);
 
       allow delete: if isAdmin();
@@ -137,7 +136,19 @@ service cloud.firestore {
       allow create: if isApproved();
       allow update, delete: if isAdmin();
     }
-    
+
+    // ---------- Programok, nagy képek ----------
+    match /program_images/{docId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------- Szponzorok ----------
+    match /sponsors/{sponsorId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+
     // ---------- Térkép ----------
     match /map_points/{pointId} {
       allow read: if isApproved();
