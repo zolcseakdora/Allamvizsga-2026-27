@@ -1,0 +1,97 @@
+import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+
+import { ProgramDetailsScreen } from '@/src/screens/program-details-screen';
+import { useAuth } from '@/src/context/AuthContext';
+import { usePrograms } from '@/src/hooks/use-programs';
+import type { Program } from '@/src/types/program';
+import { canRole } from '@/src/constants/roles';
+import { goBackOrHome } from '@/src/utils/navigation';
+
+export default function ProgramDetailsRoute() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const { programId } = useLocalSearchParams<{ programId: string }>();
+  const { profile } = useAuth();
+  const { getProgram, getProgramImage, deleteProgram } = usePrograms();
+  const [program, setProgram] = useState<Program | null>(null);
+  const [programImage, setProgramImage] = useState<string>();
+  const [isImageLoading, setIsImageLoading] = useState(false);
+  const [isLoadingProgram, setIsLoadingProgram] = useState(true);
+
+  useEffect(() => {
+    if (!programId) {
+      setIsLoadingProgram(false);
+      return;
+    }
+
+    let isActive = true;
+    setIsLoadingProgram(true);
+    setProgram(null);
+    setProgramImage(undefined);
+    setIsImageLoading(false);
+    void getProgram(programId)
+      .then(async (nextProgram) => {
+        if (!isActive) return;
+        setProgram(nextProgram);
+        if (!nextProgram || (!nextProgram.thumb && !nextProgram.image)) {
+          setProgramImage(nextProgram?.image);
+          setIsImageLoading(false);
+          return;
+        }
+        setIsImageLoading(true);
+        setProgramImage(nextProgram.thumb ?? nextProgram.image);
+        try {
+          const image = await getProgramImage(programId);
+          if (isActive) setProgramImage(image ?? nextProgram.image ?? nextProgram.thumb);
+        } catch (error) {
+          if (!isActive) return;
+          const message = error instanceof Error ? error.message : String(error);
+          Alert.alert(t('alerts.generic', { message }));
+        } finally {
+          if (isActive) setIsImageLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        const message = error instanceof Error ? error.message : String(error);
+        Alert.alert(t('alerts.generic', { message }));
+      })
+      .finally(() => {
+        if (isActive) setIsLoadingProgram(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [getProgram, getProgramImage, programId, t]);
+
+  const isAdmin = canRole(profile?.role, 'manageAdmin');
+
+  if (!program) {
+    if (isLoadingProgram || isImageLoading) return <View style={{ flex: 1, backgroundColor: '#121212', alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#EC2127" /></View>;
+    return null;
+  }
+
+  return (
+    <ProgramDetailsScreen
+      program={program}
+      image={programImage}
+      isImageLoading={isImageLoading}
+      isAdmin={isAdmin}
+      onBack={() => goBackOrHome(router)}
+      onEdit={(id) => router.push({ pathname: '/admin', params: { programId: id } })}
+      onDelete={(id) => {
+        void deleteProgram(id)
+          .then(() => goBackOrHome(router))
+          .catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            Alert.alert(t('alerts.generic', { message }));
+          });
+      }}
+    />
+  );
+}

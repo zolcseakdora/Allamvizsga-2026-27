@@ -2,8 +2,8 @@ import { Link } from 'expo-router';
 import { StyleSheet } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/src/components/shared/themed-text';
+import { ThemedView } from '@/src/components/shared/themed-view';
 
 export default function ModalScreen() {
   const { t } = useTranslation();
