@@ -31,4 +31,5 @@ export type RegistrationInput = {
   email: string;
   password: string;
   team: string;
+  role: UserRole;
 };
