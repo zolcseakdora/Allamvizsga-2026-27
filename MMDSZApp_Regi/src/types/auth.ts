@@ -33,3 +33,5 @@ export type RegistrationInput = {
   team: string;
   role: UserRole;
 };
+
+export type AuthMode = 'login' | 'register_captain' | 'register_member';

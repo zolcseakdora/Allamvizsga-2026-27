@@ -1,9 +1,10 @@
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { AuthMode } from '../types/auth';
 
 type AuthScreenProps = {
-  isLoginMode: boolean;
+  mode: AuthMode;
   fullName: string;
   teamName: string;
   email: string;
@@ -15,11 +16,11 @@ type AuthScreenProps = {
   onPasswordChange: (value: string) => void;
   onTogglePassword: () => void;
   onSubmit: () => void;
-  onToggleMode: () => void;
+  onSetMode: (mode: AuthMode) => void;
 };
 
 export function AuthScreen({
-  isLoginMode,
+  mode,
   fullName,
   teamName,
   email,
@@ -31,7 +32,7 @@ export function AuthScreen({
   onPasswordChange,
   onTogglePassword,
   onSubmit,
-  onToggleMode,
+  onSetMode,
 }: AuthScreenProps) {
   const { t } = useTranslation();
 
@@ -40,10 +41,10 @@ export function AuthScreen({
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>{t(isLoginMode ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
+          <Text style={styles.title}>{t(mode === 'login'  ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
           <Text style={styles.subtitle}>{t('auth.appName')}</Text>
 
-          {!isLoginMode && (
+          {mode !== 'login' && (
             <>
               <TextInput style={styles.input} placeholder={t('auth.fullName')} placeholderTextColor="#888" value={fullName} onChangeText={onFullNameChange} />
               <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
@@ -58,12 +59,26 @@ export function AuthScreen({
           </View>
 
           <TouchableOpacity style={styles.solidButton} onPress={onSubmit}>
-            <Text style={styles.solidButtonText}>{t(isLoginMode ? 'auth.login' : 'auth.register')}</Text>
+            <Text style={styles.solidButtonText}>{t(mode === 'login' ? 'auth.login' : 'auth.register')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.toggleMode} onPress={onToggleMode}>
-            <Text style={styles.toggleModeText}>{t(isLoginMode ? 'auth.switchToRegister' : 'auth.switchToLogin')}</Text>
-          </TouchableOpacity>
+        <View style={styles.toggleMode}>
+            {mode !== 'login' && (
+              <TouchableOpacity onPress={() => onSetMode('login')}>
+                <Text style={styles.toggleModeText}>Back to Login</Text>
+              </TouchableOpacity>
+            )}
+            {mode === 'login' && (
+              <>
+                <TouchableOpacity onPress={() => onSetMode('register_captain')} style={{ marginBottom: 10 }}>
+                  <Text style={styles.toggleModeText}>Register as Team Captain</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => onSetMode('register_member')}>
+                  <Text style={styles.toggleModeText}>Register as Team Member</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
         </ScrollView>
       </View>
     </SafeAreaView>
