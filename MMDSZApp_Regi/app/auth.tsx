@@ -10,7 +10,7 @@ import { AuthMode } from '@/src/types/auth';
 import { UserRole } from '@/src/types/auth';
 
 export default function AuthRoute() {
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<AuthMode>(AuthMode.LOGIN);
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { showToast } = useToast();
@@ -45,7 +45,7 @@ export default function AuthRoute() {
   const handleRegister = async () => {
     if (!fullName || !email || !password  || !teamName) return showToast(t('alerts.requiredFields'), 'error');
 
-    const assignedRole = mode === 'register_captain' 
+    const assignedRole = mode === AuthMode.REGISTER_CAPTAIN 
       ? UserRole.CSAPATKAPITANY 
       : UserRole.CSAPATTAG;
 

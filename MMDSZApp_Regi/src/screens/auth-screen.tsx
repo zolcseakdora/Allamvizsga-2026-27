@@ -41,10 +41,10 @@ export function AuthScreen({
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>{t(mode === 'login'  ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
+          <Text style={styles.title}>{t(mode === AuthMode.LOGIN  ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
           <Text style={styles.subtitle}>{t('auth.appName')}</Text>
 
-          {mode !== 'login' && (
+          {mode !== AuthMode.LOGIN && (
             <>
               <TextInput style={styles.input} placeholder={t('auth.fullName')} placeholderTextColor="#888" value={fullName} onChangeText={onFullNameChange} />
               <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
@@ -59,21 +59,21 @@ export function AuthScreen({
           </View>
 
           <TouchableOpacity style={styles.solidButton} onPress={onSubmit}>
-            <Text style={styles.solidButtonText}>{t(mode === 'login' ? 'auth.login' : 'auth.register')}</Text>
+            <Text style={styles.solidButtonText}>{t(mode === AuthMode.LOGIN ? 'auth.login' : 'auth.register')}</Text>
           </TouchableOpacity>
 
         <View style={styles.toggleMode}>
-            {mode !== 'login' && (
-              <TouchableOpacity onPress={() => onSetMode('login')}>
+            {mode !== AuthMode.LOGIN && (
+              <TouchableOpacity onPress={() => onSetMode(AuthMode.LOGIN)}>
                 <Text style={styles.toggleModeText}>Back to Login</Text>
               </TouchableOpacity>
             )}
-            {mode === 'login' && (
+            {mode === AuthMode.LOGIN && (
               <>
-                <TouchableOpacity onPress={() => onSetMode('register_captain')} style={{ marginBottom: 10 }}>
+                <TouchableOpacity onPress={() => onSetMode(AuthMode.REGISTER_CAPTAIN)} style={{ marginBottom: 10 }}>
                   <Text style={styles.toggleModeText}>Register as Team Captain</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => onSetMode('register_member')}>
+                <TouchableOpacity onPress={() => onSetMode(AuthMode.REGISTER_MEMBER)}>
                   <Text style={styles.toggleModeText}>Register as Team Member</Text>
                 </TouchableOpacity>
               </>

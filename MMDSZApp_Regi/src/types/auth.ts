@@ -34,4 +34,8 @@ export type RegistrationInput = {
   role: UserRole;
 };
 
-export type AuthMode = 'login' | 'register_captain' | 'register_member';
+export enum AuthMode {
+  LOGIN = 'login',
+  REGISTER_CAPTAIN = 'register_captain',
+  REGISTER_MEMBER = 'register_member'
+}
