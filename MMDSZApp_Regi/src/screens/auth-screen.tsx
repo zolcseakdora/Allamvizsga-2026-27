@@ -36,21 +36,55 @@ export function AuthScreen({
 }: AuthScreenProps) {
   const { t } = useTranslation();
 
+  const getRole = () =>{
+    switch (mode) {
+      case AuthMode.REGISTER_CAPTAIN:
+      return 'Captain Registration';
+      case AuthMode.REGISTER_MEMBER:
+        return 'Member registration';
+        default:
+           return null;
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
           <Image source={require('@/assets/images/logo.png')} style={styles.logo} resizeMode="contain" />
-          <Text style={styles.title}>{t(mode === AuthMode.LOGIN  ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
+          
+          <Text style={styles.title}>{t(mode === AuthMode.LOGIN ? 'auth.loginTitle' : 'auth.registerTitle')}</Text>
+          
+        
+          {mode !== AuthMode.LOGIN && (
+            <Text style={styles.role}>{getRole()}</Text>
+          )}
+          
           <Text style={styles.subtitle}>{t('auth.appName')}</Text>
 
           {mode !== AuthMode.LOGIN && (
             <>
-              <TextInput style={styles.input} placeholder={t('auth.fullName')} placeholderTextColor="#888" value={fullName} onChangeText={onFullNameChange} />
-              <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
+              <TextInput 
+                style={styles.input} 
+                placeholder={t('auth.fullName')} 
+                placeholderTextColor="#888" 
+                value={fullName} 
+                onChangeText={onFullNameChange} 
+              />
+              <TextInput 
+            
+                style={[styles.input, mode === AuthMode.REGISTER_MEMBER && styles.disabledInput]} 
+                placeholder={t('auth.teamName')} 
+                placeholderTextColor="#888" 
+                value={teamName} 
+                onChangeText={onTeamNameChange}
+                editable={mode !== AuthMode.REGISTER_MEMBER} 
+              />
             </>
           )}
+          
           <TextInput style={styles.input} placeholder={t('common.email')} placeholderTextColor="#888" keyboardType="email-address" value={email} onChangeText={onEmailChange} autoCapitalize="none" />
+          
           <View style={styles.passwordContainer}>
             <TextInput style={styles.passwordInput} placeholder={t('common.password')} placeholderTextColor="#888" secureTextEntry={securePassword} value={password} onChangeText={onPasswordChange} />
             <TouchableOpacity onPress={onTogglePassword} style={styles.eyeIconContainer}>
@@ -62,21 +96,17 @@ export function AuthScreen({
             <Text style={styles.solidButtonText}>{t(mode === AuthMode.LOGIN ? 'auth.login' : 'auth.register')}</Text>
           </TouchableOpacity>
 
-        <View style={styles.toggleMode}>
+          <View style={styles.toggleMode}>
             {mode !== AuthMode.LOGIN && (
               <TouchableOpacity onPress={() => onSetMode(AuthMode.LOGIN)}>
                 <Text style={styles.toggleModeText}>Back to Login</Text>
               </TouchableOpacity>
             )}
+            
             {mode === AuthMode.LOGIN && (
-              <>
-                <TouchableOpacity onPress={() => onSetMode(AuthMode.REGISTER_CAPTAIN)} style={{ marginBottom: 10 }}>
-                  <Text style={styles.toggleModeText}>Register as Team Captain</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => onSetMode(AuthMode.REGISTER_MEMBER)}>
-                  <Text style={styles.toggleModeText}>Register as Team Member</Text>
-                </TouchableOpacity>
-              </>
+              <TouchableOpacity onPress={() => onSetMode(AuthMode.REGISTER_CAPTAIN)}>
+                <Text style={styles.toggleModeText}>Register as Team Captain</Text>
+              </TouchableOpacity>
             )}
           </View>
         </ScrollView>
@@ -90,9 +120,11 @@ const styles = StyleSheet.create({
   webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
   scrollContainer: { flexGrow: 1, paddingVertical: 20 },
   logo: { width: 100, height: 100, marginBottom: 16, alignSelf: 'center' },
-  title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6, textAlign: 'center', letterSpacing: 1 },
+  title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4, textAlign: 'center', letterSpacing: 1 },
+  role: { fontSize: 14, fontWeight: '600', color: '#EC2127', marginBottom: 4, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1 },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
   input: { borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, marginBottom: 12, backgroundColor: '#1E1E1E', color: '#FFF' },
+  disabledInput: { backgroundColor: '#2A2A2A', color: '#888', borderColor: '#444' },
   passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#333', borderRadius: 8, marginBottom: 12, backgroundColor: '#1E1E1E' },
   passwordInput: { flex: 1, padding: 12, color: '#FFF' },
   eyeIconContainer: { paddingHorizontal: 12 },
