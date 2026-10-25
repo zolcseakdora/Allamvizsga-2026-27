@@ -58,7 +58,7 @@ function RootLayoutNav() {
       if (!hasLang) {
         if (currentGroup !== 'language') router.replace('/language');
       } else if (!isLoggedIn) {
-        if (currentGroup !== 'auth') router.replace('/auth');
+        if (currentGroup !== 'auth' && currentGroup !== 'invites') router.replace('/auth');
       } else if (isLoggedIn && !profile?.isVerified && profile?.role !== UserRole.FOSZERVEZO) {
         if (currentGroup !== 'verification') router.replace('/verification');
       } else if (inAuthGroup) {

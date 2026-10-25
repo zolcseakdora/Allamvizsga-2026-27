@@ -16,7 +16,6 @@ export default function AuthRoute() {
   const { showToast } = useToast();
   const router = useRouter();
 
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -75,7 +74,7 @@ export default function AuthRoute() {
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onTogglePassword={() => setSecurePassword(!securePassword)}
-      onSubmit={isLoginMode ? handleLogin : handleRegister}
+      onSubmit={mode === AuthMode.LOGIN ? handleLogin : handleRegister}
       onSetMode={setMode}
     />
   );
