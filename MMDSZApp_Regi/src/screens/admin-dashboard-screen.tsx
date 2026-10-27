@@ -23,6 +23,11 @@ type AdminDashboardScreenProps = {
   adminEventLocation: string;
   adminEventDescription: string;
   adminEventImage?: string;
+  eventType?: 'februtalis' | 'diaknapok';
+  eventDays?: Array<{ id: string; date: string; weekday: string; order: number }>;
+  selectedDayId?: string | null;
+  newDayName?: string;
+  newDayDate?: string;
   isEditingEvent: boolean;
   isUploading: boolean;
   notifTitle: string;
@@ -41,6 +46,11 @@ type AdminDashboardScreenProps = {
   onEventTimeChange: (value: string) => void;
   onEventLocationChange: (value: string) => void;
   onEventDescriptionChange: (value: string) => void;
+  onEventDaySelect?: (dayId: string | null) => void;
+  onNewDayNameChange?: (value: string) => void;
+  onNewDayDateChange?: (value: string) => void;
+  onAddDay?: () => void;
+  onDeleteDay?: (dayId: string) => void;
   onPickEventImage: () => void;
   onAddEvent: () => void;
   onNotifTitleChange: (value: string) => void;
@@ -69,6 +79,11 @@ export function AdminDashboardScreen({
   adminEventLocation,
   adminEventDescription,
   adminEventImage,
+  eventType,
+  eventDays,
+  selectedDayId,
+  newDayName,
+  newDayDate,
   isEditingEvent,
   isUploading,
   notifTitle,
@@ -87,6 +102,11 @@ export function AdminDashboardScreen({
   onEventTimeChange,
   onEventLocationChange,
   onEventDescriptionChange,
+  onEventDaySelect,
+  onNewDayNameChange,
+  onNewDayDateChange,
+  onAddDay,
+  onDeleteDay,
   onPickEventImage,
   onAddEvent,
   onNotifTitleChange,
@@ -109,6 +129,7 @@ export function AdminDashboardScreen({
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
+  const isFebrutalis = eventType === 'februtalis';
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
@@ -193,11 +214,31 @@ export function AdminDashboardScreen({
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 {t(isEditingEvent ? 'admin.editProgram' : 'admin.addProgram')}</Text>
             <Text style={styles.profileLabel}>{t('admin.chooseDay')}</Text>
-            <View style={styles.dayList}>
-              {EVENT_DAYS.map(day => (
-                <FilterChip key={day} label={t(EVENT_DAY_LABEL_KEYS[day as keyof typeof EVENT_DAY_LABEL_KEYS])} selected={adminEventDay === day} onPress={() => onEventDayChange(day)} style={styles.dayChip} />
-              ))}
-            </View>
+            {isFebrutalis && eventDays && eventDays.length > 0 ? (
+              <>
+                <View style={styles.dayList}>
+                  {eventDays.map(day => (
+                    <View key={day.id} style={styles.dynamicDayRow}>
+                      <FilterChip label={day.weekday} selected={selectedDayId === day.id} onPress={() => onEventDaySelect?.(day.id)} style={styles.dayChip} />
+                      <TouchableOpacity style={styles.deleteDayButton} onPress={() => onDeleteDay?.(day.id)}>
+                        <Text style={styles.deleteDayText}>{t('admin.deleteDay')}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <TextInput style={styles.input} placeholder={t('admin.dayNamePlaceholder')} placeholderTextColor="#888" value={newDayName} onChangeText={onNewDayNameChange} />
+                <TextInput style={styles.input} placeholder={t('admin.dayDatePlaceholder')} placeholderTextColor="#888" value={newDayDate} onChangeText={onNewDayDateChange} keyboardType="numbers-and-punctuation" />
+                <TouchableOpacity style={styles.outlineButton} onPress={onAddDay}>
+                  <Text style={styles.outlineButtonText}>＋ {t('admin.addDay')}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.dayList}>
+                {EVENT_DAYS.map(day => (
+                  <FilterChip key={day} label={t(EVENT_DAY_LABEL_KEYS[day as keyof typeof EVENT_DAY_LABEL_KEYS])} selected={adminEventDay === day} onPress={() => onEventDayChange(day)} style={styles.dayChip} />
+                ))}
+              </View>
+            )}
             <TextInput style={styles.input} placeholder={t('admin.programTitlePlaceholder')} placeholderTextColor="#888" value={adminEventTitle} onChangeText={onEventTitleChange} />
             <TextInput style={styles.input} placeholder={t('admin.timePlaceholder')} placeholderTextColor="#888" value={adminEventTime} onChangeText={onEventTimeChange} keyboardType="numbers-and-punctuation" />
             <TextInput style={styles.input} placeholder={t('admin.locationPlaceholder')} placeholderTextColor="#888" value={adminEventLocation} onChangeText={onEventLocationChange} />
@@ -275,7 +316,10 @@ const styles = StyleSheet.create({
   sectionSubtitle: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginTop: 4, marginBottom: 6 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   dayList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 },
+  dynamicDayRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   dayChip: { marginBottom: 6 },
+  deleteDayButton: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: '#2A1C1D', borderWidth: 1, borderColor: '#EC2127' },
+  deleteDayText: { color: '#EC2127', fontSize: 11, fontWeight: 'bold' },
   input: { borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, marginBottom: 12, backgroundColor: '#1E1E1E', color: '#FFF' },
   notificationBody: { height: 70, textAlignVertical: 'top', borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, marginBottom: 12, backgroundColor: '#1E1E1E', color: '#FFF' },
   solidButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
