@@ -1,16 +1,18 @@
 import * as ImagePicker from 'expo-image-picker';
 import { doc, updateDoc } from 'firebase/firestore';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { HomeScreen } from '@/src/screens/home-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useToast } from '@/src/context/ToastContext';
 
 import { UserRole } from '@/src/types/auth';
 import { canRole } from '@/src/constants/roles';
+import { useCountdown } from '@/src/hooks/use-countdown';
 import { processImage } from '@/src/services/images';
 
 export default function App() {
@@ -22,7 +24,8 @@ export default function App() {
     resendVerificationEmail,
     confirmEmailAndRedeem,
   } = useAuth();
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0 });
+  const { edition } = useEventSeason();
+  const countdown = useCountdown(edition);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [isUploadingIgazolas, setIsUploadingIgazolas] = useState(false);
@@ -33,20 +36,14 @@ export default function App() {
   
   const showIgazolasUpload = canRole(userRole, 'uploadIgazolas');
 
-  useEffect(() => {
-    const targetDate = new Date('2027-05-20T00:00:00');
-    const timer = setInterval(() => {
-      const now = new Date();
-      const difference = targetDate.getTime() - now.getTime();
-      if (difference > 0) {
-        const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
-        const minutes = Math.floor((difference / 1000 / 60) % 60);
-        setTimeLeft({ days, hours, minutes });
-      }
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const timeLeft = {
+    days: countdown.days,
+    hours: countdown.hours,
+    minutes: countdown.minutes,
+  };
+  const eventTitle = edition?.displayTitle ?? t('home.title');
+  const eventDateLabel = edition?.dateLabel ?? t('home.date');
+  const countdownStatus = countdown.status;
 
   const handleResendVerificationEmail = async () => {
     setIsResendingEmail(true);
@@ -117,6 +114,9 @@ export default function App() {
         isCheckingEmail={isCheckingEmail}
         isResendingEmail={isResendingEmail}
         timeLeft={timeLeft}
+        eventTitle={eventTitle}
+        eventDateLabel={eventDateLabel}
+        countdownStatus={countdownStatus}
         showIgazolasUpload={showIgazolasUpload}
         hasIgazolas={hasIgazolas}
         isVerified={isVerified}
