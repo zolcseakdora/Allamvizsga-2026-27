@@ -76,6 +76,9 @@ const hu = {
     switchToRegister: 'Nincs még fiókod? Regisztrálj!',
     switchToLogin: 'Már van fiókod? Lépj be!',
     forgotPassword: 'Elfelejtetted a jelszavad?',
+     roleCaptain: 'Csapatkapitányi regisztráció',
+    roleMember: 'Csapattag regisztráció',
+    roleOrganizer: 'Szervezői regisztráció',
   },
   verification: {
     title: 'FÜGGŐBEN LÉVŐ REGISZTRÁCIÓ',
@@ -93,6 +96,7 @@ const hu = {
     accepted: 'Elfogadva',
     pending: 'Ellenőrzés alatt',
     missing: 'Nincs feltöltve',
+   
   },
   profile: {
     title: 'SAJÁT PROFIL',

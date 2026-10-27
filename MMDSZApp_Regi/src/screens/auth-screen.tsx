@@ -36,16 +36,16 @@ export function AuthScreen({
 }: AuthScreenProps) {
   const { t } = useTranslation();
 
-  const getRole = () =>{
+  const getRole = () => {
     switch (mode) {
       case AuthMode.REGISTER_CAPTAIN:
-      return 'Captain Registration';
+        return t('auth.roleCaptain');
       case AuthMode.REGISTER_MEMBER:
-        return 'Member registration';
+        return t('auth.roleMember');
       case AuthMode.REGISTER_ORGANIZER:
-        return 'Organizer Registration';
-        default:
-           return null;
+        return t('auth.roleOrganizer');
+      default:
+        return null;
     }
   }
 
