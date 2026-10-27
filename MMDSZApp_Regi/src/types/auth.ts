@@ -37,5 +37,6 @@ export type RegistrationInput = {
 export enum AuthMode {
   LOGIN = 'login',
   REGISTER_CAPTAIN = 'register_captain',
-  REGISTER_MEMBER = 'register_member'
+  REGISTER_MEMBER = 'register_member',
+  REGISTER_ORGANIZER = 'register_organizer',
 }

@@ -42,6 +42,8 @@ export function AuthScreen({
       return 'Captain Registration';
       case AuthMode.REGISTER_MEMBER:
         return 'Member registration';
+      case AuthMode.REGISTER_ORGANIZER:
+        return 'Organizer Registration';
         default:
            return null;
     }
@@ -71,6 +73,7 @@ export function AuthScreen({
                 value={fullName} 
                 onChangeText={onFullNameChange} 
               />
+              {mode !== AuthMode.REGISTER_ORGANIZER &&(
               <TextInput 
             
                 style={[styles.input, mode === AuthMode.REGISTER_MEMBER && styles.disabledInput]} 
@@ -80,6 +83,7 @@ export function AuthScreen({
                 onChangeText={onTeamNameChange}
                 editable={mode !== AuthMode.REGISTER_MEMBER} 
               />
+              )}
             </>
           )}
           
