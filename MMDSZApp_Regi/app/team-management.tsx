@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
@@ -15,15 +15,18 @@ import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { processImage } from '@/src/services/images';
 import { normalizeTeamName } from '@/src/utils/team-name';
+import { useSponsors } from '@/src/hooks/use-sponsors';
+import type { Sponsor } from '@/src/types/sponsor';
 
 type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 
 export default function TeamManagementRoute() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, isLoading } = useAuth();
   const { getTeam, saveTeam } = useTeams();
-  const canInviteMembers = canRole(profile?.role, 'inviteMembers');
+  const { sponsors, refreshSponsors, addSponsor, updateSponsor, deleteSponsor } = useSponsors();
+  const canManageTeam = profile?.isVerified === true && canRole(profile?.role, 'inviteMembers');
   const teamName = normalizeTeamName(profile?.team ?? '');
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
@@ -32,23 +35,42 @@ export default function TeamManagementRoute() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<InviteRole>(UserRole.CSAPATTAG);
   const [uploadingImage, setUploadingImage] = useState<'logo' | 'flag' | null>(null);
+  const [sponsorName, setSponsorName] = useState('');
+  const [sponsorLogo, setSponsorLogo] = useState<string>();
+  const [editingSponsorId, setEditingSponsorId] = useState<string>();
+  const [isManagingSponsors, setIsManagingSponsors] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !canManageTeam) router.replace('/');
+  }, [canManageTeam, isLoading, router]);
 
   const refresh = useCallback(async () => {
-    if (!teamName) return;
-    const team = await getTeam(teamName);
+    if (!canManageTeam || !teamName) return;
+    const [team] = await Promise.all([getTeam(teamName), refreshSponsors()]);
     setTeamDescription(team?.description ?? '');
     setTeamVideoLink(team?.videoLink ?? '');
     setTeamLogo(team?.logo ?? null);
     setTeamFlag(team?.flag ?? null);
-  }, [getTeam, teamName]);
+  }, [canManageTeam, getTeam, refreshSponsors, teamName]);
 
   useEffect(() => {
+    if (!canManageTeam) return;
     const timer = setTimeout(() => {
-      void refresh();
+      void refresh().catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        Alert.alert(t('alerts.generic', { message }));
+      });
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [refresh]);
+  }, [canManageTeam, refresh, t]);
+
+  const handleRefresh = () => {
+    void refresh().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t('alerts.generic', { message }));
+    });
+  };
 
   const uploadTeamImage = async (type: 'logo' | 'flag') => {
     if (!teamName) return;
@@ -90,8 +112,107 @@ export default function TeamManagementRoute() {
     }
   };
 
+  const handlePickSponsorLogo = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(t('alerts.permissionRequired'));
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        base64: false,
+      });
+      const uri = result.canceled ? undefined : result.assets[0]?.uri;
+      if (!uri) return;
+
+      setIsManagingSponsors(true);
+      const { dataUrl } = await processImage(uri, {
+        maxSide: 256,
+        quality: 0.7,
+        maxBytes: 200000,
+      });
+      setSponsorLogo(dataUrl);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'image-too-large') {
+        Alert.alert(t('alerts.imageTooLarge'));
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t('alerts.generic', { message }));
+    } finally {
+      setIsManagingSponsors(false);
+    }
+  };
+
+  const clearSponsorForm = () => {
+    setSponsorName('');
+    setSponsorLogo(undefined);
+    setEditingSponsorId(undefined);
+  };
+
+  const handleSaveSponsor = async () => {
+    if (!sponsorName.trim() || !sponsorLogo) {
+      Alert.alert(t('teamManagement.sponsorFieldsRequired'));
+      return;
+    }
+
+    setIsManagingSponsors(true);
+    try {
+      const sponsor = { name: sponsorName, logo: sponsorLogo };
+      if (editingSponsorId) {
+        await updateSponsor(editingSponsorId, sponsor);
+        Alert.alert(t('teamManagement.sponsorUpdated'));
+      } else {
+        await addSponsor(sponsor);
+        Alert.alert(t('teamManagement.sponsorAdded'));
+      }
+      clearSponsorForm();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t('alerts.generic', { message }));
+    } finally {
+      setIsManagingSponsors(false);
+    }
+  };
+
+  const handleEditSponsor = (sponsor: Sponsor) => {
+    setEditingSponsorId(sponsor.id);
+    setSponsorName(sponsor.name);
+    setSponsorLogo(sponsor.logo);
+  };
+
+  const handleDeleteSponsor = (sponsor: Sponsor) => {
+    const remove = () => {
+      setIsManagingSponsors(true);
+      void deleteSponsor(sponsor.id)
+        .then(() => {
+          if (editingSponsorId === sponsor.id) clearSponsorForm();
+          Alert.alert(t('teamManagement.sponsorDeleted'));
+        })
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          Alert.alert(t('alerts.generic', { message }));
+        })
+        .finally(() => setIsManagingSponsors(false));
+    };
+
+    const title = t('teamManagement.deleteSponsor');
+    const message = t('teamManagement.confirmDeleteSponsor', { name: sponsor.name });
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) remove();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('teamManagement.deleteSponsor'), style: 'destructive', onPress: remove },
+    ]);
+  };
+
   const handleInvite = async () => {
-    if (!canInviteMembers) {
+    if (!canManageTeam) {
       Alert.alert(t('alerts.inviteNotAllowed'));
       return;
     }
@@ -147,6 +268,7 @@ export default function TeamManagementRoute() {
   return (
     <TeamManagementScreen
       teamName={teamName}
+      sponsors={sponsors.filter((sponsor) => sponsor.team === teamName)}
       teamDescription={teamDescription}
       teamVideoLink={teamVideoLink}
       teamLogo={teamLogo}
@@ -154,8 +276,12 @@ export default function TeamManagementRoute() {
       uploadingImage={uploadingImage}
       inviteEmail={inviteEmail}
       inviteRole={inviteRole}
+      sponsorName={sponsorName}
+      sponsorLogo={sponsorLogo}
+      editingSponsor={Boolean(editingSponsorId)}
+      isManagingSponsors={isManagingSponsors}
       onBack={() => goBackOrHome(router)}
-      onRefresh={() => void refresh()}
+      onRefresh={handleRefresh}
       onDescriptionChange={setTeamDescription}
       onVideoLinkChange={setTeamVideoLink}
       onUploadTeamImage={(type) => void uploadTeamImage(type)}
@@ -163,6 +289,12 @@ export default function TeamManagementRoute() {
       onInviteEmailChange={setInviteEmail}
       onInviteRoleChange={setInviteRole}
       onSendTeamInvite={() => void handleInvite()}
+      onSponsorNameChange={setSponsorName}
+      onPickSponsorLogo={() => void handlePickSponsorLogo()}
+      onSaveSponsor={() => void handleSaveSponsor()}
+      onCancelSponsorEdit={clearSponsorForm}
+      onEditSponsor={handleEditSponsor}
+      onDeleteSponsor={handleDeleteSponsor}
     />
   );
 }

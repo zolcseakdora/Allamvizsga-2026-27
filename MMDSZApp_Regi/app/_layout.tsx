@@ -24,7 +24,14 @@ function RootLayoutNav() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const hasApprovedAccess = Boolean(
-    isLoggedIn && profile && (profile.isVerified || profile.role === UserRole.FOSZERVEZO),
+    isLoggedIn
+    && profile
+    && profile.accountStatus !== 'disabled'
+    && (
+      profile.accountStatus
+        ? profile.accountStatus === 'active'
+        : profile.isVerified || profile.role === UserRole.FOSZERVEZO
+    ),
   );
   
   const [isReady, setIsReady] = useState(false);
@@ -59,7 +66,7 @@ function RootLayoutNav() {
         if (currentGroup !== 'language') router.replace('/language');
       } else if (!isLoggedIn) {
         if (currentGroup !== 'auth' && currentGroup !== 'invites') router.replace('/auth');
-      } else if (isLoggedIn && !profile?.isVerified && profile?.role !== UserRole.FOSZERVEZO) {
+      } else if (!hasApprovedAccess) {
         if (currentGroup !== 'verification') router.replace('/verification');
       } else if (inAuthGroup) {
         router.replace('/');
@@ -67,7 +74,7 @@ function RootLayoutNav() {
     };
 
     checkRouteAndRedirect();
-  }, [isLoggedIn, profile, isReady, isLoading, router, segments]);
+  }, [isLoggedIn, profile, hasApprovedAccess, isReady, isLoading, router, segments]);
 
   if (!isReady || isLoading) return null; 
 

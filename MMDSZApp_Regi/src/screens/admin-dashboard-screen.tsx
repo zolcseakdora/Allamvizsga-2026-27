@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/src/components/controls/filter-chip';
 import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/src/constants/event-days';
-import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
 
 type PendingUser = {
@@ -29,12 +28,7 @@ type AdminDashboardScreenProps = {
   notifBody: string;
   showPending: boolean;
   pendingUsers: PendingUser[];
-  sponsors: Sponsor[];
   teams: Team[];
-  sponsorName: string;
-  sponsorLink: string;
-  sponsorLogo?: string;
-  isManagingSponsors: boolean;
   onBack: () => void;
   onEventDayChange: (day: string) => void;
   onEventTitleChange: (value: string) => void;
@@ -55,11 +49,6 @@ type AdminDashboardScreenProps = {
   onCreateMissingTeams: () => void;
   onNormalizeUserTeamNames: () => void;
   onDeleteTeam: (team: Team) => void;
-  onSponsorNameChange: (value: string) => void;
-  onSponsorLinkChange: (value: string) => void;
-  onPickSponsorLogo: () => void;
-  onAddSponsor: () => void;
-  onDeleteSponsor: (sponsor: Sponsor) => void;
 }
 
 export function AdminDashboardScreen({
@@ -75,12 +64,7 @@ export function AdminDashboardScreen({
   notifBody,
   showPending,
   pendingUsers,
-  sponsors,
   teams,
-  sponsorName,
-  sponsorLink,
-  sponsorLogo,
-  isManagingSponsors,
   onBack,
   onEventDayChange,
   onEventTitleChange,
@@ -101,11 +85,6 @@ export function AdminDashboardScreen({
   onCreateMissingTeams,
   onNormalizeUserTeamNames,
   onDeleteTeam,
-  onSponsorNameChange,
-  onSponsorLinkChange,
-  onPickSponsorLogo,
-  onAddSponsor,
-  onDeleteSponsor,
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -156,38 +135,6 @@ export function AdminDashboardScreen({
             <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
               <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🤝 {t('admin.manageSponsors')}</Text>
-            <TextInput style={styles.input} placeholder={t('admin.sponsorNamePlaceholder')} placeholderTextColor="#888" value={sponsorName} onChangeText={onSponsorNameChange} />
-            <TextInput style={styles.input} placeholder={t('admin.sponsorLinkPlaceholder')} placeholderTextColor="#888" value={sponsorLink} onChangeText={onSponsorLinkChange} autoCapitalize="none" keyboardType="url" />
-            <TouchableOpacity style={styles.outlineButton} onPress={onPickSponsorLogo}>
-              <Text style={styles.outlineButtonText}>{t('admin.chooseSponsorLogo')}</Text>
-            </TouchableOpacity>
-            {sponsorLogo && <Image source={{ uri: sponsorLogo }} style={styles.sponsorPreview} resizeMode="contain" />}
-            <TouchableOpacity
-              style={[styles.solidButton, { opacity: isManagingSponsors ? 0.7 : 1 }]}
-              onPress={onAddSponsor}
-              disabled={isManagingSponsors}
-            >
-              <Text style={styles.solidButtonText}>{isManagingSponsors ? t('admin.uploading') : t('admin.addSponsor')}</Text>
-            </TouchableOpacity>
-            {sponsors.length === 0 ? (
-              <Text style={styles.emptyState}>{t('admin.noSponsors')}</Text>
-            ) : (
-              <View style={styles.sponsorList}>
-                {sponsors.map((sponsor) => (
-                  <View key={sponsor.id} style={styles.sponsorRow}>
-                    <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
-                    <Text style={styles.sponsorName}>{sponsor.name}</Text>
-                    <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteSponsor(sponsor)}>
-                      <Text style={styles.deleteButtonText}>{t('admin.deleteSponsor')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
 
           <View style={styles.card}>

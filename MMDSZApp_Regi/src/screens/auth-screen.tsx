@@ -7,11 +7,13 @@ type AuthScreenProps = {
   mode: AuthMode;
   fullName: string;
   teamName: string;
+  registrationCode?: string;
   email: string;
   password: string;
   securePassword: boolean;
   onFullNameChange: (value: string) => void;
   onTeamNameChange: (value: string) => void;
+  onRegistrationCodeChange?: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onTogglePassword: () => void;
@@ -23,11 +25,13 @@ export function AuthScreen({
   mode,
   fullName,
   teamName,
+  registrationCode,
   email,
   password,
   securePassword,
   onFullNameChange,
   onTeamNameChange,
+  onRegistrationCodeChange,
   onEmailChange,
   onPasswordChange,
   onTogglePassword,
@@ -66,23 +70,43 @@ export function AuthScreen({
 
           {mode !== AuthMode.LOGIN && (
             <>
-              <TextInput 
-                style={styles.input} 
-                placeholder={t('auth.fullName')} 
-                placeholderTextColor="#888" 
-                value={fullName} 
-                onChangeText={onFullNameChange} 
+              <TextInput
+                style={styles.input}
+                placeholder={t('auth.fullName')}
+                placeholderTextColor="#888"
+                value={fullName}
+                onChangeText={onFullNameChange}
               />
-              {mode !== AuthMode.REGISTER_ORGANIZER &&(
-              <TextInput 
-            
-                style={[styles.input, mode === AuthMode.REGISTER_MEMBER && styles.disabledInput]} 
-                placeholder={t('auth.teamName')} 
-                placeholderTextColor="#888" 
-                value={teamName} 
-                onChangeText={onTeamNameChange}
-                editable={mode !== AuthMode.REGISTER_MEMBER} 
-              />
+              {mode === AuthMode.REGISTER_CAPTAIN && (
+                <>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('auth.registrationCode')}
+                    placeholderTextColor="#888"
+                    value={registrationCode ?? ''}
+                    onChangeText={onRegistrationCodeChange}
+                    autoCapitalize="characters"
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder={t('auth.teamName')}
+                    placeholderTextColor="#888"
+                    value={teamName}
+                    onChangeText={onTeamNameChange}
+                  />
+                </>
+              )}
+              {mode === AuthMode.REGISTER_MEMBER && (
+                <>
+                  <TextInput
+                    style={[styles.input, styles.disabledInput]}
+                    placeholder={t('auth.teamName')}
+                    placeholderTextColor="#888"
+                    value={teamName}
+                    editable={false}
+                  />
+                  <Text style={styles.hint}>{t('auth.invitedMemberHint')}</Text>
+                </>
               )}
             </>
           )}
@@ -127,6 +151,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4, textAlign: 'center', letterSpacing: 1 },
   role: { fontSize: 14, fontWeight: '600', color: '#EC2127', marginBottom: 4, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 1 },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
+  hint: { fontSize: 12, color: '#aaa', marginBottom: 12, textAlign: 'center' },
   input: { borderWidth: 1, borderColor: '#333', borderRadius: 8, padding: 12, marginBottom: 12, backgroundColor: '#1E1E1E', color: '#FFF' },
   disabledInput: { backgroundColor: '#2A2A2A', color: '#888', borderColor: '#444' },
   passwordContainer: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#333', borderRadius: 8, marginBottom: 12, backgroundColor: '#1E1E1E' },

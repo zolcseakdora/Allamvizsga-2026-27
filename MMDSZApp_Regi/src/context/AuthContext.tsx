@@ -6,14 +6,22 @@ import {
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type User,
 } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { auth, db } from '@/src/config/firebase';
-import { AuthState, RegistrationInput, UserProfile, UserRole } from '@/src/types/auth';
-import { normalizeTeamName } from '@/src/utils/team-name';
+import { auth, db, functions } from '@/src/config/firebase';
+import {
+  type AccountStatus,
+  type AuthState,
+  type MembershipStatus,
+  type RegistrationInput,
+  type UserProfile,
+  UserRole,
+} from '@/src/types/auth';
 
 const initialAuthState: AuthState = {
   user: null,
@@ -43,28 +51,39 @@ function isUserRole(value: unknown): value is UserRole {
 async function redeemPendingInvite(user: User): Promise<InviteRedemptionResult> {
   if (!user.emailVerified || !user.email) return 'unverified';
 
-  const email = user.email.toLowerCase();
-  const inviteRef = doc(db, 'invites', email);
-  const inviteSnapshot = await getDoc(inviteRef);
-  if (!inviteSnapshot.exists() || inviteSnapshot.data().status !== 'Függőben') {
-    return 'none';
+  const redeemInvite = httpsCallable<
+    { name: string },
+    { status: 'none' } | { status: 'accepted'; team: string }
+  >(functions, 'redeemInvite');
+  const result = await redeemInvite({ name: user.displayName ?? '' });
+  if (result.data.status === 'none') return 'none';
+  if (result.data.status === 'accepted' && typeof result.data.team === 'string') {
+    return { status: 'accepted', team: result.data.team };
   }
+  throw new Error('Invalid invitation redemption response');
+}
 
-  const invite = inviteSnapshot.data();
-  if (!isUserRole(invite.role) || typeof invite.team !== 'string') {
-    throw new Error(`Invalid invite document for ${email}`);
-  }
-  const team = normalizeTeamName(invite.team);
-  if (!team) throw new Error(`Invalid team name in invite document for ${email}`);
+function isAccountStatus(value: unknown): value is AccountStatus {
+  return [
+    'pending_captain_approval',
+    'pending_verification',
+    'pending_admin_approval',
+    'pending_admin_activation',
+    'active',
+    'rejected',
+    'disabled',
+  ].includes(value as string);
+}
 
-  const batch = writeBatch(db);
-  batch.update(doc(db, 'users', user.uid), {
-    role: invite.role,
-    team,
-  });
-  batch.update(inviteRef, { status: 'Elfogadva' });
-  await batch.commit();
-  return { status: 'accepted', team };
+function isMembershipStatus(value: unknown): value is MembershipStatus {
+  return [
+    'pending_captain_approval',
+    'pending_verification',
+    'pending_admin_approval',
+    'pending_admin_activation',
+    'active',
+    'rejected',
+  ].includes(value as string);
 }
 
 function toUserProfile(user: User, data: Record<string, unknown>): UserProfile {
@@ -81,6 +100,10 @@ function toUserProfile(user: User, data: Record<string, unknown>): UserProfile {
     igazolas: typeof data.igazolas === 'string' ? data.igazolas : undefined,
     isVerified: data.isVerified === true,
     profileImage: typeof data.profileImage === 'string' ? data.profileImage : null,
+    accountStatus: isAccountStatus(data.accountStatus) ? data.accountStatus : undefined,
+    membershipStatus: isMembershipStatus(data.membershipStatus) ? data.membershipStatus : undefined,
+    pendingRole: isUserRole(data.pendingRole) ? data.pendingRole : undefined,
+    requestedTeamName: typeof data.requestedTeamName === 'string' ? data.requestedTeamName : undefined,
   };
 }
 
@@ -124,18 +147,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);
     },
-    register: async ({ name, email, password, team, role }) => {
+    register: async ({ name, email, password, team, registrationCode }) => {
       const normalizedEmail = email.trim().toLowerCase();
-      const normalizedTeam = normalizeTeamName(team) || 'Egyéni';
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        name,
-        email: normalizedEmail,
-        team: normalizedTeam,
-        role: role,
-        createdAt: new Date(),
-        isVerified: false,
-      });
+      await updateProfile(userCredential.user, { displayName: name.trim() });
+      // Szerepkört és csapattagságot csak a Firebase Functions állíthat be:
+      // a kliensből érkező role/team adat nem adhat jogosultságot.
+      if (registrationCode?.trim()) {
+        const requestCaptainRegistration = httpsCallable<
+          { code: string; name: string; teamName: string },
+          { status: string }
+        >(functions, 'requestCaptainRegistration');
+        await requestCaptainRegistration({
+          code: registrationCode.trim(),
+          name: name.trim(),
+          teamName: team?.trim() ?? '',
+        });
+      }
       await sendEmailVerification(userCredential.user);
     },
     resendVerificationEmail: async () => {

@@ -7,7 +7,6 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
 
 import { AuthMode } from '@/src/types/auth';
-import { UserRole } from '@/src/types/auth';
 
 export default function AuthRoute() {
   const [mode, setMode] = useState<AuthMode>(AuthMode.LOGIN);
@@ -20,6 +19,7 @@ export default function AuthRoute() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
   const [securePassword, setSecurePassword] = useState(true);
 
   const resetForm = () => {
@@ -27,6 +27,7 @@ export default function AuthRoute() {
     setEmail('');
     setPassword('');
     setTeamName('');
+    setRegistrationCode('');
     setSecurePassword(true);
   };
 
@@ -42,18 +43,21 @@ export default function AuthRoute() {
   };
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password  || !teamName) return showToast(t('alerts.requiredFields'), 'error');
-
-    const assignedRole = mode === AuthMode.REGISTER_CAPTAIN 
-      ? UserRole.CSAPATKAPITANY 
-      : UserRole.CSAPATTAG;
+    if (!fullName.trim() || !email.trim() || !password) {
+      return showToast(t('alerts.requiredFields'), 'error');
+    }
+    if (mode === AuthMode.REGISTER_CAPTAIN && (!registrationCode.trim() || !teamName.trim())) {
+      return showToast(t('alerts.requiredFields'), 'error');
+    }
 
     try {
-      await register({ 
-        name: fullName,
-        email, password,
-        team: teamName, 
-        role: assignedRole
+      await register({
+        name: fullName.trim(),
+        email: email.trim(),
+        password,
+        ...(mode === AuthMode.REGISTER_CAPTAIN
+          ? { team: teamName.trim(), registrationCode: registrationCode.trim() }
+          : {}),
       });
       router.replace('/');
     } catch (error: any) {
@@ -66,11 +70,13 @@ export default function AuthRoute() {
       mode={mode}
       fullName={fullName}
       teamName={teamName}
+      registrationCode={registrationCode}
       email={email}
       password={password}
       securePassword={securePassword}
       onFullNameChange={setFullName}
       onTeamNameChange={setTeamName}
+      onRegistrationCodeChange={setRegistrationCode}
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onTogglePassword={() => setSecurePassword(!securePassword)}

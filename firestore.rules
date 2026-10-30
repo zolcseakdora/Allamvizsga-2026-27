@@ -8,6 +8,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // A meghívó dokumentumazonosítója a kisbetűs e-mail-cím.
+    function myEmail() {
+      return request.auth.token.email.lower();
+    }
+
     function hasProfile() {
       return signedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid));
@@ -17,54 +22,50 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isDisabled() {
+      return hasProfile() &&
+        (me().get('isDisabled', false) == true
+          || me().get('accountStatus', '') == 'disabled');
+    }
+
     function isAdmin() {
-      return hasProfile() && me().role == 'Főszervező';
+      return hasProfile()
+        && !isDisabled()
+        && me().role == 'Főszervező'
+        && (!me().keys().hasAny(['accountStatus']) || me().get('accountStatus', '') == 'active');
     }
 
     function isOrganizer() {
       return hasProfile() && me().role == 'Szervező';
     }
 
-    function isCaptain() {
-      return hasProfile() &&
-        (me().role == 'Csapatkapitány' || me().role == 'Alcsapatkapitány');
+    function isJudge() {
+      return hasProfile() && me().role == 'Zsűri';
     }
 
     // Jóváhagyott felhasználó (a főszervezőnek nem kell jóváhagyás)
     function isApproved() {
-      return hasProfile() && (me().isVerified == true || me().role == 'Főszervező');
-    }
-
-    // ---------- Meghívó segédfüggvények ----------
-    // A meghívó azonosítója a meghívott kisbetűs e-mail címe.
-    function myEmail() {
-      return request.auth.token.email.lower();
-    }
-
-    function inviteRef() {
-      return /databases/$(database)/documents/invites/$(myEmail());
-    }
-
-    // Van beváltható meghívó a bejelentkezett (megerősített e-mailű) felhasználónak?
-    function hasOpenInvite() {
-      return signedIn()
-        && request.auth.token.email != null
-        && request.auth.token.email_verified == true
-        && exists(inviteRef())
-        && get(inviteRef()).data.status == 'Függőben';
-    }
-
-    // Ki kit hívhat meg?
-    function validInvite(d) {
-      return d.status == 'Függőben'
-        && d.email == d.email.lower()
+      return hasProfile()
+        && !isDisabled()
         && (
-          // Főszervező: szervezőt és kapitányt/alkapitányt hívhat
-          (isAdmin() && d.role in ['Szervező', 'Csapatkapitány', 'Alcsapatkapitány'])
-          // Kapitány/alkapitány: csak a saját csapatába, csapattagot vagy alkapitányt
-          || (isCaptain() && d.team == me().team
-              && d.role in ['Csapattag', 'Alcsapatkapitány'])
+          (me().role == 'Főszervező'
+            && (!me().keys().hasAny(['accountStatus']) || me().get('accountStatus', '') == 'active'))
+          || me().get('accountStatus', '') == 'active'
+          || (!me().keys().hasAny(['accountStatus']) && me().get('isVerified', false) == true)
         );
+    }
+
+    function isCaptain() {
+      return isApproved() &&
+        (me().role == 'Csapatkapitány' || me().role == 'Alcsapatkapitány');
+    }
+
+    function canManageTeamSponsors() {
+      return isApproved()
+        && isCaptain()
+        && me().team is string
+        && me().team != ''
+        && exists(/databases/$(database)/documents/teams/$(me().team));
     }
 
     // ---------- Felhasználók ----------
@@ -73,31 +74,23 @@ service cloud.firestore {
       allow get: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow list: if isAdmin();
 
-      // Regisztrációkor csak Csapattag lehet, jóváhagyás nélkül
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.role == 'Csapattag'
-        && request.resource.data.isVerified == false;
+      // Profilokat és szerepkör-/csapat-hozzárendeléseket kizárólag a megbízható backend hoz létre.
+      allow create: if false;
 
       // Saját profilnál a szerepkör és a csapat nem módosítható,
       // jóváhagyni (isVerified = true) csak az admin tud.
-      allow update: if isAdmin()
+      allow update: if (isAdmin()
+        && (request.auth.uid != uid || request.resource.data.role == resource.data.role))
         || (signedIn()
             && request.auth.uid == uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['name', 'profileImage', 'igazolas', 'updatedAt'])
             && request.resource.data.role == resource.data.role
             && request.resource.data.team == resource.data.team
             && request.resource.data.email == resource.data.email
-            && (request.resource.data.isVerified == resource.data.isVerified
-                || request.resource.data.isVerified == false))
-        // Meghívó beváltása: a szerepkör és a csapat a meghívóból jön
-        || (signedIn()
-            && request.auth.uid == uid
-            && hasOpenInvite()
-            && request.resource.data.role == get(inviteRef()).data.role
-            && request.resource.data.team == get(inviteRef()).data.team
-            && request.resource.data.email == resource.data.email
-            // A jóváhagyási állapot nem változhat (nem lehet magát jóváhagyni)
-            && request.resource.data.isVerified == resource.data.isVerified);
+            && request.resource.data.isVerified == resource.data.isVerified
+            && request.resource.data.get('accountStatus', null) == resource.data.get('accountStatus', null)
+            && request.resource.data.get('membershipStatus', null) == resource.data.get('membershipStatus', null));
 
       allow delete: if isAdmin();
     }
@@ -105,8 +98,10 @@ service cloud.firestore {
     // ---------- Csapatok ----------
     match /teams/{teamId} {
       allow read: if isApproved();
-      // Admin bármelyiket, a kapitány/alkapitány csak a saját csapatát szerkesztheti
-      allow create, update: if isAdmin()
+      // Csapatot csak jóváhagyott kapitányi kérelem után hozhat létre a backend.
+      allow create: if false;
+      // A főszervező bármelyiket, a kapitány/alkapitány csak a saját csapatát szerkesztheti.
+      allow update: if isAdmin()
         || (isCaptain() && me().team == teamId);
       allow delete: if isAdmin();
     }
@@ -145,8 +140,27 @@ service cloud.firestore {
 
     // ---------- Szponzorok ----------
     match /sponsors/{sponsorId} {
+      // Minden jóváhagyott felhasználó láthatja a szponzorokat.
       allow read: if isApproved();
-      allow create, update, delete: if isAdmin();
+      // Csak a saját csapat kapitánya/alkapitánya kezelheti a szponzorokat.
+      allow create: if canManageTeamSponsors()
+        && request.resource.data.keys().hasAll(['name', 'logo', 'team'])
+        && request.resource.data.keys().hasOnly(['name', 'logo', 'team'])
+        && request.resource.data.team == me().team
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.logo is string
+        && request.resource.data.logo.size() > 0;
+      allow update: if canManageTeamSponsors()
+        && resource.data.team == me().team
+        && request.resource.data.keys().hasAll(['name', 'logo', 'team'])
+        && request.resource.data.keys().hasOnly(['name', 'logo', 'team'])
+        && request.resource.data.team == me().team
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.logo is string
+        && request.resource.data.logo.size() > 0;
+      allow delete: if canManageTeamSponsors() && resource.data.team == me().team;
     }
 
     // ---------- Térkép ----------
@@ -165,33 +179,25 @@ service cloud.firestore {
 
     // ---------- Meghívók ----------
     match /invites/{inviteId} {
-      // A dokumentum azonosítója a meghívott kisbetűs e-mail címe
-      allow create: if inviteId == request.resource.data.email
-        && validInvite(request.resource.data);
-
-      // Meglévő meghívó felülírható (újraküldés, később új szerepkör),
-      // az új meghívónak is meg kell felelnie a korlátoknak
-      allow update: if
-        (inviteId == request.resource.data.email
-          && validInvite(request.resource.data))
-        // A meghívott elfogadhatja a sajátját (csak a status változhat)
-        || (signedIn()
-          && request.auth.token.email_verified == true
-          && inviteId == myEmail()
-          && resource.data.status == 'Függőben'
-          && request.resource.data.status == 'Elfogadva'
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']));
-
       allow get: if isAdmin()
         || (signedIn() && request.auth.token.email != null && inviteId == myEmail());
       allow list: if isAdmin();
-      allow delete: if isAdmin();
+      // Meghívók létrehozása, lejárat-ellenőrzése és beváltása csak backend tranzakcióval történhet.
+      allow create, update, delete: if false;
+    }
+
+    match /captain_registration_codes/{codeHash} {
+      allow read, write: if false;
+    }
+
+    match /captain_registrations/{uid} {
+      allow get, list: if isAdmin();
+      allow create, update, delete: if false;
     }
 
     // ---------- E-mail küldés (Trigger Email bővítmény) ----------
     match /mail/{mailId} {
-      allow create: if isAdmin() || isCaptain();
-      allow read, update, delete: if false;
+      allow read, write: if false;
     }
 
     // ---------- Minden más tiltva ----------

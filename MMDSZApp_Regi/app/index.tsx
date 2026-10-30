@@ -3,12 +3,10 @@ import { doc, updateDoc } from 'firebase/firestore';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-
 import { HomeScreen } from '@/src/screens/home-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
-
 import { UserRole } from '@/src/types/auth';
 import { canRole } from '@/src/constants/roles';
 import { processImage } from '@/src/services/images';
