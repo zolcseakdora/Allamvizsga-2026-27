@@ -9,6 +9,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
+import { EventSeasonProvider } from '@/src/context/EventSeasonContext';
 import { GalleryNavigationProvider } from '@/src/context/GalleryNavigationContext';
 import { ToastProvider } from '@/src/context/ToastContext';
 import { NotificationsProvider } from '@/src/hooks/use-notifications';
@@ -113,13 +114,15 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ToastProvider>
-          <NotificationsProvider>
-            <GalleryNavigationProvider>
-              <RootLayoutNav />
-            </GalleryNavigationProvider>
-          </NotificationsProvider>
-        </ToastProvider>
+        <EventSeasonProvider>
+          <ToastProvider>
+            <NotificationsProvider>
+              <GalleryNavigationProvider>
+                <RootLayoutNav />
+              </GalleryNavigationProvider>
+            </NotificationsProvider>
+          </ToastProvider>
+        </EventSeasonProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

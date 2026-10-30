@@ -9,6 +9,9 @@ type HomeScreenProps = {
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
   timeLeft: { days: number; hours: number; minutes: number };
+  eventTitle: string;
+  eventDateLabel: string;
+  countdownStatus: 'upcoming' | 'ongoing' | 'ended' | 'unpublished';
   showIgazolasUpload: boolean;
   hasIgazolas: boolean;
   isVerified: boolean;
@@ -23,6 +26,9 @@ export function HomeScreen({
   isCheckingEmail,
   isResendingEmail,
   timeLeft,
+  eventTitle,
+  eventDateLabel,
+  countdownStatus,
   showIgazolasUpload,
   hasIgazolas,
   isVerified,
@@ -35,6 +41,7 @@ export function HomeScreen({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isWideDesktop = width >= 1200;
+  const statusLabel = countdownStatus === 'ongoing' ? t('home.ongoing') : countdownStatus === 'ended' ? t('home.ended') : '';
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
@@ -44,13 +51,14 @@ export function HomeScreen({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.countdownCard}>
-            <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
-            <Text style={styles.countdownSub}>{t('home.date')}</Text>
+            <Text style={styles.countdownTitle}>🎉 {eventTitle}</Text>
+            <Text style={styles.countdownSub}>{eventDateLabel}</Text>
             <View style={styles.timerRow}>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>{t('home.days')}</Text></View>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>{t('home.hours')}</Text></View>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>{t('home.minutes')}</Text></View>
             </View>
+            {statusLabel ? <Text style={styles.countdownStatus}>{statusLabel}</Text> : null}
           </View>
 
           <View style={[styles.newsGrid, isDesktop && styles.desktopNewsGrid]}>
@@ -125,6 +133,7 @@ const styles = StyleSheet.create({
   countdownTitle: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5, textAlign: 'center' },
   countdownSub: { color: '#aaa', fontSize: 13, marginBottom: 10, textAlign: 'center' },
   timerRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
+  countdownStatus: { color: '#EC2127', fontSize: 12, fontWeight: 'bold', marginTop: 10, textAlign: 'center' },
   timeBox: { backgroundColor: '#121212', borderRadius: 8, padding: 8, width: '30%', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   timeValue: { color: '#EC2127', fontSize: 18, fontWeight: 'bold' },
   timeLabel: { color: '#FFF', fontSize: 11 },

@@ -111,6 +111,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---------- Események / edition adatok ----------
+    match /events/{eventId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /events/{eventId}/days/{dayId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /events/{eventId}/days/{dayId}/programItems/{programItemId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isAdmin();
+    }
+
     // ---------- Programok (események) ----------
     match /programs/{programId} {
       allow read: if isApproved();

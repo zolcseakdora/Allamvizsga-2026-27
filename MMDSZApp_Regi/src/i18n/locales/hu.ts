@@ -8,6 +8,8 @@ const hu = {
     home: 'Főoldal',
     explore: 'Felfedezés',
     brand: 'MMDSZ DIÁKNAPOK',
+    brandDiaknapok: 'MMDSZ Diáknapok',
+    brandFebrutalis: 'MMDSZ Februtális',
     menu: 'NAVIGÁCIÓ',
     more: 'Több',
     mainGroup: 'Főmenü',
@@ -121,6 +123,8 @@ const hu = {
     days: 'Nap',
     hours: 'Óra',
     minutes: 'Perc',
+    ongoing: 'Most zajlik!',
+    ended: 'Véget ért',
     profile: 'Profil',
     paradeTime: 'Szerda 17:00',
     paradeTitle: 'Hagyományos felvonulás',
@@ -139,6 +143,10 @@ const hu = {
     menuUsers: 'Regisztráltak',
     menuAdmin: 'Admin pult',
     menuInvites: 'Meghívók',
+  },
+  eventNames: {
+    diaknapok: 'Diáknapok',
+    februtalis: 'Februtális',
   },
   days: {
     wednesday: 'Szerda',
