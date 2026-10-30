@@ -91,6 +91,21 @@ function escapeHtml(value: string) {
   })[character] ?? character);
 }
 
+// Csak tényleges HTTPS telepítési / regisztrációs címeket engedünk az e-mailbe.
+// A két cím a Firebase Functions környezeti változóiból érkezik.
+function configuredHttpsUrl(value: string | undefined): string | undefined {
+  if (!value?.trim()) return undefined;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== 'https:') {
+      throw new Error('https');
+    }
+    return url.toString();
+  } catch {
+    throw new HttpsError('failed-precondition', 'Az MMDSZ telepítési/regisztrációs link érvénytelen.');
+  }
+}
+
 export const createCaptainRegistrationCode = onCall(async (request) => {
   const uid = requireUid(request);
 
@@ -288,6 +303,16 @@ export const createInvite = onCall(async (request) => {
     ? normalizeTeamName(request.data.team)
     : '';
 
+  const appUrl = configuredHttpsUrl(process.env.MMDSZ_APP_URL);
+  const installUrl = configuredHttpsUrl(process.env.MMDSZ_INSTALL_URL);
+  if (!appUrl && !installUrl) {
+    throw new HttpsError(
+      'failed-precondition',
+      'Előbb állítsd be a Firebase Functions MMDSZ_APP_URL vagy MMDSZ_INSTALL_URL címét.'
+    );
+  }
+  const registrationUrl = appUrl ? new URL('/auth?invite=1', appUrl).toString() : undefined;
+
   const inviteRef = db.collection('invites').doc(email);
   const inviterRef = db.collection('users').doc(uid);
   const mailRef = db.collection('mail').doc();
@@ -327,6 +352,15 @@ export const createInvite = onCall(async (request) => {
 
     const team = profile.role === HEAD_ORGANIZER ? '' : teamName;
     const escapedTeam = escapeHtml(team);
+    const escapedRole = escapeHtml(role);
+    const registrationLinkHtml = registrationUrl
+      ? `<p><a href="${escapeHtml(registrationUrl)}">Regisztráció az MMDSZ alkalmazásba</a></p>` : '';
+    const installLinkHtml = installUrl
+      ? `<p><a href="${escapeHtml(installUrl)}">MMDSZ alkalmazás letöltése</a></p>` : '';
+    const textLinks = [
+      registrationUrl ? `Regisztráció: ${registrationUrl}` : undefined,
+      installUrl ? `Alkalmazás letöltése: ${installUrl}` : undefined,
+    ].filter(Boolean).join('\n');
     transaction.set(inviteRef, {
       email,
       team,
@@ -339,13 +373,70 @@ export const createInvite = onCall(async (request) => {
     transaction.create(mailRef, {
       to: email,
       message: {
-        subject: 'MMDSZ alkalmazás meghívó',
-        html: `<p>Meghívást kaptál az MMDSZ alkalmazásba${escapedTeam ? ` a(z) <strong>${escapedTeam}</strong> csapatba` : ''}.</p><p>A meghívó 30 napig érvényes. Regisztrálj ezzel az e-mail-címmel, erősítsd meg a címedet, majd jelentkezz be az alkalmazásba.</p>`,
+        subject: 'MMDSZ alkalmazás – meghívó',
+        text: `Meghívást kaptál az MMDSZ alkalmazásba. Szerepkör: ${role}.${team ? ` Csapat: ${team}.` : ''}\n` +
+          `A meghívó 30 napig érvényes. Az e-mail-cím megerősítése és a főszervező jóváhagyása kötelező.\n` +
+          `${textLinks}\nAz alkalmazásban válaszd a „Meghívóval regisztrálok” lehetőséget.`,
+        html: `<p>Meghívást kaptál az MMDSZ alkalmazásba${escapedTeam ? ` a(z) <strong>${escapedTeam}</strong> csapatba` : ''}, <strong>${escapedRole}</strong> szerepkörbe.</p>` +
+          `${installLinkHtml}${registrationLinkHtml}` +
+          `<p>A meghívó 30 napig érvényes. Ugyanazzal az e-mail-címmel regisztrálj, erősítsd meg az e-mail-címed, majd várd meg a főszervező jóváhagyását.</p>`,
       },
     });
   });
 
   return { status: 'sent', expiresAt: expiresAt.toDate().toISOString() };
+});
+
+// Meghívott regisztrációjának indulása. A profil ilyenkor még SEMMILYEN
+// meghívott szerepkört nem kap, és nem szerepel a jóváhagyható kérelmek között.
+// A meghívó csak MEGERŐSÍTETT e-mail után váltható be a redeemInvite függvénnyel.
+export const prepareInvitedRegistration = onCall(async (request) => {
+  const uid = requireUid(request);
+  const emailValue = request.auth?.token.email;
+  if (typeof emailValue !== 'string') {
+    throw new HttpsError('failed-precondition', 'E-mail-cím szükséges a regisztrációhoz.');
+  }
+  const email = validEmail(emailValue);
+  const name = requiredString(request.data?.name, 'név', 120);
+  const inviteRef = db.collection('invites').doc(email);
+  const profileRef = db.collection('users').doc(uid);
+
+  await db.runTransaction(async (transaction) => {
+    const [inviteSnapshot, profileSnapshot] = await Promise.all([
+      transaction.get(inviteRef),
+      transaction.get(profileRef),
+    ]);
+    if (!inviteSnapshot.exists || inviteSnapshot.get('status') !== 'Függőben') {
+      throw new HttpsError('not-found', 'Ehhez az e-mail-címhez nincs érvényes meghívó.');
+    }
+    const expiresAt = inviteSnapshot.get('expiresAt') as Timestamp | undefined;
+    if (!expiresAt || expiresAt.toMillis() <= Date.now()) {
+      throw new HttpsError('failed-precondition', 'A meghívó lejárt.');
+    }
+    if (profileSnapshot.exists) {
+      if (profileSnapshot.get('accountStatus') === 'pending_email_verification'
+        && profileSnapshot.get('email') === email) return;
+      throw new HttpsError('already-exists', 'Ehhez a fiókhoz már tartozik profil.');
+    }
+    // Az előzetes pendingRole CSAK megjelenítési adat, nem aktív jogosultság.
+    // A végleges szerepkört a meghívó újbóli, e-mail utáni beváltásakor állítjuk.
+    const invitedRole = inviteSnapshot.get('role');
+    if (![TEAM_MEMBER, DEPUTY_CAPTAIN, ORGANIZER, JURY].includes(invitedRole as string)) {
+      throw new HttpsError('failed-precondition', 'A meghívó szerepköre érvénytelen.');
+    }
+    transaction.create(profileRef, {
+      name,
+      email,
+      team: '',
+      role: TEAM_MEMBER,
+      pendingRole: invitedRole,
+      isVerified: false,
+      accountStatus: 'pending_email_verification',
+      membershipStatus: 'pending_email_verification',
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+  return { status: 'pending_email_verification' };
 });
 
 export const redeemInvite = onCall(async (request) => {
@@ -396,7 +487,9 @@ export const redeemInvite = onCall(async (request) => {
         profile.isDisabled === true
         || profile.accountStatus === 'disabled'
         || (existingTeam && existingTeam.toLowerCase() !== 'egyéni')
-        || (profile.membershipStatus && profile.membershipStatus !== 'rejected')
+        || (profile.membershipStatus
+          && profile.membershipStatus !== 'rejected'
+          && profile.membershipStatus !== 'pending_email_verification')
         || (profile.role && profile.role !== TEAM_MEMBER)
       ) {
         throw new HttpsError('failed-precondition', 'A fiók már másik csapathoz tartozik vagy nem jogosult meghívó beváltására.');

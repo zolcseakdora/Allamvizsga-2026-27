@@ -11,6 +11,7 @@ export enum UserRole {
 
 export type AccountStatus =
   | 'pending_captain_approval'
+  | 'pending_email_verification'
   | 'pending_verification'
   | 'pending_admin_approval'
   | 'pending_admin_activation'
@@ -20,6 +21,7 @@ export type AccountStatus =
 
 export type MembershipStatus =
   | 'pending_captain_approval'
+  | 'pending_email_verification'
   | 'pending_verification'
   | 'pending_admin_approval'
   | 'pending_admin_activation'
@@ -54,6 +56,7 @@ export type RegistrationInput = {
   password: string;
   team?: string;
   registrationCode?: string;
+  invited?: boolean;
   // Kompatibilitás a meglévő meghívós oldalakkal. Nem jogosultságigénylés:
   // a szerver dönti el a tényleges szerepkört a meghívó/kapitányi kód alapján.
   role?: UserRole;
@@ -63,5 +66,6 @@ export enum AuthMode {
   LOGIN = 'login',
   REGISTER_CAPTAIN = 'register_captain',
   REGISTER_MEMBER = 'register_member',
+  REGISTER_INVITED = 'register_invited',
   REGISTER_ORGANIZER = 'register_organizer',
 }

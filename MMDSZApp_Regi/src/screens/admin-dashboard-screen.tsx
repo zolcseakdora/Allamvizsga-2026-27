@@ -132,6 +132,11 @@ export function AdminDashboardScreen({
                 ))}
               </View>
             )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>✉️ {t('inviteManagement.title')}</Text>
+            <Text style={styles.cardText}>{t('inviteManagement.description')}</Text>
             <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
               <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
             </TouchableOpacity>
@@ -192,7 +197,9 @@ export function AdminDashboardScreen({
                       <Text style={[styles.verificationStatus, { color: user.isVerified ? '#27AE60' : '#F39C12' }]}>
                         {t('admin.status', { status: user.isVerified ? t('verification.accepted') : t('verification.pending') })}
                       </Text>
-                      <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
+                      {user.igazolas ? (
+                        <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
+                      ) : null}
                       {!user.isVerified && (
                         <TouchableOpacity style={styles.approveButton} onPress={() => onApproveUser(user.id)}>
                           <Text style={styles.solidButtonText}>✅ {t('admin.approve')}</Text>
@@ -219,6 +226,7 @@ const styles = StyleSheet.create({
   scroll: { width: '100%' },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
+  cardText: { color: '#aaa', fontSize: 13, marginBottom: 12 },
   sectionSubtitle: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginTop: 4, marginBottom: 6 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   dayList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 },
