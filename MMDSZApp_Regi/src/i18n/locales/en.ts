@@ -86,6 +86,9 @@ const en: TranslationShape<typeof hu> = {
     switchToRegister: "Don't have an account? Register!",
     switchToLogin: 'Already have an account? Sign in!',
     forgotPassword: 'Forgot your password?',
+    roleCaptain: 'Captain Registration',
+    roleMember: 'Member Registration',
+    roleOrganizer: 'Organizer Registration',
   },
   verification: {
     title: 'REGISTRATION PENDING',

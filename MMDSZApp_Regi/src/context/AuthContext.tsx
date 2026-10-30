@@ -124,7 +124,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);
     },
-    register: async ({ name, email, password, team }) => {
+    register: async ({ name, email, password, team, role }) => {
       const normalizedEmail = email.trim().toLowerCase();
       const normalizedTeam = normalizeTeamName(team) || 'Egyéni';
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
@@ -132,7 +132,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         name,
         email: normalizedEmail,
         team: normalizedTeam,
-        role: UserRole.CSAPATTAG,
+        role: role,
         createdAt: new Date(),
         isVerified: false,
       });

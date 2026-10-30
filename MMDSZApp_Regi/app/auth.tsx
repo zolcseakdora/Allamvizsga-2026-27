@@ -6,13 +6,16 @@ import { AuthScreen } from '@/src/screens/auth-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
 
+import { AuthMode } from '@/src/types/auth';
+import { UserRole } from '@/src/types/auth';
+
 export default function AuthRoute() {
+  const [mode, setMode] = useState<AuthMode>(AuthMode.LOGIN);
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,7 +31,8 @@ export default function AuthRoute() {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) return showToast(t('alerts.emailPasswordRequired'), 'error');
+    if ( !email || !password ) return showToast(t('alerts.requiredFields'), 'error');
+
     try {
       await login(email, password);
       router.replace('/'); 
@@ -38,9 +42,19 @@ export default function AuthRoute() {
   };
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) return showToast(t('alerts.requiredFields'), 'error');
+    if (!fullName || !email || !password  || !teamName) return showToast(t('alerts.requiredFields'), 'error');
+
+    const assignedRole = mode === AuthMode.REGISTER_CAPTAIN 
+      ? UserRole.CSAPATKAPITANY 
+      : UserRole.CSAPATTAG;
+
     try {
-      await register({ name: fullName, email, password, team: teamName });
+      await register({ 
+        name: fullName,
+        email, password,
+        team: teamName, 
+        role: assignedRole
+      });
       router.replace('/');
     } catch (error: any) {
       showToast(t('alerts.generic', { message: error.message }), 'error');
@@ -49,7 +63,7 @@ export default function AuthRoute() {
 
   return (
     <AuthScreen
-      isLoginMode={isLoginMode}
+      mode={mode}
       fullName={fullName}
       teamName={teamName}
       email={email}
@@ -60,8 +74,8 @@ export default function AuthRoute() {
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onTogglePassword={() => setSecurePassword(!securePassword)}
-      onSubmit={isLoginMode ? handleLogin : handleRegister}
-      onToggleMode={() => { setIsLoginMode(!isLoginMode); resetForm(); }}
+      onSubmit={mode === AuthMode.LOGIN ? handleLogin : handleRegister}
+      onSetMode={setMode}
     />
   );
 }
