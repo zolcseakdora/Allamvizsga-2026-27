@@ -66,6 +66,7 @@ async function redeemPendingInvite(user: User): Promise<InviteRedemptionResult> 
 function isAccountStatus(value: unknown): value is AccountStatus {
   return [
     'pending_captain_approval',
+    'pending_email_verification',
     'pending_verification',
     'pending_admin_approval',
     'pending_admin_activation',
@@ -78,6 +79,7 @@ function isAccountStatus(value: unknown): value is AccountStatus {
 function isMembershipStatus(value: unknown): value is MembershipStatus {
   return [
     'pending_captain_approval',
+    'pending_email_verification',
     'pending_verification',
     'pending_admin_approval',
     'pending_admin_activation',
@@ -147,7 +149,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     login: async (email, password) => {
       await signInWithEmailAndPassword(auth, email, password);
     },
-    register: async ({ name, email, password, team, registrationCode }) => {
+    register: async ({ name, email, password, team, registrationCode, invited }) => {
       const normalizedEmail = email.trim().toLowerCase();
       const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
       await updateProfile(userCredential.user, { displayName: name.trim() });
@@ -165,6 +167,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
       }
       await sendEmailVerification(userCredential.user);
+      if (invited && !registrationCode?.trim()) {
+        // Átmeneti, jogosultság nélküli profil az e-mail megerősítéséig.
+        // A tényleges meghívás beváltását kizárólag a backend végzi.
+        const prepareInvitedRegistration = httpsCallable<
+          { name: string },
+          { status: string }
+        >(functions, 'prepareInvitedRegistration');
+        await prepareInvitedRegistration({ name: name.trim() });
+      }
     },
     resendVerificationEmail: async () => {
       const user = auth.currentUser;

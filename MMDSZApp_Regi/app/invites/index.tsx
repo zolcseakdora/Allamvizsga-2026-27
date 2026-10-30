@@ -1,90 +1,65 @@
 import { useEffect, useState } from 'react';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'expo-router';
+import { httpsCallable } from 'firebase/functions';
 import { useTranslation } from 'react-i18next';
 
-import { InviteManagementScreen, type OrganizerInviteRole } from '@/src/screens/invite-management-screen';
-import { canRole } from '@/src/constants/roles';
+import { functions } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
-import { db } from '@/src/config/firebase';
-import { useTeams } from '@/src/hooks/use-teams';
+import {
+  InviteManagementScreen,
+  type OrganizerInviteRole,
+} from '@/src/screens/invite-management-screen';
 import { UserRole } from '@/src/types/auth';
-import { goBackOrHome } from '@/src/utils/navigation';
-import { normalizeTeamName } from '@/src/utils/team-name';
 
-export default function InvitesRoute() {
-  const { t } = useTranslation();
+export default function AdminInvitesRoute() {
   const router = useRouter();
-  const { profile } = useAuth();
+  const { t } = useTranslation();
+  const { profile, isLoading } = useAuth();
   const { showToast } = useToast();
-  const { teams, refresh } = useTeams();
-  const [teamName, setTeamName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrganizerInviteRole>(UserRole.SZERVEZO);
+  const [isSending, setIsSending] = useState(false);
+  const isAuthorized = profile?.role === UserRole.FOSZERVEZO
+    && profile?.accountStatus !== 'disabled'
+    && profile?.accountStatus !== 'rejected'
+    && (profile?.accountStatus === undefined || profile?.accountStatus === 'active');
 
   useEffect(() => {
-    void refresh().catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    });
-  }, [refresh, showToast, t]);
-
-  const teamNames = [...new Set(teams.map((team) => normalizeTeamName(team.name ?? team.id)).filter(Boolean))];
-  const firstTeamName = teamNames[0] ?? '';
-  const selectedTeamName = teamNames.includes(teamName) ? teamName : firstTeamName;
+    if (!isLoading && !isAuthorized) router.replace('/');
+  }, [isLoading, isAuthorized, router]);
 
   const handleSendInvite = async () => {
-    if (!canRole(profile?.role, 'inviteOrganizers')) {
-      showToast(t('alerts.inviteNotAllowed'), 'error');
+    if (!isAuthorized || isSending) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      showToast(t('inviteManagement.invalidEmail'), 'error');
       return;
     }
-    if (!email.trim() || !selectedTeamName) {
-      showToast(t('alerts.inviteFieldsRequired'), 'error');
-      return;
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const inviteRoleLabel = role === UserRole.SZERVEZO
-      ? t('roles.organizer')
-      : role === UserRole.CSAPATKAPITANY
-        ? t('roles.captain')
-        : t('roles.deputy');
-    const body = t('inviteManagement.emailBody', { teamName: selectedTeamName, role: inviteRoleLabel });
-
+    setIsSending(true);
     try {
-      await setDoc(doc(db, 'invites', normalizedEmail), {
-        email: normalizedEmail,
-        team: normalizeTeamName(selectedTeamName),
-        role,
-        invitedBy: profile?.name || UserRole.FOSZERVEZO,
-        createdAt: new Date(),
-        status: 'Függőben',
-      });
-      await addDoc(collection(db, 'mail'), {
-        to: normalizedEmail,
-        message: {
-          subject: t('inviteManagement.emailSubject'),
-          text: `${t('inviteManagement.emailGreeting')} ${body} ${t('inviteManagement.emailAction')}`,
-          html: `<h3>${t('inviteManagement.emailGreeting')}</h3><p>${body}</p><p>${t('inviteManagement.emailAction')}</p>`,
-        },
-      });
+      const createInvite = httpsCallable<
+        { email: string; role: OrganizerInviteRole },
+        { status: string }
+      >(functions, 'createInvite');
+      await createInvite({ email: email.trim().toLowerCase(), role });
+      showToast(t('inviteManagement.queued'), 'success');
       setEmail('');
-      showToast(t('alerts.inviteSent', { email: normalizedEmail }), 'success');
-    } catch (error) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsSending(false);
     }
   };
 
+  if (isLoading || !isAuthorized) return null;
+
   return (
     <InviteManagementScreen
-      teams={teamNames}
-      teamName={selectedTeamName}
       email={email}
       role={role}
-      onBack={() => goBackOrHome(router)}
-      onTeamChange={setTeamName}
+      isSending={isSending}
+      onBack={() => router.back()}
       onEmailChange={setEmail}
       onRoleChange={setRole}
       onSendInvite={() => void handleSendInvite()}

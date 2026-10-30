@@ -1,13 +1,14 @@
 import * as ImagePicker from 'expo-image-picker';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '@/src/context/ToastContext';
 
 import { TeamManagementScreen } from '@/src/screens/team-management-screen';
 import { useAuth } from '@/src/context/AuthContext';
-import { db } from '@/src/config/firebase';
+import { functions } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { canRole } from '@/src/constants/roles';
 
@@ -23,6 +24,7 @@ type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 export default function TeamManagementRoute() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showToast } = useToast();
   const { profile, isLoading } = useAuth();
   const { getTeam, saveTeam } = useTeams();
   const { sponsors, refreshSponsors, addSponsor, updateSponsor, deleteSponsor } = useSponsors();
@@ -223,30 +225,22 @@ export default function TeamManagementRoute() {
 
     try {
       const normalizedEmail = inviteEmail.trim().toLowerCase();
-      const translatedRole = inviteRole === UserRole.CSAPATTAG ? t('roles.member') : t('roles.deputy');
-      const normalizedTeamName = normalizeTeamName(teamName);
-      const body = t('teamManagement.inviteEmailBody', { teamName: normalizedTeamName, role: translatedRole });
-      await setDoc(doc(db, 'invites', normalizedEmail), {
+      // Meghívót kizárólag a szerver hozhat létre. A szerver ellenőrzi,
+      // hogy a meghívó a kapitány/alkapitány SAJÁT csapatába szól-e.
+      const createInvite = httpsCallable<
+        { email: string; role: InviteRole; team: string },
+        { status: string }
+      >(functions, 'createInvite');
+      await createInvite({
         email: normalizedEmail,
-        team: normalizedTeamName,
         role: inviteRole,
-        invitedBy: profile?.name || UserRole.CSAPATKAPITANY,
-        createdAt: new Date(),
-        status: 'Függőben',
-      });
-      await addDoc(collection(db, 'mail'), {
-        to: normalizedEmail,
-        message: {
-          subject: t('teamManagement.inviteEmailSubject'),
-          text: `${t('teamManagement.inviteEmailGreeting')} ${body} ${t('teamManagement.inviteEmailAction')}`,
-          html: `<h3>${t('teamManagement.inviteEmailGreeting')}</h3><p>${body}</p><p>${t('teamManagement.inviteEmailAction')}</p>`,
-        },
+        team: normalizeTeamName(teamName),
       });
       setInviteEmail('');
-      Alert.alert(t('alerts.inviteSent', { email: normalizedEmail }));
+      showToast(t('teamManagement.inviteQueued'), 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
+      showToast(t('alerts.generic', { message }), 'error');
     }
   };
 

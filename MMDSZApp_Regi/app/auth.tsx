@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AuthScreen } from '@/src/screens/auth-screen';
@@ -9,7 +9,13 @@ import { useToast } from '@/src/context/ToastContext';
 import { AuthMode } from '@/src/types/auth';
 
 export default function AuthRoute() {
-  const [mode, setMode] = useState<AuthMode>(AuthMode.LOGIN);
+  const { invite } = useLocalSearchParams<{ invite?: string }>();
+  const [mode, setMode] = useState<AuthMode>(
+    invite === '1' ? AuthMode.REGISTER_INVITED : AuthMode.LOGIN
+  );
+  useEffect(() => {
+    if (invite === '1') setMode(AuthMode.REGISTER_INVITED);
+  }, [invite]);
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { showToast } = useToast();
@@ -58,6 +64,7 @@ export default function AuthRoute() {
         ...(mode === AuthMode.REGISTER_CAPTAIN
           ? { team: teamName.trim(), registrationCode: registrationCode.trim() }
           : {}),
+        invited: mode === AuthMode.REGISTER_INVITED || mode === AuthMode.REGISTER_MEMBER,
       });
       router.replace('/');
     } catch (error: any) {
