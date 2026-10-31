@@ -20,6 +20,8 @@ function translatedRole(role: UserRole, t: (key: string) => string) {
       return t('roles.headOrganizer');
     case UserRole.SZERVEZO:
       return t('roles.organizer');
+    case UserRole.ZSURI:
+      return t('roles.jury');
     case UserRole.CSAPATKAPITANY:
       return t('roles.captain');
     case UserRole.ALCSAPATKAPITANY:

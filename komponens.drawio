@@ -1,0 +1,365 @@
+<mxfile>
+  <diagram name="Oldal-1" id="i2HLlJFmFNlLmhfZDFI1">
+    <mxGraphModel dx="1092" dy="-71" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" plantUmlData="{&#xa;  &quot;data&quot;: &quot;@startuml\n!theme plain\nskinparam componentStyle uml2\nskinparam nodesep 50\nskinparam ranksep 60\n\n&#39; Csomagok stílusa - A \&quot;rectangle\&quot; középre helyezi a feliratokat a doboz tetején\nskinparam packageStyle rectangle\n\n&#39; --- Színpaletta beállítása ---\nskinparam package {\n    BackgroundColor&lt;&lt;Frontend&gt;&gt; #F4FBFF\n    BorderColor&lt;&lt;Frontend&gt;&gt; #0277BD\n    BackgroundColor&lt;&lt;Backend&gt;&gt; #FFFDF3\n    BorderColor&lt;&lt;Backend&gt;&gt; #F57F17\n}\n\n&#39; Adatbázisok és tárolók külön kiemelése\nskinparam database {\n    BackgroundColor #E8F5E9\n    BorderColor #2E7D32\n}\n\nskinparam storage {\n    BackgroundColor #E8F5E9\n    BorderColor #2E7D32\n}\n\nskinparam component {\n    BorderColor #757575\n}\n\ntitle MMDSZ Diáknapok - Rendszerarchitektúra\n\npackage \&quot;React Native (Vastag Kliens)\&quot; &lt;&lt;Frontend&gt;&gt; {\n    \n    [Képernyők (Screens)] as Screens #E1F5FE\n    [UI Komponensek] as Components #E1F5FE\n    [Útválasztó (App)] as App #E1F5FE\n    [Globális Állapot\\n(Context)] as Context #E1F5FE\n    [Szolgáltatások (Hooks)] as Hooks #E1F5FE\n    \n    database \&quot;Firebase SDK SQLite\\n(Helyi Cache)\&quot; as SQLite\n\n    Screens --&gt; Components : tartalmazza\n    Screens --&gt; App : események\n    App --&gt; Context : állapot lekérés\n    App --&gt; Hooks : hook hívás\n    Hooks --&gt; Context : állapot frissítés\n    Hooks --&gt; SQLite : helyi adat\n}\n\npackage \&quot;Firebase (Felhő Infrastruktúra)\&quot; &lt;&lt;Backend&gt;&gt; {\n    \n    [Hitelesítési Szolgáltatás\\n(Firebase Auth)] as Auth #FFF9C4\n    [Cloud Functions] as Functions #FFF9C4\n    \n    database \&quot;Cloud Firestore\\n(NoSQL DB)\&quot; as Firestore\n    storage \&quot;Cloud Storage\\n(Objektumok)\&quot; as Storage\n    \n    Auth -down-&gt; Firestore : JWT Rules\\nérvényesítés\n    Auth -down-&gt; Storage : JWT Rules\\nérvényesítés\n    Auth -right-&gt; Functions : token validálás\n    \n    Functions -down-&gt; Firestore : módosítás\n    Functions -down-&gt; Storage : fájl kezelés\n}\n\n&#39; Kliens és Backend közötti kommunikáció (JWT token automatikus csatolásával)\nContext --&gt; Auth : munkamenet\\nszinkronizáció\nHooks --&gt; Firestore : kérés küldése\\n(JWT-vel)\nHooks --&gt; Storage : blob feltöltés\\n(JWT-vel)\nHooks --&gt; Functions : trigger indítás\\n(JWT-vel)\nSQLite &lt;--&gt; Firestore : automatikus\\nszinkron\n\n@enduml&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="1lcH82b6klHAO5CGtepi-52">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Frontend»&#xa;React Native (Vastag Kliens)" plantUmlId="c_0" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=5;fillColor=#FFFFFF;strokeColor=#000000;verticalAlign=top;align=center;spacingTop=2;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="«Frontend»&#xa;React Native (Vastag Kliens)" id="1lcH82b6klHAO5CGtepi-53">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-52" style="rounded=1;absoluteArcSize=1;arcSize=5;fillColor=#FFFFFF;strokeColor=#000000;verticalAlign=top;align=center;spacingTop=2;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="485" width="529.1" x="66.4" y="1670" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Képernyők (Screens)" plantUmlId="n_1" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Képernyők (Screens)" id="1lcH82b6klHAO5CGtepi-54">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="49" width="177" x="89.2" y="49" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_2" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-55">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="10" width="15" x="246.2" y="54" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_3" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-56">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="244.2" y="56" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_4" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-57">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="244.2" y="60" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="UI Komponensek" plantUmlId="n_5" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="UI Komponensek" id="1lcH82b6klHAO5CGtepi-58">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="49" width="146" x="15" y="174" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_6" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-59">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="10" width="15" x="141" y="179" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_7" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-60">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="139" y="181" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_8" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-61">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="139" y="185" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Útválasztó (App)" plantUmlId="n_9" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Útválasztó (App)" id="1lcH82b6klHAO5CGtepi-62">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="49" width="143" x="196" y="174" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_10" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-63">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="10" width="15" x="319" y="179" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_11" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-64">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="317" y="181" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_12" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-65">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="317" y="185" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Globális Állapot&#xa;(Context)" plantUmlId="n_13" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Globális Állapot&#xa;(Context)" id="1lcH82b6klHAO5CGtepi-66">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="49" width="140" x="169.32" y="424" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_14" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-67">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="10" width="15" x="289.32" y="429" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_15" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-68">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="287.32" y="431" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_16" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-69">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="287.32" y="435" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Szolgáltatások (Hooks)" plantUmlId="n_17" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Szolgáltatások (Hooks)" id="1lcH82b6klHAO5CGtepi-70">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#E1F5FE;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="49" width="186" x="251.59" y="299" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_18" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-71">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="10" width="15" x="417.59" y="304" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_19" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-72">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="415.59" y="306" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_20" plantUmlBaseStyle="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-73">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="fillColor=#E1F5FE;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="2" width="4" x="415.59" y="310" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Firebase SDK SQLite&#xa;(Helyi Cache)" plantUmlId="n_21" plantUmlBaseStyle="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Firebase SDK SQLite&#xa;(Helyi Cache)" id="1lcH82b6klHAO5CGtepi-74">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-53" style="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="46" width="150" x="364.1" y="425.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="tartalmazza" plantUmlId="e_33" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="tartalmazza" id="1lcH82b6klHAO5CGtepi-86">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-54" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-58">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="45" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="események" plantUmlId="e_34" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="események" id="1lcH82b6klHAO5CGtepi-87">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-54" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-62">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="42" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="állapot lekérés" plantUmlId="e_35" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="állapot lekérés" id="1lcH82b6klHAO5CGtepi-88">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-62" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-66">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="55" y="12" as="offset" />
+              <Array as="points">
+                <mxPoint x="100.67999999999998" y="261" />
+                <mxPoint x="100.67999999999998" y="315.5" />
+                <mxPoint x="169.32" y="386" />
+              </Array>
+              <mxPoint x="243.66" y="223" as="sourcePoint" />
+              <mxPoint x="215.98999999999998" y="424" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="hook hívás" plantUmlId="e_36" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="hook hívás" id="1lcH82b6klHAO5CGtepi-89">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-62" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-70">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="42" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="állapot frissítés" plantUmlId="e_37" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="állapot frissítés" id="1lcH82b6klHAO5CGtepi-90">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-70" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-66">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="42" y="14" as="offset" />
+              <Array as="points">
+                <mxPoint x="188.1" y="378" />
+              </Array>
+              <mxPoint x="313.59000000000003" y="348" as="sourcePoint" />
+              <mxPoint x="262.65" y="424" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="helyi adat" plantUmlId="e_38" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="helyi adat" id="1lcH82b6klHAO5CGtepi-91">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-53" source="1lcH82b6klHAO5CGtepi-70" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-74">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="36" y="-1" as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="«Backend»&#xa;Firebase (Felhő Infrastruktúra)" plantUmlId="c_22" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=5;fillColor=#FFFFFF;strokeColor=#000000;verticalAlign=top;align=center;spacingTop=2;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="«Backend»&#xa;Firebase (Felhő Infrastruktúra)" id="1lcH82b6klHAO5CGtepi-75">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-52" style="rounded=1;absoluteArcSize=1;arcSize=5;fillColor=#FFFFFF;strokeColor=#000000;verticalAlign=top;align=center;spacingTop=2;fontSize=14;fontStyle=1;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="450.5" width="565.5" x="30" y="2359.5" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Hitelesítési Szolgáltatás&#xa;(Firebase Auth)" plantUmlId="n_23" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#FFF9C4;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Hitelesítési Szolgáltatás&#xa;(Firebase Auth)" id="1lcH82b6klHAO5CGtepi-76">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#FFF9C4;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="95.14870689655173" width="199" x="33.5" y="95.14870689655173" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_24" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-77">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="19.418103448275865" width="15" x="212.5" y="104.85775862068967" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_25" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-78">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="3.8836206896551726" width="4" x="210.5" y="108.74137931034483" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_26" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-79">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="3.8836206896551726" width="4" x="210.5" y="116.50862068965517" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cloud Functions" plantUmlId="n_27" plantUmlBaseStyle="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#FFF9C4;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Cloud Functions" id="1lcH82b6klHAO5CGtepi-80">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="rounded=1;absoluteArcSize=1;arcSize=6;fillColor=#FFF9C4;strokeColor=#757575;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="95.14870689655173" width="143" x="370.5" y="95.14870689655173" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_28" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-81">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="19.418103448275865" width="15" x="493.5" y="104.85775862068967" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_29" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-82">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="3.8836206896551726" width="4" x="491.5" y="108.74137931034483" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" plantUmlId="ci_30" plantUmlBaseStyle="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="" id="1lcH82b6klHAO5CGtepi-83">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="fillColor=#FFF9C4;strokeColor=#757575;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="3.8836206896551726" width="4" x="491.5" y="116.50862068965517" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cloud Firestore&#xa;(NoSQL DB)" plantUmlId="n_31" plantUmlBaseStyle="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Cloud Firestore&#xa;(NoSQL DB)" id="1lcH82b6klHAO5CGtepi-84">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="shape=cylinder3;size=10;boundedLbl=1;backgroundOutline=1;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="89.32327586206897" width="123" x="394.44" y="337.875" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="Cloud Storage&#xa;(Objektumok)" plantUmlId="n_32" plantUmlBaseStyle="rounded=1;arcSize=50;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" plantUmlBaseValue="Cloud Storage&#xa;(Objektumok)" id="1lcH82b6klHAO5CGtepi-85">
+          <mxCell parent="1lcH82b6klHAO5CGtepi-75" style="rounded=1;arcSize=50;fillColor=#E8F5E9;strokeColor=#2E7D32;fontSize=14;whiteSpace=wrap;shadow=0;strokeWidth=1;fontColor=#000000;fontFamily=Verdana;" vertex="1">
+            <mxGeometry height="89.32327586206897" width="111" x="144.89" y="337.875" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="JWT Rules&#xa;érvényesítés" plantUmlId="e_39" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="JWT Rules&#xa;érvényesítés" id="1lcH82b6klHAO5CGtepi-92">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-75" source="1lcH82b6klHAO5CGtepi-76" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-84">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="56" y="9" as="offset" />
+              <Array as="points">
+                <mxPoint x="323.69" y="249.71681034482742" />
+              </Array>
+              <mxPoint x="133.5" y="192.21980603448233" as="sourcePoint" />
+              <mxPoint x="419.04" y="337.875" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="JWT Rules&#xa;érvényesítés" plantUmlId="e_40" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="JWT Rules&#xa;érvényesítés" id="1lcH82b6klHAO5CGtepi-93">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-75" source="1lcH82b6klHAO5CGtepi-76" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-85">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="34" y="-5" as="offset" />
+              <Array as="points">
+                <mxPoint x="108.19999999999999" y="249.71681034482742" />
+              </Array>
+              <mxPoint x="133.5" y="192.21980603448233" as="sourcePoint" />
+              <mxPoint x="200.39" y="337.875" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="token validálás" plantUmlId="e_41" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="token validálás" id="1lcH82b6klHAO5CGtepi-94">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-75" source="1lcH82b6klHAO5CGtepi-76" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-80">
+            <mxGeometry relative="1" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="módosítás" plantUmlId="e_42" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="módosítás" id="1lcH82b6klHAO5CGtepi-95">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-75" source="1lcH82b6klHAO5CGtepi-80" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-84">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="39" as="offset" />
+              <Array as="points">
+                <mxPoint x="438.19" y="249.71681034482742" />
+              </Array>
+              <mxPoint x="442.5" y="192.21980603448233" as="sourcePoint" />
+              <mxPoint x="443.64" y="337.875" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="fájl kezelés" plantUmlId="e_43" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="fájl kezelés" id="1lcH82b6klHAO5CGtepi-96">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-75" source="1lcH82b6klHAO5CGtepi-80" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-85">
+            <mxGeometry relative="1" as="geometry">
+              <mxPoint x="-7" y="21" as="offset" />
+              <Array as="points">
+                <mxPoint x="222.7" y="249.71681034482742" />
+              </Array>
+              <mxPoint x="442.5" y="192.21980603448233" as="sourcePoint" />
+              <mxPoint x="228.14" y="337.875" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="munkamenet&#xa;szinkronizáció" plantUmlId="e_44" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="munkamenet&#xa;szinkronizáció" id="1lcH82b6klHAO5CGtepi-97">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-52" source="1lcH82b6klHAO5CGtepi-66" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=0;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-76">
+            <mxGeometry relative="1" x="-0.0688" y="25" as="geometry">
+              <mxPoint as="offset" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="kérés küldése&#xa;(JWT-vel)" plantUmlId="e_45" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="kérés küldése&#xa;(JWT-vel)" id="1lcH82b6klHAO5CGtepi-98">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-52" source="1lcH82b6klHAO5CGtepi-70" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-84">
+            <mxGeometry relative="1" x="0.1856" y="-3" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="460" y="2210" />
+                <mxPoint x="416.67" y="2274.5" />
+                <mxPoint x="480" y="2360" />
+                <mxPoint x="400" y="2204.06" />
+                <mxPoint x="450" y="2330" />
+                <mxPoint x="485.94" y="2290" />
+                <mxPoint x="417.71" y="2314.94" />
+                <mxPoint x="510" y="2333.39" />
+                <mxPoint x="565.8" y="2364.12" />
+                <mxPoint x="567.69" y="2433.5" />
+                <mxPoint x="569.13" y="2495.99" />
+              </Array>
+              <mxPoint x="444.36" y="2174" as="sourcePoint" />
+              <mxPoint x="498.24" y="2533.5" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="blob feltöltés&#xa;(JWT-vel)" plantUmlId="e_46" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="blob feltöltés&#xa;(JWT-vel)" id="1lcH82b6klHAO5CGtepi-99">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-52" source="1lcH82b6klHAO5CGtepi-70" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-85">
+            <mxGeometry relative="1" x="-0.1335" y="-11" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="207.41" y="2212" />
+                <mxPoint x="150" y="2300" />
+                <mxPoint x="128.32999999999998" y="2333.39" />
+                <mxPoint x="50.29" y="2364.12" />
+                <mxPoint x="51.69" y="2433.5" />
+                <mxPoint x="53.13" y="2495.99" />
+              </Array>
+              <mxPoint x="351.36" y="2174" as="sourcePoint" />
+              <mxPoint x="202.64" y="2533.5" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="trigger indítás&#xa;(JWT-vel)" plantUmlId="e_47" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="trigger indítás&#xa;(JWT-vel)" id="1lcH82b6klHAO5CGtepi-100">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-52" source="1lcH82b6klHAO5CGtepi-70" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-80">
+            <mxGeometry relative="1" x="-0.2653" y="-16" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="395.87" y="2212" />
+                <mxPoint x="395.87" y="2274.5" />
+                <mxPoint x="382.28" y="2314.94" />
+                <mxPoint x="365.42" y="2333.39" />
+                <mxPoint x="472.5" y="2364.12" />
+              </Array>
+              <mxPoint x="413.36" y="2174" as="sourcePoint" />
+              <mxPoint x="472.5" y="2408.5" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="automatikus&#xa;szinkron" plantUmlId="e_48" plantUmlBaseStyle="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" plantUmlBaseValue="automatikus&#xa;szinkron" id="1lcH82b6klHAO5CGtepi-101">
+          <mxCell edge="1" parent="1lcH82b6klHAO5CGtepi-52" source="1lcH82b6klHAO5CGtepi-74" style="strokeColor=#000000;fontColor=#000000;fontSize=12;html=1;labelBackgroundColor=#FFFFFF;endArrow=classicThin;endFill=1;startArrow=classicThin;startFill=1;strokeWidth=1;fontFamily=Verdana;curved=1;rounded=0;endSize=6;startSize=6;sourcePerimeterSpacing=0;targetPerimeterSpacing=0;" target="1lcH82b6klHAO5CGtepi-84">
+            <mxGeometry relative="1" x="-0.6893" y="22" as="geometry">
+              <mxPoint as="offset" />
+              <Array as="points">
+                <mxPoint x="508.61" y="2314.94" />
+                <mxPoint x="608.96" y="2333.39" />
+                <mxPoint x="582.38" y="2364.12" />
+                <mxPoint x="585.13" y="2433.5" />
+                <mxPoint x="587.23" y="2495.99" />
+              </Array>
+              <mxPoint x="507.87" y="2297.5" as="sourcePoint" />
+              <mxPoint x="522.8399999999999" y="2533.5" as="targetPoint" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

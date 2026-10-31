@@ -1,0 +1,79 @@
+name: MMDSZ - Automatikus ellenorzesek
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release/mmdsz-v1
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ellenorzes:
+    name: TypeScript, Functions es Firestore
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Projekt letoltese
+        uses: actions/checkout@v7
+
+      - name: Node.js 22 beallitasa
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          package-manager-cache: false
+
+      - name: Java 21 beallitasa
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Alkalmazas fuggosegeinek telepitese
+        working-directory: MMDSZApp_Regi
+        run: npm ci
+
+      - name: TypeScript ellenorzes
+        working-directory: MMDSZApp_Regi
+        run: npx --no-install tsc --noEmit
+
+      - name: Functions fuggosegek telepitese
+        working-directory: functions
+        run: npm ci
+
+      - name: Firebase Functions forditasa
+        working-directory: functions
+        run: npm run build
+
+      - name: Firebase CLI telepitese
+        run: npm install --global firebase-tools@14
+
+      - name: Firestore biztonsagi tesztek
+        working-directory: MMDSZApp_Regi
+        run: npm run test:rules
+      - name: Playwright bongeszok telepitese
+        working-directory: MMDSZApp_Regi
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Multiplatform webes tesztek
+        working-directory: MMDSZApp_Regi
+        run: npx playwright test --config playwright.prod.config.cjs --workers=1
+
+      - name: Playwright tesztjelentes mentese
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: mmdsz-webes-tesztek
+          path: |
+            MMDSZApp_Regi/playwright-report/
+            MMDSZApp_Regi/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
