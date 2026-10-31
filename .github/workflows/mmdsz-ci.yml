@@ -59,3 +59,21 @@ jobs:
       - name: Firestore biztonsagi tesztek
         working-directory: MMDSZApp_Regi
         run: npm run test:rules
+      - name: Playwright bongeszok telepitese
+        working-directory: MMDSZApp_Regi
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Multiplatform webes tesztek
+        working-directory: MMDSZApp_Regi
+        run: npx playwright test --config playwright.prod.config.cjs --workers=1
+
+      - name: Playwright tesztjelentes mentese
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: mmdsz-webes-tesztek
+          path: |
+            MMDSZApp_Regi/playwright-report/
+            MMDSZApp_Regi/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
