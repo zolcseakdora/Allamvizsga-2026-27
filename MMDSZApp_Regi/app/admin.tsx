@@ -29,7 +29,6 @@ export default function AdminRoute() {
     approveUser,
     addEvent,
     sendNotification,
-    createMissingTeams,
     teams,
     refreshTeams,
     deleteTeam,
@@ -92,19 +91,6 @@ export default function AdminRoute() {
       isActive = false;
     };
   }, [canManageAdmin, getProgram, isLoading, programId, t]);
-
-  const handleCreateMissingTeams = async () => {
-    try {
-      const count = await createMissingTeams();
-      await refreshTeams();
-      showToast(count > 0
-        ? t('admin.missingTeamsCreated', { count })
-        : t('admin.noMissingTeams'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    }
-  };
 
   const handleNormalizeUserTeamNames = async () => {
     try {
@@ -284,7 +270,6 @@ export default function AdminRoute() {
       onOpenPrograms={() => router.push('/schedule')}
       onOpenUsers={() => router.push('/users')}
       onOpenInvites={() => router.push('/invites')}
-      onCreateMissingTeams={() => void handleCreateMissingTeams()}
       onNormalizeUserTeamNames={() => void handleNormalizeUserTeamNames()}
       onDeleteTeam={handleDeleteTeam}
     />
