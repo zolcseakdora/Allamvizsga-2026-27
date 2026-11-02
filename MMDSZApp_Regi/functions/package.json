@@ -1,0 +1,25 @@
+{
+  "name": "mmdsz-event-functions",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "test": "firebase --config ../../firebase.json emulators:exec --only firestore --project demo-event-admin-validation \"node --test test/*.test.js\""
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.0",
+    "firebase-functions": "^7.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.34.2"
+  },
+  "overrides": {
+    "@firebase/app": "0.16.2",
+    "@firebase/app-compat": "0.5.18",
+    "@grpc/grpc-js": "^1.13.6"
+  }
+}

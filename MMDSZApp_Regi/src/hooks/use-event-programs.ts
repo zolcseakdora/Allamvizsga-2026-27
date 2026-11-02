@@ -1,6 +1,5 @@
 import {
   collection,
-  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -10,6 +9,7 @@ import {
 import { useCallback, useState } from 'react';
 
 import { db } from '@/src/config/firebase';
+import { deleteEventDay as deleteEventDayCallable } from '@/src/services/event-admin';
 import { isProgramTypeVisible } from '@/src/constants/event-programs';
 import type { EventDay, EventEdition, EventProgramItem, EventProgramStatus, EventProgramType } from '@/src/types/event';
 
@@ -144,12 +144,7 @@ export function useEventPrograms(edition: EventEdition | null) {
     if (!edition || edition.id.startsWith('preview-')) {
       throw new Error('No published event edition is selected for day changes.');
     }
-    const dayRef = doc(db, 'events', edition.id, 'days', dayId);
-    const programSnapshot = await getDocs(collection(dayRef, 'programItems'));
-    if (!programSnapshot.empty) {
-      throw new Error('Delete or move this day’s programs before deleting the day.');
-    }
-    await deleteDoc(dayRef);
+    await deleteEventDayCallable(edition.id, dayId);
     await refresh();
   }, [edition, refresh]);
 
