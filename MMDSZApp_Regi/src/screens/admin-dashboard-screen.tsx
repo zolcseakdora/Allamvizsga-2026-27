@@ -46,7 +46,6 @@ type AdminDashboardScreenProps = {
   onOpenPrograms: () => void;
   onOpenUsers: () => void;
   onOpenInvites: () => void;
-  onCreateMissingTeams: () => void;
   onNormalizeUserTeamNames: () => void;
   onDeleteTeam: (team: Team) => void;
 }
@@ -82,7 +81,6 @@ export function AdminDashboardScreen({
   onOpenPrograms,
   onOpenUsers,
   onOpenInvites,
-  onCreateMissingTeams,
   onNormalizeUserTeamNames,
   onDeleteTeam,
 }: AdminDashboardScreenProps) {
@@ -110,9 +108,6 @@ export function AdminDashboardScreen({
             </TouchableOpacity>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
               <Text style={styles.outlineButtonText}>👥 {t('admin.registeredUsers')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton} onPress={onCreateMissingTeams}>
-              <Text style={styles.outlineButtonText}>🛡️ {t('admin.createMissingTeams')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.outlineButton} onPress={onNormalizeUserTeamNames}>
               <Text style={styles.outlineButtonText}>🧹 {t('admin.normalizeUserTeamNames')}</Text>
