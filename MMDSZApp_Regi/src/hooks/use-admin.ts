@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useState } from 'react';
 
@@ -6,7 +6,7 @@ import { auth, db, functions } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { createNotification } from '@/src/services/notifications';
 import { UserRole } from '@/src/types/auth';
-import { normalizeTeamName, teamNameKey } from '@/src/utils/team-name';
+import { normalizeTeamName } from '@/src/utils/team-name';
 import type { Team } from '@/src/types/team';
 
 export type RegisteredUser = {
@@ -161,36 +161,6 @@ export function useAdmin() {
     await refreshPendingUsers();
   }, [refreshPendingUsers, requireHeadOrganizer]);
 
-  const createMissingTeams = useCallback(async () => {
-    const [usersSnapshot, teamsSnapshot] = await Promise.all([
-      getDocs(collection(db, 'users')),
-      getDocs(collection(db, 'teams')),
-    ]);
-    const existingTeamNames = new Set(teamsSnapshot.docs.flatMap((team) => {
-      const names = [team.id];
-      const dataName: unknown = team.data().name;
-      if (typeof dataName === 'string') names.push(dataName);
-      return names.map(teamNameKey).filter(Boolean);
-    }));
-    const missingTeamNames = new Map<string, string>();
-
-    usersSnapshot.docs.forEach((item) => {
-      const team = item.data().team;
-      if (typeof team !== 'string') return;
-
-      const name = normalizeTeamName(team);
-      const key = teamNameKey(name);
-      if (!key || key === teamNameKey('Egyéni') || existingTeamNames.has(key)) return;
-      if (!missingTeamNames.has(key)) missingTeamNames.set(key, name);
-    });
-
-    await Promise.all([...missingTeamNames.values()].map((name) => (
-      setDoc(doc(db, 'teams', name), { name }, { merge: true })
-    )));
-
-    return missingTeamNames.size;
-  }, []);
-
   const addEvent = useCallback(async (
     event: {
       id?: string;
@@ -237,7 +207,6 @@ export function useAdmin() {
     refreshRegisteredUsers,
     refreshPendingUsers,
     approveUser,
-    createMissingTeams,
     addEvent,
     sendNotification,
   };
