@@ -9,9 +9,11 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { db } from '@/src/config/firebase';
 import { useToast } from '@/src/context/ToastContext';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useAdmin } from '@/src/hooks/use-admin';
 import { useNotifications } from '@/src/hooks/use-notifications';
 import { navigationItemsForRole, type NavigationItem } from '@/src/constants/roles';
+import { EventSelector } from '@/src/components/event-selector';
 import { UserRole } from '@/src/types/auth';
 
 function translatedRole(role: UserRole, t: (key: string) => string) {
@@ -102,9 +104,11 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
   const router = useRouter();
   const { t } = useTranslation();
   const { logout, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const brandLabel = eventType === 'februtalis' ? t('navigation.brandFebrutalis') : t('navigation.brandDiaknapok');
 
   return (
     <View
@@ -125,7 +129,7 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
         accessibilityRole="link"
       >
         <Text style={[styles.brand, width < 600 && styles.compactBrand]} numberOfLines={1}>
-          {t('navigation.brand')}
+          {brandLabel}
         </Text>
       </Pressable>
       <View
@@ -134,6 +138,7 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
           width < 600 && styles.compactActions,
         ]}
       >
+        <EventSelector />
         <Pressable
           onPress={() => router.push('/notifications')}
           style={styles.bellButton}

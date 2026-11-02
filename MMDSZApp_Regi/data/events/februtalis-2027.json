@@ -1,0 +1,24 @@
+{
+  "id": "februtalis-2027",
+  "type": "februtalis",
+  "editionYear": 2027,
+  "title": "Februtális 2027",
+  "titleEn": "Februtalis 2027",
+  "displayTitle": "FEBRUTÁLIS",
+  "dateLabel": "2027. február 26-27.",
+  "startDate": "2027-02-26",
+  "endDate": "2027-02-27",
+  "timeZone": "Europe/Bucharest",
+  "published": true,
+  "theme": {
+    "primary": "#EC2127",
+    "background": "#121212",
+    "surface": "#1E1E1E",
+    "border": "#333333",
+    "activeSurface": "#321719"
+  },
+  "days": [
+    { "id": "2027-02-26", "date": "2027-02-26", "weekday": "Péntek", "order": 0, "programItems": [] },
+    { "id": "2027-02-27", "date": "2027-02-27", "weekday": "Szombat", "order": 1, "programItems": [] }
+  ]
+}

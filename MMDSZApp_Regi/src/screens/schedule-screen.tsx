@@ -7,6 +7,7 @@ import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/src/constants/event-days';
 
 type ScheduleProgram = {
   id: string;
+  dayId?: string;
   day?: string;
   time?: string;
   helyszín?: string;
@@ -15,8 +16,15 @@ type ScheduleProgram = {
   image?: string;
 };
 
+type ScheduleDay = {
+  id: string;
+  weekday: string;
+  date?: string;
+};
+
 type ScheduleScreenProps = {
   programs: ScheduleProgram[];
+  days?: ScheduleDay[];
   selectedCategory: string;
   onBack: () => void;
   onRefresh: () => void;
@@ -28,6 +36,7 @@ type ScheduleScreenProps = {
 
 export function ScheduleScreen({
   programs,
+  days,
   selectedCategory,
   onBack,
   onRefresh,
@@ -38,7 +47,10 @@ export function ScheduleScreen({
 }: ScheduleScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const filteredPrograms = programs.filter(program => program.day === selectedCategory);
+  const visibleDays = days && days.length > 0
+    ? days
+    : EVENT_DAYS.map((weekday, order) => ({ id: weekday, weekday, date: '', order }));
+  const filteredPrograms = programs.filter((program) => program.day === selectedCategory || (program.day === undefined && visibleDays.some((day) => day.id === selectedCategory)));
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
@@ -57,12 +69,12 @@ export function ScheduleScreen({
 
         <View style={styles.filterContainer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-            {EVENT_DAYS.map(category => (
+            {visibleDays.map((day) => (
               <FilterChip
-                key={category}
-                label={t(EVENT_DAY_LABEL_KEYS[category as keyof typeof EVENT_DAY_LABEL_KEYS])}
-                selected={selectedCategory === category}
-                onPress={() => onSelectCategory(category)}
+                key={day.id}
+                label={t(EVENT_DAY_LABEL_KEYS[day.weekday as keyof typeof EVENT_DAY_LABEL_KEYS] ?? day.weekday)}
+                selected={selectedCategory === day.id}
+                onPress={() => onSelectCategory(day.id)}
               />
             ))}
           </ScrollView>

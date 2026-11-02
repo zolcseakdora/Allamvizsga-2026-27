@@ -7,24 +7,30 @@ import { useTranslation } from 'react-i18next';
 import { AdminDashboardScreen } from '@/src/screens/admin-dashboard-screen';
 import { useAdmin } from '@/src/hooks/use-admin';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useToast } from '@/src/context/ToastContext';
 import { useSponsors } from '@/src/hooks/use-sponsors';
 import { canRole } from '@/src/constants/roles';
 import { makeThumbnail, processImage } from '@/src/services/images';
 import { EVENT_DAYS } from '@/src/constants/event-days';
+import { useEventPrograms } from '@/src/hooks/use-event-programs';
 import { usePrograms } from '@/src/hooks/use-programs';
+import { useSchedulePrograms } from '@/src/hooks/use-schedule-programs';
 import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
 import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function AdminRoute() {
   const router = useRouter();
-  const { section, programId } = useLocalSearchParams<{ section?: string; programId?: string }>();
+  const { section, programId, dayId } = useLocalSearchParams<{ section?: string; programId?: string; dayId?: string }>();
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { profile, isLoading } = useAuth();
+  const { eventType, edition } = useEventSeason();
   const { sponsors, refreshSponsors, addSponsor, deleteSponsor } = useSponsors();
-  const { getProgram } = usePrograms();
+  const { days: eventDays, saveDay, deleteDay, saveProgram } = useEventPrograms(edition);
+  const { getProgram: getLegacyProgram } = usePrograms();
+  const { getProgram: getScheduleProgram } = useSchedulePrograms();
   const canManageAdmin = canRole(profile?.role, 'manageAdmin');
   const {
     pendingUsers,
@@ -45,6 +51,9 @@ export default function AdminRoute() {
   const [adminEventLocation, setAdminEventLocation] = useState('');
   const [adminEventDescription, setAdminEventDescription] = useState('');
   const [adminEventImage, setAdminEventImage] = useState<string>();
+  const [adminDayId, setAdminDayId] = useState<string | null>(null);
+  const [newDayName, setNewDayName] = useState('');
+  const [newDayDate, setNewDayDate] = useState('');
   const [eventImagePayload, setEventImagePayload] = useState<{ image: string; thumb: string }>();
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [notifTitle, setNotifTitle] = useState('');
@@ -70,35 +79,99 @@ export default function AdminRoute() {
   }, [canManageAdmin, isLoading, refreshSponsors, refreshTeams, showToast, t]);
 
   useEffect(() => {
+    if (eventType !== 'februtalis' || !eventDays.length) {
+      setAdminDayId(null);
+      return;
+    }
+    if (!adminDayId || !eventDays.some((day) => day.id === adminDayId)) {
+      setAdminDayId(eventDays[0].id);
+    }
+  }, [adminDayId, eventDays, eventType]);
+
+  useEffect(() => {
     if (!programId || !canManageAdmin || isLoading) return;
 
     let isActive = true;
-    void getProgram(programId)
-      .then((program) => {
-        if (!isActive) return;
-        if (!program) {
-          Alert.alert(t('programs.notFound'));
-          return;
-        }
-        setIsEditingEvent(true);
-        setAdminEventTitle(program.title ?? '');
-        setAdminEventTime(program.time ?? '');
-        setAdminEventLocation(program.helyszín ?? '');
-        setAdminEventDay(EVENT_DAYS.includes(program.day ?? '') ? program.day ?? 'Szerda' : 'Szerda');
-        setAdminEventDescription(program.description ?? '');
-        setAdminEventImage(program.thumb ?? program.image);
-        setEventImagePayload(undefined);
-      })
-      .catch((error: unknown) => {
-        if (!isActive) return;
-        const message = error instanceof Error ? error.message : String(error);
-        Alert.alert(t('alerts.generic', { message }));
-      });
+    const resolveProgram = async () => {
+      let program: { title?: string; time?: string; helyszín?: string; day?: string; description?: string; image?: string; thumb?: string; id?: string } | null;
+      if (eventType === 'februtalis' && dayId) {
+        program = await getScheduleProgram(programId, dayId);
+      } else {
+        program = await getLegacyProgram(programId);
+      }
+
+      if (!isActive) return;
+      if (!program) {
+        Alert.alert(t('programs.notFound'));
+        return;
+      }
+      setIsEditingEvent(true);
+      setAdminEventTitle(program.title ?? '');
+      setAdminEventTime(program.time ?? '');
+      setAdminEventLocation(program.helyszín ?? '');
+      setAdminEventDay(EVENT_DAYS.includes(program.day ?? '') ? program.day ?? 'Szerda' : 'Szerda');
+      if (program.day && eventDays.some((day) => day.weekday === program.day)) {
+        setAdminDayId(eventDays.find((day) => day.weekday === program.day)?.id ?? null);
+      } else if (dayId) {
+        setAdminDayId(dayId);
+      }
+      setAdminEventDescription(program.description ?? '');
+      setAdminEventImage(program.thumb ?? program.image);
+      setEventImagePayload(undefined);
+    };
+
+    void resolveProgram().catch((error: unknown) => {
+      if (!isActive) return;
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert(t('alerts.generic', { message }));
+    });
 
     return () => {
       isActive = false;
     };
-  }, [canManageAdmin, getProgram, isLoading, programId, t]);
+  }, [canManageAdmin, dayId, eventDays, eventType, getLegacyProgram, getScheduleProgram, isLoading, programId, t]);
+
+  const handleAddDay = async () => {
+    if (eventType !== 'februtalis' || !edition) {
+      return;
+    }
+
+    const weekday = newDayName.trim();
+    const date = newDayDate.trim();
+    if (!weekday || !date) {
+      Alert.alert(t('alerts.requiredFields'));
+      return;
+    }
+
+    try {
+      const dayId = await saveDay({ date, weekday, order: eventDays.length });
+      setAdminDayId(dayId);
+      setNewDayName('');
+      setNewDayDate('');
+      showToast(t('admin.dayAdded'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    }
+  };
+
+  const handleDeleteDay = async (dayId: string) => {
+    if (eventType !== 'februtalis') {
+      return;
+    }
+
+    try {
+      await deleteDay(dayId);
+      if (adminDayId === dayId) {
+        const nextDay = eventDays.find((day) => day.id !== dayId);
+        setAdminDayId(nextDay?.id ?? null);
+      }
+      showToast(t('admin.dayDeleted'));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    }
+  };
 
   const handleCreateMissingTeams = async () => {
     try {
@@ -255,15 +328,40 @@ export default function AdminRoute() {
 
     setIsUploading(true);
     try {
-      await addEvent({
-        id: programId,
-        title: adminEventTitle,
-        time: adminEventTime,
-        location: adminEventLocation,
-        day: adminEventDay,
-        description: adminEventDescription,
-        image: eventImagePayload,
-      });
+      if (edition) {
+        const selectedDayId = eventType === 'februtalis'
+          ? adminDayId ?? eventDays[0]?.id ?? null
+          : eventDays.find((day) => day.weekday === adminEventDay)?.id ?? eventDays[0]?.id ?? null;
+
+        if (!selectedDayId) {
+          throw new Error(t('alerts.requiredFields'));
+        }
+
+        await saveProgram({
+          id: programId,
+          dayId: selectedDayId,
+          title: adminEventTitle,
+          startsAt: adminEventTime,
+          endsAt: undefined,
+          location: adminEventLocation,
+          description: adminEventDescription,
+          type: 'other',
+          status: 'scheduled',
+          isHeadline: false,
+          image: eventImagePayload,
+        });
+      } else {
+        await addEvent({
+          id: programId,
+          title: adminEventTitle,
+          time: adminEventTime,
+          location: adminEventLocation,
+          day: adminEventDay,
+          description: adminEventDescription,
+          image: eventImagePayload,
+        });
+      }
+
       setAdminEventTitle('');
       setAdminEventTime('');
       setAdminEventLocation('');
@@ -349,8 +447,18 @@ export default function AdminRoute() {
       onEventLocationChange={setAdminEventLocation}
       adminEventDescription={adminEventDescription}
       adminEventImage={adminEventImage}
+      eventType={eventType}
+      eventDays={eventDays}
+      selectedDayId={adminDayId}
+      newDayName={newDayName}
+      newDayDate={newDayDate}
       isEditingEvent={isEditingEvent}
       onEventDescriptionChange={setAdminEventDescription}
+      onEventDaySelect={setAdminDayId}
+      onNewDayNameChange={setNewDayName}
+      onNewDayDateChange={setNewDayDate}
+      onAddDay={() => void handleAddDay()}
+      onDeleteDay={(dayId) => void handleDeleteDay(dayId)}
       onPickEventImage={() => void handlePickEventImage()}
       onAddEvent={handleAddEvent}
       onNotifTitleChange={setNotifTitle}

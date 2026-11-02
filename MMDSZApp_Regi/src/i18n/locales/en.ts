@@ -18,6 +18,8 @@ const en: TranslationShape<typeof hu> = {
     home: 'Home',
     explore: 'Explore',
     brand: 'MMDSZ DIÁKNAPOK',
+    brandDiaknapok: 'MMDSZ Student Days',
+    brandFebrutalis: 'MMDSZ Februtális',
     menu: 'NAVIGATION',
     more: 'More',
     mainGroup: 'Main menu',
@@ -130,6 +132,8 @@ const en: TranslationShape<typeof hu> = {
     days: 'Days',
     hours: 'Hours',
     minutes: 'Minutes',
+    ongoing: 'Now running!',
+    ended: 'Ended',
     profile: 'Profile',
     paradeTime: 'Wednesday 17:00',
     paradeTitle: 'Traditional parade',
@@ -148,6 +152,10 @@ const en: TranslationShape<typeof hu> = {
     menuUsers: 'Registered users',
     menuAdmin: 'Admin panel',
     menuInvites: 'Invitations',
+  },
+  eventNames: {
+    diaknapok: 'Student Days',
+    februtalis: 'Februtális',
   },
   days: {
     wednesday: 'Wednesday',
