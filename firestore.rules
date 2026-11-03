@@ -119,17 +119,37 @@ service cloud.firestore {
     }
 
     // ---------- Galéria ----------
+    // A feltöltő UID-je nem hamisítható a kliensről.
+    function ownsGalleryPhoto(data) {
+      return isApproved() && data.get('uploadedByUid', '') == request.auth.uid;
+    }
+
     match /gallery/{docId} {
       allow read: if isApproved();
-      allow create: if isApproved();
-      allow update, delete: if isAdmin();
+      allow create: if isApproved()
+        && request.resource.data.keys().hasAll(['thumb', 'category', 'uploadedBy', 'uploadedByUid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['thumb', 'category', 'uploadedBy', 'uploadedByUid', 'createdAt'])
+        && request.resource.data.uploadedByUid == request.auth.uid
+        && request.resource.data.thumb is string
+        && request.resource.data.category is string
+        && request.resource.data.uploadedBy is string;
+      allow update: if isAdmin();
+      // Régi, UID nélküli képeket csak a főszervező törölhet.
+      allow delete: if isAdmin() || ownsGalleryPhoto(resource.data);
     }
 
     // ---------- Galéria, nagy képek ----------
     match /gallery_images/{docId} {
       allow read: if isApproved();
-      allow create: if isApproved();
-      allow update, delete: if isAdmin();
+      // Az összetartozó miniatűr és teljes kép egyszerre készül el egy batch-ben.
+      allow create: if isApproved()
+        && request.resource.data.keys().hasAll(['image', 'uploadedByUid'])
+        && request.resource.data.keys().hasOnly(['image', 'uploadedByUid'])
+        && request.resource.data.image is string
+        && request.resource.data.uploadedByUid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/gallery/$(docId)).data.get('uploadedByUid', '') == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin() || ownsGalleryPhoto(resource.data);
     }
 
     // ---------- Programok, nagy képek ----------
