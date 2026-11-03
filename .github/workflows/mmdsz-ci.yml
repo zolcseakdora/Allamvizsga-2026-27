@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - release/mmdsz-v1
+      - 'fix/**'
   pull_request:
     branches:
       - main

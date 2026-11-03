@@ -42,6 +42,7 @@ function toGalleryImage(id: string, data: Record<string, unknown>, includeFullIm
     thumb,
     category: typeof data.category === 'string' ? data.category : undefined,
     uploadedBy: typeof data.uploadedBy === 'string' ? data.uploadedBy : undefined,
+    uploadedByUid: typeof data.uploadedByUid === 'string' ? data.uploadedByUid : undefined,
     createdAt,
   };
 }
@@ -160,6 +161,7 @@ export function useGallery() {
     });
 
     if (result.canceled || !auth.currentUser) return 0;
+    const uploaderUid = auth.currentUser.uid;
 
     setIsUploading(true);
     try {
@@ -176,9 +178,13 @@ export function useGallery() {
           thumb,
           category: folder,
           uploadedBy: uploadedBy || 'Névtelen',
+          uploadedByUid: uploaderUid,
           createdAt: new Date(),
         });
-        batch.set(doc(db, 'gallery_images', imageId), { image });
+        batch.set(doc(db, 'gallery_images', imageId), {
+          image,
+          uploadedByUid: uploaderUid,
+        });
         await batch.commit();
         uploadedCount += 1;
       }

@@ -18,7 +18,7 @@ export default function GalleryImageRoute() {
     folder: string;
     imageId: string;
   }>();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const galleryNavigation = useGalleryNavigation();
   const { getImage, deleteImage } = useGallery();
   const [loadResult, setLoadResult] = useState<{
@@ -27,9 +27,16 @@ export default function GalleryImageRoute() {
     error?: string;
   } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const canManageGallery = canRole(profile?.role, 'manageGallery');
   const currentLoadResult = loadResult?.imageId === imageId ? loadResult : null;
   const image = currentLoadResult?.image ?? null;
+  const isApprovedAccount = profile !== null && (
+    profile.accountStatus === 'active'
+    || (!profile.accountStatus && (profile.isVerified || canRole(profile.role, 'manageGallery')))
+  );
+  const canManageGallery = Boolean(isApprovedAccount && (
+    canRole(profile?.role, 'manageGallery')
+    || (user && image?.uploadedByUid === user.uid)
+  ));
   const loadError = currentLoadResult?.error ?? null;
   const isLoading = Boolean(imageId) && currentLoadResult === null;
   const imageIdList = useMemo(() => {
