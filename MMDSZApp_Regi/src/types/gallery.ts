@@ -4,5 +4,6 @@ export type GalleryImage = {
   thumb?: string;
   category?: string;
   uploadedBy?: string;
+  uploadedByUid?: string;
   createdAt?: Date;
 };
