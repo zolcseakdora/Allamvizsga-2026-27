@@ -12,6 +12,7 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  writeBatch,
 } from 'firebase/firestore';
 
 const projectId = 'demo-mmdsz-rules-tests';
@@ -185,5 +186,112 @@ describe('Firestore sponsor Security Rules', () => {
 
   it('denies sponsor reads to unapproved users', async () => {
     await assertFails(getDoc(doc(userContext('unapproved'), 'sponsors/alfa-sponsor')));
+  });
+});
+
+describe('Galéria jogosultságok', () => {
+  const thumbnail = 'data:image/jpeg;base64,AA==';
+  const fullImage = 'data:image/jpeg;base64,AAAABBBB';
+
+  function galleryMetadata(uid, name = uid) {
+    return {
+      thumb: thumbnail,
+      category: 'Sportok',
+      uploadedBy: name,
+      uploadedByUid: uid,
+      createdAt: new Date(),
+    };
+  }
+
+  async function uploadPhoto(uid, imageId) {
+    const firestore = userContext(uid);
+    const batch = writeBatch(firestore);
+    batch.set(doc(firestore, 'gallery', imageId), galleryMetadata(uid));
+    batch.set(doc(firestore, 'gallery_images', imageId), {
+      image: fullImage,
+      uploadedByUid: uid,
+    });
+    await assertSucceeds(batch.commit());
+  }
+
+  it('jóváhagyott csapattag feltölthet és törölhet saját képet', async () => {
+    await uploadPhoto('member', 'own-photo');
+    const firestore = userContext('member');
+    await assertSucceeds(getDoc(doc(firestore, 'gallery/own-photo')));
+    await assertSucceeds(getDoc(doc(firestore, 'gallery_images/own-photo')));
+
+    const batch = writeBatch(firestore);
+    batch.delete(doc(firestore, 'gallery/own-photo'));
+    batch.delete(doc(firestore, 'gallery_images/own-photo'));
+    await assertSucceeds(batch.commit());
+  });
+
+  it('jóváhagyott szervező is feltölthet képet', async () => {
+    await uploadPhoto('organizer', 'organizer-photo');
+  });
+
+  it('más felhasználó nem törölheti és nem módosíthatja a képet vagy a teljes képet', async () => {
+    await uploadPhoto('member', 'member-photo');
+    const other = userContext('organizer');
+    await assertFails(deleteDoc(doc(other, 'gallery/member-photo')));
+    await assertFails(deleteDoc(doc(other, 'gallery_images/member-photo')));
+    await assertFails(updateDoc(doc(other, 'gallery/member-photo'), { uploadedByUid: 'organizer' }));
+    await assertFails(updateDoc(doc(other, 'gallery_images/member-photo'), { uploadedByUid: 'organizer' }));
+  });
+
+  it('a feltöltő nem hamisíthatja meg a tulajdonos Firebase UID-jét', async () => {
+    const firestore = userContext('member');
+    await assertFails(setDoc(doc(firestore, 'gallery/forged-photo'), galleryMetadata('organizer', 'member')));
+
+    const batch = writeBatch(firestore);
+    batch.set(doc(firestore, 'gallery/forged-batch'), galleryMetadata('member'));
+    batch.set(doc(firestore, 'gallery_images/forged-batch'), {
+      image: fullImage,
+      uploadedByUid: 'organizer',
+    });
+    await assertFails(batch.commit());
+  });
+
+  it('nem lehet önálló teljes képet létrehozni megfelelő galéria-bejegyzés nélkül', async () => {
+    const firestore = userContext('member');
+    await assertFails(setDoc(doc(firestore, 'gallery_images/orphan'), {
+      image: fullImage,
+      uploadedByUid: 'member',
+    }));
+  });
+
+  it('nem jóváhagyott és letiltott felhasználó nem tölthet fel vagy törölhet', async () => {
+    await uploadPhoto('member', 'protected-photo');
+    for (const uid of ['unapproved', 'disabled', 'pending-status']) {
+      const firestore = userContext(uid);
+      await assertFails(setDoc(doc(firestore, 'gallery/' + uid), galleryMetadata(uid)));
+      await assertFails(getDoc(doc(firestore, 'gallery/protected-photo')));
+      await assertFails(deleteDoc(doc(firestore, 'gallery/protected-photo')));
+      await assertFails(deleteDoc(doc(firestore, 'gallery_images/protected-photo')));
+    }
+  });
+
+  it('a főszervező más képeit, valamint a régi UID nélküli képeket is törölheti', async () => {
+    await uploadPhoto('member', 'another-photo');
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      await setDoc(doc(firestore, 'gallery/legacy-photo'), {
+        thumb: thumbnail,
+        category: 'Sportok',
+        uploadedBy: 'Régi felhasználó',
+        createdAt: new Date(),
+      });
+      await setDoc(doc(firestore, 'gallery_images/legacy-photo'), { image: fullImage });
+    });
+    const owner = userContext('member');
+    await assertFails(deleteDoc(doc(owner, 'gallery/legacy-photo')));
+    await assertFails(deleteDoc(doc(owner, 'gallery_images/legacy-photo')));
+    const firestore = userContext('admin');
+    for (const imageId of ['another-photo', 'legacy-photo']) {
+      const batch = writeBatch(firestore);
+      batch.delete(doc(firestore, 'gallery', imageId));
+      batch.delete(doc(firestore, 'gallery_images', imageId));
+      await assertSucceeds(batch.commit());
+    }
   });
 });
