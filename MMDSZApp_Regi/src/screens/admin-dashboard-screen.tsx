@@ -29,6 +29,13 @@ type AdminDashboardScreenProps = {
   showPending: boolean;
   pendingUsers: PendingUser[];
   teams: Team[];
+  captainCode: string;
+  captainCodeActive: boolean;
+  captainCodeExpiresAt: string | null;
+  captainCodeLoading: boolean;
+  onGenerateCaptainCode: () => void;
+  onRevokeCaptainCode: () => void;
+  onCopyCaptainCode: () => void;
   onBack: () => void;
   onEventDayChange: (day: string) => void;
   onEventTitleChange: (value: string) => void;
@@ -65,6 +72,13 @@ export function AdminDashboardScreen({
   showPending,
   pendingUsers,
   teams,
+  captainCode,
+  captainCodeActive,
+  captainCodeExpiresAt,
+  captainCodeLoading,
+  onGenerateCaptainCode,
+  onRevokeCaptainCode,
+  onCopyCaptainCode,
   onBack,
   onEventDayChange,
   onEventTitleChange,
@@ -100,6 +114,41 @@ export function AdminDashboardScreen({
         <Text style={styles.title}>⚙️ {t('admin.title')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🎓 Közös kapitányi regisztrációs kód</Text>
+            <Text style={styles.cardText}>
+              Egy kódot minden kapitány használhat a gyűlésen. A kód 30 napig érvényes, és csak a jelentkezést indítja el: a csapatot kizárólag a főszervező jóváhagyása után hozza létre a rendszer.
+            </Text>
+            <Text style={styles.cardText}>
+              {captainCodeActive
+                ? `Aktív közös kód (lejárat: ${captainCodeExpiresAt ? new Date(captainCodeExpiresAt).toLocaleString('hu-HU') : 'ismeretlen'})`
+                : 'Nincs aktív közös kód.'}
+            </Text>
+            {captainCode ? (
+              <>
+                <Text style={styles.profileLabel}>A kód csak most látható. Másold ki, és a gyűlésen vetítsd ki vagy oszd meg személyesen.</Text>
+                <Text selectable style={styles.codeValue}>{captainCode}</Text>
+                <TouchableOpacity style={styles.outlineButton} onPress={onCopyCaptainCode}>
+                  <Text style={styles.outlineButtonText}>📋 Kód másolása</Text>
+                </TouchableOpacity>
+              </>
+            ) : captainCodeActive ? (
+              <Text style={styles.cardText}>A kód korábban már létrejött, biztonsági okból nem kérhető le újra. Ha elveszett, vond vissza, majd generálj újat.</Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.outlineButton}
+              onPress={captainCodeActive ? onRevokeCaptainCode : onGenerateCaptainCode}
+              disabled={captainCodeLoading}
+            >
+              <Text style={styles.outlineButtonText}>
+                {captainCodeLoading
+                  ? 'Feldolgozás...'
+                  : captainCodeActive
+                    ? '🛑 Közös kód visszavonása'
+                    : '🔑 Új közös kapitányi kód generálása'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>🧰 {t('admin.management')}</Text>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenPrograms}>
@@ -227,6 +276,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
   cardText: { color: '#aaa', fontSize: 13, marginBottom: 12 },
+  codeValue: { color: '#FFF', fontSize: 17, fontWeight: 'bold', padding: 12, backgroundColor: '#121212', borderRadius: 8, marginBottom: 12 },
   sectionSubtitle: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginTop: 4, marginBottom: 6 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   dayList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 },
