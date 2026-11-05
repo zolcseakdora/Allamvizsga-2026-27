@@ -112,7 +112,8 @@ const sharedCaptainCodeRef = db.collection('captain_registration_codes').doc('sh
 
 export const createCaptainRegistrationCode = onCall(async (request) => {
   const uid = requireUid(request);
-  const code = `MMDSZ-${randomBytes(24).toString('base64url')}`;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const code = Array.from(randomBytes(8), (byte) => alphabet[byte % 32]).join('');
   const codeHash = hashCode(code);
   const now = Timestamp.now();
   const expiresAt = Timestamp.fromMillis(now.toMillis() + INVITE_LIFETIME_MS);
