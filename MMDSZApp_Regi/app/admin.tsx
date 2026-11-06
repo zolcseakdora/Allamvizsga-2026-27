@@ -26,7 +26,6 @@ export default function AdminRoute() {
   const {
     pendingUsers,
     refreshPendingUsers,
-    approveUser,
     addEvent,
     sendNotification,
     createMissingTeams,
@@ -240,15 +239,6 @@ export default function AdminRoute() {
     }
   }, [canManageAdmin, isLoading, refreshPendingUsers, section, t]);
 
-  const handleApprove = async (userId: string) => {
-    try {
-      await approveUser(userId);
-      Alert.alert(t('alerts.idApproved'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
-    }
-  };
 
   if (isLoading || !canManageAdmin) return null;
 
@@ -279,7 +269,6 @@ export default function AdminRoute() {
       onNotifBodyChange={setNotifBody}
       onSendNotification={handleSendNotification}
       onFetchPendingUsers={() => void handleFetchPending()}
-      onApproveUser={(userId) => void handleApprove(userId)}
       onOpenVerifications={() => router.replace({ pathname: '/admin', params: { section: 'verifications' } })}
       onOpenPrograms={() => router.push('/schedule')}
       onOpenUsers={() => router.push('/users')}

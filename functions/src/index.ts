@@ -578,7 +578,7 @@ export const reviewPendingMembership = onCall(async (request) => {
     }
 
     const pendingRole = profile.pendingRole;
-    const role = typeof pendingRole === 'string' ? pendingRole : TEAM_MEMBER;
+    const role = typeof pendingRole === 'string' ? pendingRole : '';
     if (![TEAM_MEMBER, DEPUTY_CAPTAIN, ORGANIZER, JURY].includes(role)) {
       throw new HttpsError('failed-precondition', 'A kért szerepkör érvénytelen.');
     }

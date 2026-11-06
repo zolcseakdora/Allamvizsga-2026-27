@@ -41,7 +41,6 @@ type AdminDashboardScreenProps = {
   onNotifBodyChange: (value: string) => void;
   onSendNotification: () => void;
   onFetchPendingUsers: () => void;
-  onApproveUser: (userId: string) => void;
   onOpenVerifications: () => void;
   onOpenPrograms: () => void;
   onOpenUsers: () => void;
@@ -77,7 +76,6 @@ export function AdminDashboardScreen({
   onNotifBodyChange,
   onSendNotification,
   onFetchPendingUsers,
-  onApproveUser,
   onOpenVerifications,
   onOpenPrograms,
   onOpenUsers,
@@ -200,11 +198,12 @@ export function AdminDashboardScreen({
                       {user.igazolas ? (
                         <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
                       ) : null}
-                      {!user.isVerified && (
-                        <TouchableOpacity style={styles.approveButton} onPress={() => onApproveUser(user.id)}>
-                          <Text style={styles.solidButtonText}>✅ {t('admin.approve')}</Text>
-                        </TouchableOpacity>
-                      )}
+                      <Text style={styles.cardText}>
+                        Az igazolás itt megtekinthető. A regisztráció jóváhagyása vagy elutasítása a Regisztráltak oldalon történik.
+                      </Text>
+                      <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
+                        <Text style={styles.outlineButtonText}>👥 Regisztráltak megnyitása</Text>
+                      </TouchableOpacity>
                     </View>
                   ))
                 )}
