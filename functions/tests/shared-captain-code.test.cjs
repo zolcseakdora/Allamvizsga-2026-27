@@ -54,7 +54,7 @@ test('közös kód: két kapitány, főszervezői jog, visszavonás', async () =
   assert.equal((await call('createCaptainRegistrationCode', a.token)).status, 403);
   const generated = await call('createCaptainRegistrationCode', admin.token);
   assert.equal(generated.status, 200, JSON.stringify(generated));
-  assert.match(generated.body.code, /^MMDSZ-/);
+  assert.match(generated.body.code, /^[A-HJ-NP-Z2-9]{8}$/);
   const code = generated.body.code;
 
   assert.equal((await call('createCaptainRegistrationCode', admin.token)).status, 400);
