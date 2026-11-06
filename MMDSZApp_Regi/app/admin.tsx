@@ -1,19 +1,19 @@
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, Share } from 'react-native';
+import { httpsCallable } from 'firebase/functions';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AdminDashboardScreen } from '@/src/screens/admin-dashboard-screen';
 import { useAdmin } from '@/src/hooks/use-admin';
 import { useAuth } from '@/src/context/AuthContext';
+import { functions } from '@/src/config/firebase';
 import { useToast } from '@/src/context/ToastContext';
-import { useSponsors } from '@/src/hooks/use-sponsors';
 import { canRole } from '@/src/constants/roles';
 import { makeThumbnail, processImage } from '@/src/services/images';
 import { EVENT_DAYS } from '@/src/constants/event-days';
 import { usePrograms } from '@/src/hooks/use-programs';
-import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
 import { goBackOrHome } from '@/src/utils/navigation';
 
@@ -23,7 +23,6 @@ export default function AdminRoute() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { profile, isLoading } = useAuth();
-  const { sponsors, refreshSponsors, addSponsor, deleteSponsor } = useSponsors();
   const { getProgram } = usePrograms();
   const canManageAdmin = canRole(profile?.role, 'manageAdmin');
   const {
@@ -32,7 +31,6 @@ export default function AdminRoute() {
     approveUser,
     addEvent,
     sendNotification,
-    createMissingTeams,
     teams,
     refreshTeams,
     deleteTeam,
@@ -51,10 +49,87 @@ export default function AdminRoute() {
   const [notifBody, setNotifBody] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [showPending, setShowPending] = useState(false);
-  const [sponsorName, setSponsorName] = useState('');
-  const [sponsorLink, setSponsorLink] = useState('');
-  const [sponsorLogo, setSponsorLogo] = useState<string>();
-  const [isManagingSponsors, setIsManagingSponsors] = useState(false);
+  const [captainCode, setCaptainCode] = useState('');
+  const [captainCodeActive, setCaptainCodeActive] = useState(false);
+  const [captainCodeExpiresAt, setCaptainCodeExpiresAt] = useState<string | null>(null);
+  const [captainCodeLoading, setCaptainCodeLoading] = useState(false);
+
+  const refreshCaptainCodeStatus = useCallback(async () => {
+    const getStatus = httpsCallable<void, { active: boolean; expiresAt: string | null }>(
+      functions, 'getCaptainRegistrationCodeStatus',
+    );
+    const result = await getStatus();
+    setCaptainCodeActive(result.data.active);
+    setCaptainCodeExpiresAt(result.data.expiresAt);
+    if (!result.data.active) setCaptainCode('');
+  }, []);
+
+  useEffect(() => {
+    if (isLoading || !canManageAdmin) return;
+    void refreshCaptainCodeStatus().catch((error: unknown) => {
+      console.error('Kapitányi kód állapotának lekérése sikertelen', error);
+    });
+  }, [canManageAdmin, isLoading, refreshCaptainCodeStatus]);
+
+  const handleGenerateCaptainCode = async () => {
+    if (captainCodeLoading || captainCodeActive) return;
+    setCaptainCodeLoading(true);
+    try {
+      const createCode = httpsCallable<void, { code: string; expiresAt: string }>(
+        functions, 'createCaptainRegistrationCode',
+      );
+      const response = await createCode();
+      setCaptainCode(response.data.code);
+      setCaptainCodeExpiresAt(response.data.expiresAt);
+      setCaptainCodeActive(true);
+      showToast('A közös kapitányi kód létrejött. Másold ki most: később már nem jeleníthető meg.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(`Nem sikerült létrehozni a kódot: ${message}`, 'error');
+      await refreshCaptainCodeStatus().catch(() => {});
+    } finally {
+      setCaptainCodeLoading(false);
+    }
+  };
+
+  const handleRevokeCaptainCode = async () => {
+    if (captainCodeLoading || !captainCodeActive) return;
+    if (Platform.OS === 'web' && !window.confirm('Biztosan visszavonod a közös kapitányi kódot?')) return;
+    setCaptainCodeLoading(true);
+    try {
+      const revoke = httpsCallable<void, { status: 'revoked' }>(
+        functions, 'revokeCaptainRegistrationCode',
+      );
+      await revoke();
+      setCaptainCode('');
+      setCaptainCodeActive(false);
+      setCaptainCodeExpiresAt(null);
+      showToast('A közös kapitányi kód visszavonva.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(`Nem sikerült visszavonni a kódot: ${message}`, 'error');
+    } finally {
+      setCaptainCodeLoading(false);
+    }
+  };
+
+  const handleCopyCaptainCode = async () => {
+    if (!captainCode) return;
+    try {
+      if (Platform.OS === 'web') {
+        if (!navigator.clipboard) {
+          showToast('A kódot jelöld ki és másold ki kézzel.', 'error');
+          return;
+        }
+        await navigator.clipboard.writeText(captainCode);
+        showToast('A közös kapitányi kód a vágólapra került.');
+      } else {
+        await Share.share({ message: captainCode });
+      }
+    } catch (error) {
+      showToast('A kód másolása sikertelen. Jelöld ki és másold ki kézzel.', 'error');
+    }
+  };
 
   useEffect(() => {
     if (!isLoading && (!profile || !canManageAdmin)) router.replace('/');
@@ -62,12 +137,12 @@ export default function AdminRoute() {
 
   useEffect(() => {
     if (!isLoading && canManageAdmin) {
-      void Promise.all([refreshSponsors(), refreshTeams()]).catch((error: unknown) => {
+      void refreshTeams().catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
         showToast(t('alerts.generic', { message }), 'error');
       });
     }
-  }, [canManageAdmin, isLoading, refreshSponsors, refreshTeams, showToast, t]);
+  }, [canManageAdmin, isLoading, refreshTeams, showToast, t]);
 
   useEffect(() => {
     if (!programId || !canManageAdmin || isLoading) return;
@@ -100,19 +175,6 @@ export default function AdminRoute() {
     };
   }, [canManageAdmin, getProgram, isLoading, programId, t]);
 
-  const handleCreateMissingTeams = async () => {
-    try {
-      const count = await createMissingTeams();
-      await refreshTeams();
-      showToast(count > 0
-        ? t('admin.missingTeamsCreated', { count })
-        : t('admin.noMissingTeams'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    }
-  };
-
   const handleNormalizeUserTeamNames = async () => {
     try {
       const count = await normalizeUserTeamNames();
@@ -142,72 +204,6 @@ export default function AdminRoute() {
     Alert.alert(title, message, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('admin.deleteTeam'), style: 'destructive', onPress: confirm },
-    ]);
-  };
-
-  const handlePickSponsorLogo = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        showToast(t('alerts.permissionRequired'), 'error');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-        base64: false,
-      });
-      const uri = result.canceled ? undefined : result.assets[0]?.uri;
-      if (!uri) return;
-
-      const { dataUrl } = await processImage(uri, { maxSide: 256, quality: 0.7, maxBytes: 200000 });
-      setSponsorLogo(dataUrl);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    }
-  };
-
-  const handleAddSponsor = async () => {
-    const name = sponsorName.trim();
-    if (!name || !sponsorLogo) {
-      showToast(t('admin.sponsorFieldsRequired'), 'error');
-      return;
-    }
-
-    setIsManagingSponsors(true);
-    try {
-      await addSponsor({ name, logo: sponsorLogo, link: sponsorLink.trim() || undefined });
-      setSponsorName('');
-      setSponsorLink('');
-      setSponsorLogo(undefined);
-      showToast(t('admin.sponsorAdded'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    } finally {
-      setIsManagingSponsors(false);
-    }
-  };
-
-  const handleDeleteSponsor = (sponsor: Sponsor) => {
-    Alert.alert(t('admin.deleteSponsor'), t('admin.confirmDeleteSponsor', { name: sponsor.name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('admin.deleteSponsor'),
-        style: 'destructive',
-        onPress: () => {
-          setIsManagingSponsors(true);
-          void deleteSponsor(sponsor.id)
-            .then(() => showToast(t('admin.sponsorDeleted')))
-            .catch((error: unknown) => {
-              const message = error instanceof Error ? error.message : String(error);
-              showToast(t('alerts.generic', { message }), 'error');
-            })
-            .finally(() => setIsManagingSponsors(false));
-        },
-      },
     ]);
   };
 
@@ -336,12 +332,14 @@ export default function AdminRoute() {
       notifBody={notifBody}
       showPending={showPending}
       pendingUsers={pendingUsers}
-      sponsors={sponsors}
       teams={teams}
-      sponsorName={sponsorName}
-      sponsorLink={sponsorLink}
-      sponsorLogo={sponsorLogo}
-      isManagingSponsors={isManagingSponsors}
+      captainCode={captainCode}
+      captainCodeActive={captainCodeActive}
+      captainCodeExpiresAt={captainCodeExpiresAt}
+      captainCodeLoading={captainCodeLoading}
+      onGenerateCaptainCode={() => void handleGenerateCaptainCode()}
+      onRevokeCaptainCode={() => void handleRevokeCaptainCode()}
+      onCopyCaptainCode={() => void handleCopyCaptainCode()}
       onBack={() => goBackOrHome(router)}
       onEventDayChange={setAdminEventDay}
       onEventTitleChange={setAdminEventTitle}
@@ -362,14 +360,8 @@ export default function AdminRoute() {
       onOpenPrograms={() => router.push('/schedule')}
       onOpenUsers={() => router.push('/users')}
       onOpenInvites={() => router.push('/invites')}
-      onCreateMissingTeams={() => void handleCreateMissingTeams()}
       onNormalizeUserTeamNames={() => void handleNormalizeUserTeamNames()}
       onDeleteTeam={handleDeleteTeam}
-      onSponsorNameChange={setSponsorName}
-      onSponsorLinkChange={setSponsorLink}
-      onPickSponsorLogo={() => void handlePickSponsorLogo()}
-      onAddSponsor={() => void handleAddSponsor()}
-      onDeleteSponsor={handleDeleteSponsor}
     />
   );
 }

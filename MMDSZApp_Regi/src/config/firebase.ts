@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 // @ts-ignore
 import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
@@ -23,5 +24,6 @@ const auth = Platform.OS === 'web'
     });
 
 const db = initializeFirestore(app, { experimentalAutoDetectLongPolling: true });
+const functions = getFunctions(app, 'europe-west1');
 
-export { auth, db };
+export { auth, db, functions };

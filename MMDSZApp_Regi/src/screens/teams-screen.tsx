@@ -35,8 +35,13 @@ export function TeamsScreen({
 }: TeamsScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const columns = width >= 1200 ? 6 : width >= 900 ? 5 : width >= 600 ? 4 : 3;
+  const columns = width >= 1200 ? 4 : width >= 900 ? 3 : width >= 600 ? 2 : 1;
   const uniqueTeams = new Map<string, Team>();
+  const sponsorsByTeam = new Map<string, Sponsor[]>();
+  sponsors.forEach((sponsor) => {
+    const key = teamNameKey(sponsor.team);
+    sponsorsByTeam.set(key, [...(sponsorsByTeam.get(key) ?? []), sponsor]);
+  });
   let duplicateTeamCount = 0;
   teams.forEach(team => {
     const name = normalizeTeamName(team.name ?? '') || normalizeTeamName(team.id);
@@ -79,42 +84,44 @@ export function TeamsScreen({
             {visibleTeams.length === 0 ? (
               <Text style={styles.emptyState}>{t('teams.empty')}</Text>
             ) : (
-              visibleTeams.map((team) => (
-                <View key={team.id} style={[styles.teamItem, { width: `${100 / columns}%` }]}>
-                  <TouchableOpacity
-                    style={[styles.teamLogoCircle, { backgroundColor: team.logo ? 'transparent' : placeholderColor(normalizeTeamName(team.name ?? '') || team.id) }]}
-                    onPress={() => onOpenLink(team.videoLink)}
-                    accessibilityRole="button"
-                    accessibilityLabel={normalizeTeamName(team.name ?? '') || t('teams.unnamed')}
-                  >
-                    {team.logo
-                      ? <Image source={{ uri: team.logo }} style={styles.teamLogoImage} />
-                      : <Text style={styles.teamPlaceholder}>{(normalizeTeamName(team.name ?? '') || '?').charAt(0).toUpperCase()}</Text>}
-                  </TouchableOpacity>
-                  <Text style={styles.teamName} numberOfLines={2}>{normalizeTeamName(team.name ?? '') || t('teams.unnamed')}</Text>
-                </View>
-              ))
+              visibleTeams.map((team) => {
+                const teamSponsors = sponsorsByTeam.get(teamNameKey(team.id)) ?? [];
+                const sponsorSplit = Math.ceil(teamSponsors.length / 2);
+                const renderSponsorLogos = (items: Sponsor[]) => items.length > 0 && (
+                  <View style={styles.sponsorCluster}>
+                    {items.map((sponsor) => (
+                      <View key={sponsor.id} style={styles.sponsorItem}>
+                        <Image
+                          source={{ uri: sponsor.logo }}
+                          style={styles.sponsorLogo}
+                          resizeMode="contain"
+                          accessibilityLabel={sponsor.name}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                );
+
+                return (
+                  <View key={team.id} style={[styles.teamItem, { width: `${100 / columns}%` }]}>
+                    {renderSponsorLogos(teamSponsors.slice(0, sponsorSplit))}
+                    <TouchableOpacity
+                      style={[styles.teamLogoCircle, { backgroundColor: team.logo ? 'transparent' : placeholderColor(normalizeTeamName(team.name ?? '') || team.id) }]}
+                      onPress={() => onOpenLink(team.videoLink)}
+                      accessibilityRole="button"
+                      accessibilityLabel={normalizeTeamName(team.name ?? '') || t('teams.unnamed')}
+                    >
+                      {team.logo
+                        ? <Image source={{ uri: team.logo }} style={styles.teamLogoImage} />
+                        : <Text style={styles.teamPlaceholder}>{(normalizeTeamName(team.name ?? '') || '?').charAt(0).toUpperCase()}</Text>}
+                    </TouchableOpacity>
+                    {renderSponsorLogos(teamSponsors.slice(sponsorSplit))}
+                    <Text style={styles.teamName} numberOfLines={2}>{normalizeTeamName(team.name ?? '') || t('teams.unnamed')}</Text>
+                  </View>
+                );
+              })
             )}
           </View>
-          {sponsors.length > 0 && (
-            <View style={styles.sponsorsSection}>
-              <Text style={styles.sponsorsTitle}>{t('teams.sponsors')}</Text>
-              <View style={styles.sponsorsGrid}>
-                {sponsors.map((sponsor) => (
-                  <TouchableOpacity
-                    key={sponsor.id}
-                    style={styles.sponsorItem}
-                    onPress={() => sponsor.link && onOpenLink(sponsor.link)}
-                    disabled={!sponsor.link}
-                    accessibilityRole={sponsor.link ? 'link' : undefined}
-                    accessibilityLabel={sponsor.name}
-                  >
-                    <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -138,16 +145,14 @@ const styles = StyleSheet.create({
   listContent: { paddingBottom: 32 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'flex-start' },
   emptyState: { textAlign: 'center', width: '100%', color: '#888', marginTop: 20 },
-  teamItem: { alignItems: 'center', paddingHorizontal: 6, marginBottom: 22 },
-  teamLogoCircle: { width: 76, height: 76, borderRadius: 38, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  teamItem: { alignItems: 'center', padding: 14, marginBottom: 16, backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 12 },
+  teamLogoCircle: { width: 92, height: 92, borderRadius: 46, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   teamLogoImage: { width: '100%', height: '100%' },
   teamPlaceholder: { color: '#FFF', fontSize: 30, fontWeight: 'bold' },
-  teamName: { color: '#FFF', fontWeight: '600', fontSize: 12, textAlign: 'center', marginTop: 8 },
-  sponsorsSection: { marginTop: 22 },
-  sponsorsTitle: { color: '#FFF', fontSize: 17, fontWeight: 'bold', textAlign: 'center', marginBottom: 14 },
-  sponsorsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' },
-  sponsorItem: { width: 90, height: 64, alignItems: 'center', justifyContent: 'center', margin: 8 },
-  sponsorLogo: { width: 76, height: 54 },
+  teamName: { color: '#FFF', fontWeight: '700', fontSize: 15, textAlign: 'center', marginTop: 10, marginBottom: 8 },
+  sponsorCluster: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 6 },
+  sponsorItem: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#121212', borderWidth: 1, borderColor: '#333', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  sponsorLogo: { width: 46, height: 46 },
 });
 
 function placeholderColor(name: string) {

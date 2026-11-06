@@ -1,6 +1,8 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/src/context/AuthContext';
+import { UserRole } from '@/src/types/auth';
 
 type VerificationPendingScreenProps = {
   hasIgazolas: boolean;
@@ -26,6 +28,10 @@ export function VerificationPendingScreen({
   onLogout,
 }: VerificationPendingScreenProps) {
   const { t } = useTranslation();
+  const { profile } = useAuth();
+  const pendingStaff = profile?.pendingRole === UserRole.SZERVEZO
+    || profile?.pendingRole === UserRole.ZSURI;
+  const requiresStudentId = !pendingStaff;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,7 +39,7 @@ export function VerificationPendingScreen({
         <View style={styles.card}>
           <Text style={styles.title}>⏳ {t('verification.title')}</Text>
           <Text style={styles.cardText}>
-            {t('verification.message')}
+            {t(pendingStaff ? 'verification.pendingStaffMessage' : 'verification.message')}
           </Text>
 
           <Text style={[styles.emailStatus, { color: emailVerified ? '#27AE60' : '#F39C12' }]}>
@@ -63,13 +69,13 @@ export function VerificationPendingScreen({
             </>
           )}
 
-          {!hasIgazolas ? (
+          {requiresStudentId && (!hasIgazolas ? (
             <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
               <Text style={styles.solidButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('verification.uploadId')}</Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.uploadedText}>✅ {t('verification.uploaded')}</Text>
-          )}
+          ))}
 
           <TouchableOpacity style={styles.outlineButton} onPress={onLogout}>
             <Text style={styles.outlineButtonText}>{t('common.logout')}</Text>

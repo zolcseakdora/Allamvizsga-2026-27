@@ -1,22 +1,31 @@
-import { useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { AuthScreen } from '@/src/screens/auth-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
 
+import { AuthMode } from '@/src/types/auth';
+
 export default function AuthRoute() {
+  const { invite } = useLocalSearchParams<{ invite?: string }>();
+  const [mode, setMode] = useState<AuthMode>(
+    invite === '1' ? AuthMode.REGISTER_INVITED : AuthMode.LOGIN
+  );
+  useEffect(() => {
+    if (invite === '1') setMode(AuthMode.REGISTER_INVITED);
+  }, [invite]);
   const { t } = useTranslation();
   const { login, register } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
-  const [isLoginMode, setIsLoginMode] = useState(true);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [teamName, setTeamName] = useState('');
+  const [registrationCode, setRegistrationCode] = useState('');
   const [securePassword, setSecurePassword] = useState(true);
 
   const resetForm = () => {
@@ -24,11 +33,13 @@ export default function AuthRoute() {
     setEmail('');
     setPassword('');
     setTeamName('');
+    setRegistrationCode('');
     setSecurePassword(true);
   };
 
   const handleLogin = async () => {
-    if (!email || !password) return showToast(t('alerts.emailPasswordRequired'), 'error');
+    if ( !email || !password ) return showToast(t('alerts.requiredFields'), 'error');
+
     try {
       await login(email, password);
       router.replace('/'); 
@@ -38,9 +49,23 @@ export default function AuthRoute() {
   };
 
   const handleRegister = async () => {
-    if (!fullName || !email || !password) return showToast(t('alerts.requiredFields'), 'error');
+    if (!fullName.trim() || !email.trim() || !password) {
+      return showToast(t('alerts.requiredFields'), 'error');
+    }
+    if (mode === AuthMode.REGISTER_CAPTAIN && (!registrationCode.trim() || !teamName.trim())) {
+      return showToast(t('alerts.requiredFields'), 'error');
+    }
+
     try {
-      await register({ name: fullName, email, password, team: teamName });
+      await register({
+        name: fullName.trim(),
+        email: email.trim(),
+        password,
+        ...(mode === AuthMode.REGISTER_CAPTAIN
+          ? { team: teamName.trim(), registrationCode: registrationCode.trim() }
+          : {}),
+        invited: mode === AuthMode.REGISTER_INVITED || mode === AuthMode.REGISTER_MEMBER,
+      });
       router.replace('/');
     } catch (error: any) {
       showToast(t('alerts.generic', { message: error.message }), 'error');
@@ -49,19 +74,21 @@ export default function AuthRoute() {
 
   return (
     <AuthScreen
-      isLoginMode={isLoginMode}
+      mode={mode}
       fullName={fullName}
       teamName={teamName}
+      registrationCode={registrationCode}
       email={email}
       password={password}
       securePassword={securePassword}
       onFullNameChange={setFullName}
       onTeamNameChange={setTeamName}
+      onRegistrationCodeChange={setRegistrationCode}
       onEmailChange={setEmail}
       onPasswordChange={setPassword}
       onTogglePassword={() => setSecurePassword(!securePassword)}
-      onSubmit={isLoginMode ? handleLogin : handleRegister}
-      onToggleMode={() => { setIsLoginMode(!isLoginMode); resetForm(); }}
+      onSubmit={mode === AuthMode.LOGIN ? handleLogin : handleRegister}
+      onSetMode={setMode}
     />
   );
 }

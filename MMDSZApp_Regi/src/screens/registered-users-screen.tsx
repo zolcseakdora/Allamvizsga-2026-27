@@ -48,6 +48,7 @@ function translateRole(role: UserRole | undefined, t: (key: string) => string) {
   switch (role) {
     case UserRole.FOSZERVEZO: return t('roles.headOrganizer');
     case UserRole.SZERVEZO: return t('roles.organizer');
+    case UserRole.ZSURI: return t('roles.jury');
     case UserRole.CSAPATKAPITANY: return t('roles.captain');
     case UserRole.ALCSAPATKAPITANY: return t('roles.deputy');
     case UserRole.CSAPATTAG: return t('roles.member');

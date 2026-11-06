@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import { FilterChip } from '@/src/components/controls/filter-chip';
 import { EVENT_DAYS, EVENT_DAY_LABEL_KEYS } from '@/src/constants/event-days';
-import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
 
 type PendingUser = {
@@ -29,12 +28,14 @@ type AdminDashboardScreenProps = {
   notifBody: string;
   showPending: boolean;
   pendingUsers: PendingUser[];
-  sponsors: Sponsor[];
   teams: Team[];
-  sponsorName: string;
-  sponsorLink: string;
-  sponsorLogo?: string;
-  isManagingSponsors: boolean;
+  captainCode: string;
+  captainCodeActive: boolean;
+  captainCodeExpiresAt: string | null;
+  captainCodeLoading: boolean;
+  onGenerateCaptainCode: () => void;
+  onRevokeCaptainCode: () => void;
+  onCopyCaptainCode: () => void;
   onBack: () => void;
   onEventDayChange: (day: string) => void;
   onEventTitleChange: (value: string) => void;
@@ -52,14 +53,8 @@ type AdminDashboardScreenProps = {
   onOpenPrograms: () => void;
   onOpenUsers: () => void;
   onOpenInvites: () => void;
-  onCreateMissingTeams: () => void;
   onNormalizeUserTeamNames: () => void;
   onDeleteTeam: (team: Team) => void;
-  onSponsorNameChange: (value: string) => void;
-  onSponsorLinkChange: (value: string) => void;
-  onPickSponsorLogo: () => void;
-  onAddSponsor: () => void;
-  onDeleteSponsor: (sponsor: Sponsor) => void;
 }
 
 export function AdminDashboardScreen({
@@ -75,12 +70,14 @@ export function AdminDashboardScreen({
   notifBody,
   showPending,
   pendingUsers,
-  sponsors,
   teams,
-  sponsorName,
-  sponsorLink,
-  sponsorLogo,
-  isManagingSponsors,
+  captainCode,
+  captainCodeActive,
+  captainCodeExpiresAt,
+  captainCodeLoading,
+  onGenerateCaptainCode,
+  onRevokeCaptainCode,
+  onCopyCaptainCode,
   onBack,
   onEventDayChange,
   onEventTitleChange,
@@ -98,14 +95,8 @@ export function AdminDashboardScreen({
   onOpenPrograms,
   onOpenUsers,
   onOpenInvites,
-  onCreateMissingTeams,
   onNormalizeUserTeamNames,
   onDeleteTeam,
-  onSponsorNameChange,
-  onSponsorLinkChange,
-  onPickSponsorLogo,
-  onAddSponsor,
-  onDeleteSponsor,
 }: AdminDashboardScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -122,6 +113,41 @@ export function AdminDashboardScreen({
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
+            <Text style={styles.cardTitle}>🎓 Közös kapitányi regisztrációs kód</Text>
+            <Text style={styles.cardText}>
+              Egy kódot minden kapitány használhat a gyűlésen. A kód 30 napig érvényes, és csak a jelentkezést indítja el: a csapatot kizárólag a főszervező jóváhagyása után hozza létre a rendszer.
+            </Text>
+            <Text style={styles.cardText}>
+              {captainCodeActive
+                ? `Aktív közös kód (lejárat: ${captainCodeExpiresAt ? new Date(captainCodeExpiresAt).toLocaleString('hu-HU') : 'ismeretlen'})`
+                : 'Nincs aktív közös kód.'}
+            </Text>
+            {captainCode ? (
+              <>
+                <Text style={styles.profileLabel}>A kód csak most látható. Másold ki, és a gyűlésen vetítsd ki vagy oszd meg személyesen.</Text>
+                <Text selectable style={styles.codeValue}>{captainCode}</Text>
+                <TouchableOpacity style={styles.outlineButton} onPress={onCopyCaptainCode}>
+                  <Text style={styles.outlineButtonText}>📋 Kód másolása</Text>
+                </TouchableOpacity>
+              </>
+            ) : captainCodeActive ? (
+              <Text style={styles.cardText}>A kód korábban már létrejött, biztonsági okból nem kérhető le újra. Ha elveszett, vond vissza, majd generálj újat.</Text>
+            ) : null}
+            <TouchableOpacity
+              style={styles.outlineButton}
+              onPress={captainCodeActive ? onRevokeCaptainCode : onGenerateCaptainCode}
+              disabled={captainCodeLoading}
+            >
+              <Text style={styles.outlineButtonText}>
+                {captainCodeLoading
+                  ? 'Feldolgozás...'
+                  : captainCodeActive
+                    ? '🛑 Közös kód visszavonása'
+                    : '🔑 Új közös kapitányi kód generálása'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>🧰 {t('admin.management')}</Text>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenPrograms}>
               <Text style={styles.outlineButtonText}>📅 {t('admin.managePrograms')}</Text>
@@ -131,9 +157,6 @@ export function AdminDashboardScreen({
             </TouchableOpacity>
             <TouchableOpacity style={styles.outlineButton} onPress={onOpenUsers}>
               <Text style={styles.outlineButtonText}>👥 {t('admin.registeredUsers')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.outlineButton} onPress={onCreateMissingTeams}>
-              <Text style={styles.outlineButtonText}>🛡️ {t('admin.createMissingTeams')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.outlineButton} onPress={onNormalizeUserTeamNames}>
               <Text style={styles.outlineButtonText}>🧹 {t('admin.normalizeUserTeamNames')}</Text>
@@ -153,41 +176,14 @@ export function AdminDashboardScreen({
                 ))}
               </View>
             )}
-            <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
-              <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
-            </TouchableOpacity>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>🤝 {t('admin.manageSponsors')}</Text>
-            <TextInput style={styles.input} placeholder={t('admin.sponsorNamePlaceholder')} placeholderTextColor="#888" value={sponsorName} onChangeText={onSponsorNameChange} />
-            <TextInput style={styles.input} placeholder={t('admin.sponsorLinkPlaceholder')} placeholderTextColor="#888" value={sponsorLink} onChangeText={onSponsorLinkChange} autoCapitalize="none" keyboardType="url" />
-            <TouchableOpacity style={styles.outlineButton} onPress={onPickSponsorLogo}>
-              <Text style={styles.outlineButtonText}>{t('admin.chooseSponsorLogo')}</Text>
+            <Text style={styles.cardTitle}>✉️ {t('inviteManagement.title')}</Text>
+            <Text style={styles.cardText}>{t('inviteManagement.description')}</Text>
+            <TouchableOpacity style={[styles.outlineButton, styles.lastOutlineButton]} onPress={onOpenInvites}>
+              <Text style={styles.outlineButtonText}>✉️ {t('admin.invites')}</Text>
             </TouchableOpacity>
-            {sponsorLogo && <Image source={{ uri: sponsorLogo }} style={styles.sponsorPreview} resizeMode="contain" />}
-            <TouchableOpacity
-              style={[styles.solidButton, { opacity: isManagingSponsors ? 0.7 : 1 }]}
-              onPress={onAddSponsor}
-              disabled={isManagingSponsors}
-            >
-              <Text style={styles.solidButtonText}>{isManagingSponsors ? t('admin.uploading') : t('admin.addSponsor')}</Text>
-            </TouchableOpacity>
-            {sponsors.length === 0 ? (
-              <Text style={styles.emptyState}>{t('admin.noSponsors')}</Text>
-            ) : (
-              <View style={styles.sponsorList}>
-                {sponsors.map((sponsor) => (
-                  <View key={sponsor.id} style={styles.sponsorRow}>
-                    <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
-                    <Text style={styles.sponsorName}>{sponsor.name}</Text>
-                    <TouchableOpacity style={styles.deleteButton} onPress={() => onDeleteSponsor(sponsor)}>
-                      <Text style={styles.deleteButtonText}>{t('admin.deleteSponsor')}</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            )}
           </View>
 
           <View style={styles.card}>
@@ -245,7 +241,9 @@ export function AdminDashboardScreen({
                       <Text style={[styles.verificationStatus, { color: user.isVerified ? '#27AE60' : '#F39C12' }]}>
                         {t('admin.status', { status: user.isVerified ? t('verification.accepted') : t('verification.pending') })}
                       </Text>
-                      <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
+                      {user.igazolas ? (
+                        <Image source={{ uri: user.igazolas }} style={styles.idImage} resizeMode="contain" />
+                      ) : null}
                       {!user.isVerified && (
                         <TouchableOpacity style={styles.approveButton} onPress={() => onApproveUser(user.id)}>
                           <Text style={styles.solidButtonText}>✅ {t('admin.approve')}</Text>
@@ -272,6 +270,8 @@ const styles = StyleSheet.create({
   scroll: { width: '100%' },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 },
+  cardText: { color: '#aaa', fontSize: 13, marginBottom: 12 },
+  codeValue: { color: '#FFF', fontSize: 17, fontWeight: 'bold', padding: 12, backgroundColor: '#121212', borderRadius: 8, marginBottom: 12 },
   sectionSubtitle: { color: '#FFF', fontSize: 14, fontWeight: 'bold', marginTop: 4, marginBottom: 6 },
   profileLabel: { fontSize: 12, color: '#aaa', marginTop: 8 },
   dayList: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10, marginTop: 5 },
