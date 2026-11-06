@@ -106,25 +106,87 @@ function configuredHttpsUrl(value: string | undefined): string | undefined {
   }
 }
 
+// A kapitányi gyűlésen kiosztható EGY közös kódot használunk.
+// Az adatbázisban kizárólag a kód SHA-256 lenyomata szerepel.
+const sharedCaptainCodeRef = db.collection('captain_registration_codes').doc('shared');
+
 export const createCaptainRegistrationCode = onCall(async (request) => {
   const uid = requireUid(request);
-
-  const code = `MMDSZ-${randomBytes(24).toString('base64url')}`;
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const code = Array.from(randomBytes(8), (byte) => alphabet[byte % 32]).join('');
   const codeHash = hashCode(code);
   const now = Timestamp.now();
+  const expiresAt = Timestamp.fromMillis(now.toMillis() + INVITE_LIFETIME_MS);
   const profileRef = db.collection('users').doc(uid);
+
   await db.runTransaction(async (transaction) => {
-    const profileSnapshot = await transaction.get(profileRef);
+    const [profileSnapshot, existingCode] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(sharedCaptainCodeRef),
+    ]);
     assertHeadOrganizer(profileSnapshot.exists ? profileSnapshot.data() as Profile : undefined);
-    transaction.create(db.collection('captain_registration_codes').doc(codeHash), {
+    const oldExpiry = existingCode.get('expiresAt') as Timestamp | undefined;
+    if (
+      existingCode.exists
+      && existingCode.get('status') === 'available'
+      && oldExpiry
+      && oldExpiry.toMillis() > Date.now()
+    ) {
+      throw new HttpsError(
+        'failed-precondition',
+        'Már van aktív közös kapitányi kód. Új kódhoz előbb vond vissza a régit.',
+      );
+    }
+
+    transaction.set(sharedCaptainCodeRef, {
       status: 'available',
+      codeHash,
       createdBy: uid,
       createdAt: FieldValue.serverTimestamp(),
-      expiresAt: Timestamp.fromMillis(now.toMillis() + INVITE_LIFETIME_MS),
+      expiresAt,
     });
   });
 
-  return { code, expiresAt: Timestamp.fromMillis(now.toMillis() + INVITE_LIFETIME_MS).toDate().toISOString() };
+  // A nyers kódot csak ekkor küldjük vissza; később nem olvasható ki az adatbázisból.
+  return { code, expiresAt: expiresAt.toDate().toISOString() };
+});
+
+export const getCaptainRegistrationCodeStatus = onCall(async (request) => {
+  const uid = requireUid(request);
+  const [profileSnapshot, codeSnapshot] = await Promise.all([
+    db.collection('users').doc(uid).get(),
+    sharedCaptainCodeRef.get(),
+  ]);
+  assertHeadOrganizer(profileSnapshot.exists ? profileSnapshot.data() as Profile : undefined);
+  const expiresAt = codeSnapshot.get('expiresAt') as Timestamp | undefined;
+  return {
+    active: codeSnapshot.exists
+      && codeSnapshot.get('status') === 'available'
+      && !!expiresAt
+      && expiresAt.toMillis() > Date.now(),
+    expiresAt: expiresAt ? expiresAt.toDate().toISOString() : null,
+  };
+});
+
+export const revokeCaptainRegistrationCode = onCall(async (request) => {
+  const uid = requireUid(request);
+  const profileRef = db.collection('users').doc(uid);
+  await db.runTransaction(async (transaction) => {
+    const [profileSnapshot, codeSnapshot] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(sharedCaptainCodeRef),
+    ]);
+    assertHeadOrganizer(profileSnapshot.exists ? profileSnapshot.data() as Profile : undefined);
+    if (!codeSnapshot.exists || codeSnapshot.get('status') !== 'available') {
+      throw new HttpsError('failed-precondition', 'Nincs visszavonható kapitányi kód.');
+    }
+    transaction.update(sharedCaptainCodeRef, {
+      status: 'revoked',
+      revokedBy: uid,
+      revokedAt: FieldValue.serverTimestamp(),
+    });
+  });
+  return { status: 'revoked' };
 });
 
 export const requestCaptainRegistration = onCall(async (request) => {
@@ -138,7 +200,7 @@ export const requestCaptainRegistration = onCall(async (request) => {
   const name = requiredString(request.data?.name, 'név', 120);
   const teamName = validTeamName(requiredString(request.data?.teamName, 'csapatnév', 80));
   const codeHash = hashCode(code);
-  const codeRef = db.collection('captain_registration_codes').doc(codeHash);
+  const codeRef = sharedCaptainCodeRef;
   const registrationRef = db.collection('captain_registrations').doc(uid);
   const profileRef = db.collection('users').doc(uid);
   const emailAddress = validEmail(email);
@@ -160,8 +222,12 @@ export const requestCaptainRegistration = onCall(async (request) => {
     if (profileSnapshot.exists || registrationSnapshot.exists) {
       throw new HttpsError('already-exists', 'Ehhez a fiókhoz már tartozik regisztráció vagy profil.');
     }
-    if (!codeSnapshot.exists || codeSnapshot.get('status') !== 'available') {
-      throw new HttpsError('failed-precondition', 'A regisztrációs kód érvénytelen vagy már felhasznált.');
+    if (
+      !codeSnapshot.exists
+      || codeSnapshot.get('status') !== 'available'
+      || codeSnapshot.get('codeHash') !== codeHash
+    ) {
+      throw new HttpsError('failed-precondition', 'A közös kapitányi kód érvénytelen vagy visszavonták.');
     }
     const expiresAt = codeSnapshot.get('expiresAt') as Timestamp | undefined;
     if (!expiresAt || expiresAt.toMillis() <= Date.now()) {
@@ -169,11 +235,6 @@ export const requestCaptainRegistration = onCall(async (request) => {
     }
 
     const now = FieldValue.serverTimestamp();
-    transaction.update(codeRef, {
-      status: 'redeemed',
-      redeemedBy: uid,
-      redeemedAt: now,
-    });
     transaction.create(registrationRef, {
       uid,
       name,

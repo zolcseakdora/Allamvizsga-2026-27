@@ -7,6 +7,7 @@ on:
       - develop
       - release/mmdsz-v1
       - 'fix/**'
+      - 'feature/kozos-kapitanyi-kod'
   pull_request:
     branches:
       - main
@@ -60,6 +61,10 @@ jobs:
       - name: Firestore biztonsagi tesztek
         working-directory: MMDSZApp_Regi
         run: npm run test:rules
+      - name: Kozos kapitanyi kod integracios tesztje
+        working-directory: functions
+        run: firebase --config ../firebase.json emulators:exec --only auth,firestore,functions --project demo-mmdsz-shared-code "node tests/shared-captain-code.test.cjs"
+
       - name: Playwright bongeszok telepitese
         working-directory: MMDSZApp_Regi
         run: npx playwright install --with-deps chromium firefox webkit
