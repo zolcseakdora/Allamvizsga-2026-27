@@ -60,7 +60,7 @@ export default function TeamManagementRoute() {
     const timer = setTimeout(() => {
       void refresh().catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        Alert.alert(t('alerts.generic', { message }));
+        showToast(t('alerts.generic', { message }), 'error');
       });
     }, 0);
 
@@ -70,7 +70,7 @@ export default function TeamManagementRoute() {
   const handleRefresh = () => {
     void refresh().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
+      showToast(t('alerts.generic', { message }), 'error');
     });
   };
 
@@ -116,14 +116,18 @@ export default function TeamManagementRoute() {
 
   const handlePickSponsorLogo = async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(t('alerts.permissionRequired'));
-        return;
+      // A böngésző fájlválasztóját közvetlenül a kattintásból kell elindítani.
+      // Weben a jogosultságkérés nem szükséges, és megszakíthatja a user gesture-t.
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          showToast(t('alerts.permissionRequired'), 'error');
+          return;
+        }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         quality: 1,
         base64: false,
       });
@@ -139,11 +143,11 @@ export default function TeamManagementRoute() {
       setSponsorLogo(dataUrl);
     } catch (error) {
       if (error instanceof Error && error.message === 'image-too-large') {
-        Alert.alert(t('alerts.imageTooLarge'));
+        showToast(t('alerts.imageTooLarge'), 'error');
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
+      showToast(t('alerts.generic', { message }), 'error');
     } finally {
       setIsManagingSponsors(false);
     }
@@ -157,7 +161,7 @@ export default function TeamManagementRoute() {
 
   const handleSaveSponsor = async () => {
     if (!sponsorName.trim() || !sponsorLogo) {
-      Alert.alert(t('teamManagement.sponsorFieldsRequired'));
+      showToast(t('teamManagement.sponsorFieldsRequired'), 'error');
       return;
     }
 
@@ -166,15 +170,15 @@ export default function TeamManagementRoute() {
       const sponsor = { name: sponsorName, logo: sponsorLogo };
       if (editingSponsorId) {
         await updateSponsor(editingSponsorId, sponsor);
-        Alert.alert(t('teamManagement.sponsorUpdated'));
+        showToast(t('teamManagement.sponsorUpdated'), 'success');
       } else {
         await addSponsor(sponsor);
-        Alert.alert(t('teamManagement.sponsorAdded'));
+        showToast(t('teamManagement.sponsorAdded'), 'success');
       }
       clearSponsorForm();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
+      showToast(t('alerts.generic', { message }), 'error');
     } finally {
       setIsManagingSponsors(false);
     }
@@ -192,11 +196,11 @@ export default function TeamManagementRoute() {
       void deleteSponsor(sponsor.id)
         .then(() => {
           if (editingSponsorId === sponsor.id) clearSponsorForm();
-          Alert.alert(t('teamManagement.sponsorDeleted'));
+          showToast(t('teamManagement.sponsorDeleted'), 'success');
         })
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
-          Alert.alert(t('alerts.generic', { message }));
+          showToast(t('alerts.generic', { message }), 'error');
         })
         .finally(() => setIsManagingSponsors(false));
     };
