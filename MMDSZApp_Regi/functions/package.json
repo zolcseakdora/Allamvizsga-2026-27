@@ -6,7 +6,7 @@
     "node": "22"
   },
   "scripts": {
-    "test": "firebase --config ../../firebase.json emulators:exec --only firestore --project demo-event-admin-validation \"node --test test/*.test.js\""
+    "test": "firebase --config ../../firebase.json emulators:exec --only firestore,storage --project demo-event-admin-validation \"node --test test/*.test.js\""
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",

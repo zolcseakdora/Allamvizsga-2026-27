@@ -3,12 +3,18 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "functions": {
     "source": "MMDSZApp_Regi/functions"
   },
   "emulators": {
     "firestore": {
       "port": 8080
+    },
+    "storage": {
+      "port": 9199
     }
   }
 }
