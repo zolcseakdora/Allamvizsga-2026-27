@@ -9,6 +9,7 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
 import { db } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { normalizeTeamName } from '@/src/utils/team-name';
@@ -17,6 +18,7 @@ export default function InvitesRoute() {
   const { t } = useTranslation();
   const router = useRouter();
   const { profile } = useAuth();
+  const { eventType } = useEventSeason();
   const { showToast } = useToast();
   const { teams, refresh } = useTeams();
   const [teamName, setTeamName] = useState('');
@@ -24,13 +26,16 @@ export default function InvitesRoute() {
   const [role, setRole] = useState<OrganizerInviteRole>(UserRole.SZERVEZO);
 
   useEffect(() => {
+    if (eventType === 'februtalis') return;
     void refresh().catch((error: unknown) => {
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('alerts.generic', { message }), 'error');
     });
-  }, [refresh, showToast, t]);
+  }, [eventType, refresh, showToast, t]);
 
-  const teamNames = [...new Set(teams.map((team) => normalizeTeamName(team.name ?? team.id)).filter(Boolean))];
+  const teamNames = eventType === 'februtalis'
+    ? []
+    : [...new Set(teams.map((team) => normalizeTeamName(team.name ?? team.id)).filter(Boolean))];
   const firstTeamName = teamNames[0] ?? '';
   const selectedTeamName = teamNames.includes(teamName) ? teamName : firstTeamName;
 
@@ -39,23 +44,34 @@ export default function InvitesRoute() {
       showToast(t('alerts.inviteNotAllowed'), 'error');
       return;
     }
-    if (!email.trim() || !selectedTeamName) {
-      showToast(t('alerts.inviteFieldsRequired'), 'error');
+    if (!email.trim() || (eventType === 'diaknapok' && !selectedTeamName)) {
+      showToast(t(eventType === 'februtalis'
+        ? 'alerts.februtalisInviteFieldsRequired'
+        : 'alerts.inviteFieldsRequired'), 'error');
       return;
     }
 
     const normalizedEmail = email.trim().toLowerCase();
     const inviteRoleLabel = role === UserRole.SZERVEZO
       ? t('roles.organizer')
-      : role === UserRole.CSAPATKAPITANY
-        ? t('roles.captain')
-        : t('roles.deputy');
-    const body = t('inviteManagement.emailBody', { teamName: selectedTeamName, role: inviteRoleLabel });
+      : role === UserRole.ZSURI
+        ? t('roles.jury')
+        : role === UserRole.CSAPATKAPITANY
+          ? t('roles.captain')
+          : t('roles.deputy');
+    const body = eventType === 'februtalis'
+      ? t('inviteManagement.februtalisEmailBody', {
+        eventName: t('eventNames.februtalis'),
+        role: inviteRoleLabel,
+      })
+      : t('inviteManagement.emailBody', { teamName: selectedTeamName, role: inviteRoleLabel });
 
     try {
       await setDoc(doc(db, 'invites', normalizedEmail), {
         email: normalizedEmail,
-        team: normalizeTeamName(selectedTeamName),
+        ...(eventType === 'februtalis'
+          ? { eventType: 'februtalis' }
+          : { team: normalizeTeamName(selectedTeamName) }),
         role,
         invitedBy: profile?.name || UserRole.FOSZERVEZO,
         createdAt: new Date(),
@@ -64,9 +80,15 @@ export default function InvitesRoute() {
       await addDoc(collection(db, 'mail'), {
         to: normalizedEmail,
         message: {
-          subject: t('inviteManagement.emailSubject'),
-          text: `${t('inviteManagement.emailGreeting')} ${body} ${t('inviteManagement.emailAction')}`,
-          html: `<h3>${t('inviteManagement.emailGreeting')}</h3><p>${body}</p><p>${t('inviteManagement.emailAction')}</p>`,
+          subject: t(eventType === 'februtalis'
+            ? 'inviteManagement.februtalisEmailSubject'
+            : 'inviteManagement.emailSubject'),
+          text: `${t('inviteManagement.emailGreeting')} ${body} ${t(eventType === 'februtalis'
+            ? 'inviteManagement.februtalisEmailAction'
+            : 'inviteManagement.emailAction')}`,
+          html: `<h3>${t('inviteManagement.emailGreeting')}</h3><p>${body}</p><p>${t(eventType === 'februtalis'
+            ? 'inviteManagement.februtalisEmailAction'
+            : 'inviteManagement.emailAction')}</p>`,
         },
       });
       setEmail('');
@@ -79,6 +101,7 @@ export default function InvitesRoute() {
 
   return (
     <InviteManagementScreen
+      eventType={eventType}
       teams={teamNames}
       teamName={selectedTeamName}
       email={email}

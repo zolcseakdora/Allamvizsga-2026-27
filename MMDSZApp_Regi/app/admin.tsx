@@ -9,16 +9,28 @@ import { useAdmin } from '@/src/hooks/use-admin';
 import { useAuth } from '@/src/context/AuthContext';
 import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useToast } from '@/src/context/ToastContext';
-import { useSponsors } from '@/src/hooks/use-sponsors';
 import { canRole } from '@/src/constants/roles';
 import { makeThumbnail, processImage } from '@/src/services/images';
-import { EVENT_DAYS } from '@/src/constants/event-days';
+import { WEEKDAYS } from '@/src/constants/event-days';
 import { useEventPrograms } from '@/src/hooks/use-event-programs';
 import { usePrograms } from '@/src/hooks/use-programs';
 import { useSchedulePrograms } from '@/src/hooks/use-schedule-programs';
-import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
+import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
+import type { EventSeason } from '@/src/constants/event-schedule';
+import type { NotificationAudience } from '@/src/services/notifications';
+
+function getWeekdayFromDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  if (date.toISOString().slice(0, 10) !== value) return null;
+
+  return WEEKDAYS[(date.getUTCDay() + 6) % 7] ?? null;
+}
 
 export default function AdminRoute() {
   const router = useRouter();
@@ -27,11 +39,14 @@ export default function AdminRoute() {
   const { showToast } = useToast();
   const { profile, isLoading } = useAuth();
   const { eventType, edition } = useEventSeason();
-  const { sponsors, refreshSponsors, addSponsor, deleteSponsor } = useSponsors();
   const { days: eventDays, saveDay, deleteDay, saveProgram } = useEventPrograms(edition);
   const { getProgram: getLegacyProgram } = usePrograms();
   const { getProgram: getScheduleProgram } = useSchedulePrograms();
-  const canManageAdmin = canRole(profile?.role, 'manageAdmin');
+  const isFebrutalisOrganizer = eventType === 'februtalis'
+    && profile?.eventMemberships?.februtalis?.role === UserRole.SZERVEZO
+    && profile.role !== UserRole.FOSZERVEZO;
+  const canManageAdmin = canRole(profile?.role, 'manageAdmin') || isFebrutalisOrganizer;
+  const isHeadOrganizer = profile?.role === UserRole.FOSZERVEZO;
   const {
     pendingUsers,
     refreshPendingUsers,
@@ -51,6 +66,7 @@ export default function AdminRoute() {
   const [adminEventLocation, setAdminEventLocation] = useState('');
   const [adminEventDescription, setAdminEventDescription] = useState('');
   const [adminEventImage, setAdminEventImage] = useState<string>();
+  const [adminEventDate, setAdminEventDate] = useState('');
   const [adminDayId, setAdminDayId] = useState<string | null>(null);
   const [newDayName, setNewDayName] = useState('');
   const [newDayDate, setNewDayDate] = useState('');
@@ -58,12 +74,20 @@ export default function AdminRoute() {
   const [isEditingEvent, setIsEditingEvent] = useState(false);
   const [notifTitle, setNotifTitle] = useState('');
   const [notifBody, setNotifBody] = useState('');
+  const [notificationEventSelection, setNotificationEventSelection] = useState({
+    eventType,
+    selectedEventType: eventType,
+  });
+  const [verificationEventType, setVerificationEventType] = useState<EventSeason>(eventType);
+  const [notificationAudience, setNotificationAudience] = useState<NotificationAudience>('everyone');
+  const [isConfirmingNotification, setIsConfirmingNotification] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showPending, setShowPending] = useState(false);
-  const [sponsorName, setSponsorName] = useState('');
-  const [sponsorLink, setSponsorLink] = useState('');
-  const [sponsorLogo, setSponsorLogo] = useState<string>();
-  const [isManagingSponsors, setIsManagingSponsors] = useState(false);
+
+  if (notificationEventSelection.eventType !== eventType) {
+    setNotificationEventSelection({ eventType, selectedEventType: eventType });
+  }
+  const notificationEventType = notificationEventSelection.selectedEventType;
 
   useEffect(() => {
     if (!isLoading && (!profile || !canManageAdmin)) router.replace('/');
@@ -71,12 +95,12 @@ export default function AdminRoute() {
 
   useEffect(() => {
     if (!isLoading && canManageAdmin) {
-      void Promise.all([refreshSponsors(), refreshTeams()]).catch((error: unknown) => {
+      void refreshTeams(eventType).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
         showToast(t('alerts.generic', { message }), 'error');
       });
     }
-  }, [canManageAdmin, isLoading, refreshSponsors, refreshTeams, showToast, t]);
+  }, [canManageAdmin, eventType, isLoading, refreshTeams, showToast, t]);
 
   useEffect(() => {
     if (eventType !== 'februtalis' || !eventDays.length) {
@@ -93,7 +117,7 @@ export default function AdminRoute() {
 
     let isActive = true;
     const resolveProgram = async () => {
-      let program: { title?: string; time?: string; helyszín?: string; day?: string; description?: string; image?: string; thumb?: string; id?: string } | null;
+      let program: { title?: string; time?: string; helyszín?: string; day?: string; dayId?: string; description?: string; image?: string; thumb?: string; id?: string } | null;
       if (eventType === 'februtalis' && dayId) {
         program = await getScheduleProgram(programId, dayId);
       } else {
@@ -109,7 +133,12 @@ export default function AdminRoute() {
       setAdminEventTitle(program.title ?? '');
       setAdminEventTime(program.time ?? '');
       setAdminEventLocation(program.helyszín ?? '');
-      setAdminEventDay(EVENT_DAYS.includes(program.day ?? '') ? program.day ?? 'Szerda' : 'Szerda');
+      const programDay = eventDays.find((day) => day.id === program.dayId);
+      const weekday = WEEKDAYS.includes(program.day ?? '') ? program.day ?? 'Szerda' : 'Szerda';
+      setAdminEventDay(weekday);
+      setNewDayName(weekday);
+      setAdminEventDate(programDay?.date ?? '');
+      setNewDayDate(programDay?.date ?? '');
       if (program.day && eventDays.some((day) => day.weekday === program.day)) {
         setAdminDayId(eventDays.find((day) => day.weekday === program.day)?.id ?? null);
       } else if (dayId) {
@@ -142,12 +171,28 @@ export default function AdminRoute() {
       Alert.alert(t('alerts.requiredFields'));
       return;
     }
+    if (getWeekdayFromDate(date) !== weekday) {
+      Alert.alert(t('alerts.invalidProgramDate'));
+      return;
+    }
 
     try {
-      const dayId = await saveDay({ date, weekday, order: eventDays.length });
+      const existingDay = eventDays.find((day) => day.date === date);
+      if (existingDay && existingDay.weekday !== weekday) {
+        Alert.alert(t('alerts.invalidProgramDate'));
+        return;
+      }
+      const dayId = await saveDay({
+        ...(existingDay ? { id: existingDay.id } : {}),
+        date,
+        weekday,
+        order: eventDays.length,
+        isProgramDayOnly: date < edition.startDate || date > edition.endDate,
+      });
       setAdminDayId(dayId);
       setNewDayName('');
       setNewDayDate('');
+      setAdminEventDate('');
       showToast(t('admin.dayAdded'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -198,7 +243,7 @@ export default function AdminRoute() {
 
   const handleDeleteTeam = (team: Team) => {
     const confirm = () => {
-      void deleteTeam(team.id)
+      void deleteTeam(team.id, eventType)
         .then(() => showToast(t('admin.teamDeleted', { team: team.name || team.id })))
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
@@ -215,72 +260,6 @@ export default function AdminRoute() {
     Alert.alert(title, message, [
       { text: t('common.cancel'), style: 'cancel' },
       { text: t('admin.deleteTeam'), style: 'destructive', onPress: confirm },
-    ]);
-  };
-
-  const handlePickSponsorLogo = async () => {
-    try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        showToast(t('alerts.permissionRequired'), 'error');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-        base64: false,
-      });
-      const uri = result.canceled ? undefined : result.assets[0]?.uri;
-      if (!uri) return;
-
-      const { dataUrl } = await processImage(uri, { maxSide: 256, quality: 0.7, maxBytes: 200000 });
-      setSponsorLogo(dataUrl);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    }
-  };
-
-  const handleAddSponsor = async () => {
-    const name = sponsorName.trim();
-    if (!name || !sponsorLogo) {
-      showToast(t('admin.sponsorFieldsRequired'), 'error');
-      return;
-    }
-
-    setIsManagingSponsors(true);
-    try {
-      await addSponsor({ name, logo: sponsorLogo, link: sponsorLink.trim() || undefined });
-      setSponsorName('');
-      setSponsorLink('');
-      setSponsorLogo(undefined);
-      showToast(t('admin.sponsorAdded'));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      showToast(t('alerts.generic', { message }), 'error');
-    } finally {
-      setIsManagingSponsors(false);
-    }
-  };
-
-  const handleDeleteSponsor = (sponsor: Sponsor) => {
-    Alert.alert(t('admin.deleteSponsor'), t('admin.confirmDeleteSponsor', { name: sponsor.name }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('admin.deleteSponsor'),
-        style: 'destructive',
-        onPress: () => {
-          setIsManagingSponsors(true);
-          void deleteSponsor(sponsor.id)
-            .then(() => showToast(t('admin.sponsorDeleted')))
-            .catch((error: unknown) => {
-              const message = error instanceof Error ? error.message : String(error);
-              showToast(t('alerts.generic', { message }), 'error');
-            })
-            .finally(() => setIsManagingSponsors(false));
-        },
-      },
     ]);
   };
 
@@ -329,17 +308,37 @@ export default function AdminRoute() {
     setIsUploading(true);
     try {
       if (edition) {
-        const selectedDayId = eventType === 'februtalis'
-          ? adminDayId ?? eventDays[0]?.id ?? null
-          : eventDays.find((day) => day.weekday === adminEventDay)?.id ?? eventDays[0]?.id ?? null;
+        const date = adminEventDate.trim();
+        if (date && getWeekdayFromDate(date) !== adminEventDay) {
+          Alert.alert(t('alerts.invalidProgramDate'));
+          return;
+        }
 
-        if (!selectedDayId) {
-          throw new Error(t('alerts.requiredFields'));
+        let selectedDay = date
+          ? eventDays.find((day) => day.date === date)
+          : eventDays.find((day) => day.id === adminDayId && day.weekday === adminEventDay)
+            ?? eventDays.find((day) => day.weekday === adminEventDay);
+        if (selectedDay && selectedDay.weekday !== adminEventDay) {
+          Alert.alert(t('alerts.invalidProgramDate'));
+          return;
+        }
+        if (!selectedDay) {
+          if (!date) {
+            Alert.alert(t('alerts.requiredFields'));
+            return;
+          }
+          const dayId = await saveDay({
+            date,
+            weekday: adminEventDay,
+            order: eventDays.length,
+            isProgramDayOnly: date < edition.startDate || date > edition.endDate,
+          });
+          selectedDay = { id: dayId, date, weekday: adminEventDay, order: eventDays.length };
         }
 
         await saveProgram({
           id: programId,
-          dayId: selectedDayId,
+          dayId: selectedDay.id,
           title: adminEventTitle,
           startsAt: adminEventTime,
           endsAt: undefined,
@@ -367,6 +366,8 @@ export default function AdminRoute() {
       setAdminEventLocation('');
       setAdminEventDescription('');
       setAdminEventImage(undefined);
+      setAdminEventDate('');
+      setNewDayDate('');
       setEventImagePayload(undefined);
       Alert.alert(t(isEditingEvent ? 'alerts.programUpdated' : 'alerts.programAdded', { day: adminEventDay }));
       router.replace('/schedule');
@@ -383,11 +384,15 @@ export default function AdminRoute() {
       Alert.alert(t('alerts.notificationRequired'));
       return;
     }
+    setIsConfirmingNotification(true);
+  };
 
+  const handleConfirmNotification = async () => {
     try {
-      await sendNotification(notifTitle, notifBody);
+      await sendNotification(notifTitle, notifBody, notificationEventType, notificationAudience);
       setNotifTitle('');
       setNotifBody('');
+      setIsConfirmingNotification(false);
       Alert.alert(t('alerts.notificationSent'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -396,24 +401,24 @@ export default function AdminRoute() {
   };
 
   const handleFetchPending = useCallback(async () => {
-    await refreshPendingUsers();
+    await refreshPendingUsers(verificationEventType);
     setShowPending(true);
-  }, [refreshPendingUsers]);
+  }, [refreshPendingUsers, verificationEventType]);
 
   useEffect(() => {
-    if (!isLoading && canManageAdmin && (section === 'verifications' || section === 'verification')) {
-      void refreshPendingUsers()
+    if (!isLoading && canManageAdmin && isHeadOrganizer && (section === 'verifications' || section === 'verification')) {
+      void refreshPendingUsers(verificationEventType)
         .then(() => setShowPending(true))
         .catch((error: unknown) => {
           const message = error instanceof Error ? error.message : String(error);
           Alert.alert(t('alerts.generic', { message }));
         });
     }
-  }, [canManageAdmin, isLoading, refreshPendingUsers, section, t]);
+  }, [canManageAdmin, isHeadOrganizer, isLoading, refreshPendingUsers, section, t, verificationEventType]);
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (userId: string, selectedEventType: EventSeason, isLegacy: boolean) => {
     try {
-      await approveUser(userId);
+      await approveUser(userId, selectedEventType, isLegacy);
       Alert.alert(t('alerts.idApproved'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -432,40 +437,73 @@ export default function AdminRoute() {
       isUploading={isUploading}
       notifTitle={notifTitle}
       notifBody={notifBody}
+      notificationEventType={notificationEventType}
+      notificationAudience={notificationAudience}
+      verificationEventType={verificationEventType}
+      isConfirmingNotification={isConfirmingNotification}
       showPending={showPending}
       pendingUsers={pendingUsers}
-      sponsors={sponsors}
       teams={teams}
-      sponsorName={sponsorName}
-      sponsorLink={sponsorLink}
-      sponsorLogo={sponsorLogo}
-      isManagingSponsors={isManagingSponsors}
       onBack={() => goBackOrHome(router)}
-      onEventDayChange={setAdminEventDay}
+      onEventDayChange={(weekday) => {
+        setAdminEventDay(weekday);
+        setNewDayName(weekday);
+        const existingDay = eventDays.find((day) => day.weekday === weekday);
+        setAdminDayId(existingDay?.id ?? null);
+        setNewDayDate(existingDay?.date ?? '');
+        setAdminEventDate(existingDay?.date ?? '');
+      }}
+      onEventDateChange={(date) => {
+        setAdminEventDate(date);
+        setNewDayDate(date);
+      }}
       onEventTitleChange={setAdminEventTitle}
       onEventTimeChange={setAdminEventTime}
       onEventLocationChange={setAdminEventLocation}
       adminEventDescription={adminEventDescription}
       adminEventImage={adminEventImage}
+      adminEventDate={adminEventDate}
       eventType={eventType}
+      isFebrutalisOrganizer={isFebrutalisOrganizer}
+      canDeleteEvent={isHeadOrganizer}
       eventDays={eventDays}
       selectedDayId={adminDayId}
-      newDayName={newDayName}
-      newDayDate={newDayDate}
       isEditingEvent={isEditingEvent}
       onEventDescriptionChange={setAdminEventDescription}
-      onEventDaySelect={setAdminDayId}
-      onNewDayNameChange={setNewDayName}
-      onNewDayDateChange={setNewDayDate}
+      onEventDaySelect={(dayId) => {
+        setAdminDayId(dayId);
+        const selectedDay = eventDays.find((day) => day.id === dayId);
+        if (selectedDay) {
+          setAdminEventDay(selectedDay.weekday);
+          setNewDayName(selectedDay.weekday);
+          setNewDayDate(selectedDay.date);
+          setAdminEventDate(selectedDay.date);
+        }
+      }}
+      onNewDayNameChange={(weekday) => {
+        setNewDayName(weekday);
+        setAdminEventDay(weekday);
+        const existingDay = eventDays.find((day) => day.weekday === weekday);
+        setAdminDayId(existingDay?.id ?? null);
+        setNewDayDate(existingDay?.date ?? '');
+        setAdminEventDate(existingDay?.date ?? '');
+      }}
       onAddDay={() => void handleAddDay()}
       onDeleteDay={(dayId) => void handleDeleteDay(dayId)}
       onPickEventImage={() => void handlePickEventImage()}
       onAddEvent={handleAddEvent}
       onNotifTitleChange={setNotifTitle}
       onNotifBodyChange={setNotifBody}
+      onNotificationEventTypeChange={(selectedEventType) => (
+        setNotificationEventSelection({ eventType, selectedEventType })
+      )}
+      onNotificationAudienceChange={setNotificationAudience}
+      onVerificationEventTypeChange={setVerificationEventType}
       onSendNotification={handleSendNotification}
+      onConfirmNotification={() => void handleConfirmNotification()}
+      onCancelNotification={() => setIsConfirmingNotification(false)}
       onFetchPendingUsers={() => void handleFetchPending()}
-      onApproveUser={(userId) => void handleApprove(userId)}
+      onApproveUser={(user) => void handleApprove(user.id, user.eventType, user.isLegacy)}
       onOpenVerifications={() => router.replace({ pathname: '/admin', params: { section: 'verifications' } })}
       onOpenPrograms={() => router.push('/schedule')}
       onOpenUsers={() => router.push('/users')}
@@ -473,11 +511,6 @@ export default function AdminRoute() {
       onCreateMissingTeams={() => void handleCreateMissingTeams()}
       onNormalizeUserTeamNames={() => void handleNormalizeUserTeamNames()}
       onDeleteTeam={handleDeleteTeam}
-      onSponsorNameChange={setSponsorName}
-      onSponsorLinkChange={setSponsorLink}
-      onPickSponsorLogo={() => void handlePickSponsorLogo()}
-      onAddSponsor={() => void handleAddSponsor()}
-      onDeleteSponsor={handleDeleteSponsor}
     />
   );
 }

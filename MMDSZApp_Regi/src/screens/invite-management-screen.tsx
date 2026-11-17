@@ -6,11 +6,13 @@ import { FilterChip } from '@/src/components/controls/filter-chip';
 import { UserRole } from '@/src/types/auth';
 
 export type OrganizerInviteRole =
+  | UserRole.ZSURI
   | UserRole.SZERVEZO
   | UserRole.CSAPATKAPITANY
   | UserRole.ALCSAPATKAPITANY;
 
 type InviteManagementScreenProps = {
+  eventType: 'februtalis' | 'diaknapok';
   teams: string[];
   teamName: string;
   email: string;
@@ -23,6 +25,7 @@ type InviteManagementScreenProps = {
 };
 
 export function InviteManagementScreen({
+  eventType,
   teams,
   teamName,
   email,
@@ -35,16 +38,16 @@ export function InviteManagementScreen({
 }: InviteManagementScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
-  const inviteRoles: OrganizerInviteRole[] = [
-    UserRole.SZERVEZO,
-    UserRole.CSAPATKAPITANY,
-    UserRole.ALCSAPATKAPITANY,
-  ];
+  const inviteRoles: OrganizerInviteRole[] = eventType === 'februtalis'
+    ? [UserRole.SZERVEZO, UserRole.ZSURI]
+    : [UserRole.SZERVEZO, UserRole.CSAPATKAPITANY, UserRole.ALCSAPATKAPITANY];
 
   const roleLabel = (inviteRole: OrganizerInviteRole): string => {
     switch (inviteRole) {
       case UserRole.SZERVEZO:
         return t('roles.organizer');
+      case UserRole.ZSURI:
+        return t('roles.jury');
       case UserRole.CSAPATKAPITANY:
         return t('roles.captain');
       case UserRole.ALCSAPATKAPITANY:
@@ -64,26 +67,30 @@ export function InviteManagementScreen({
           </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.title}>✉️ {t('inviteManagement.title')}</Text>
-        <Text style={styles.description}>{t('inviteManagement.description')}</Text>
+        <Text style={styles.title}>✉️ {t(eventType === 'februtalis' ? 'inviteManagement.februtalisTitle' : 'inviteManagement.title')}</Text>
+        <Text style={styles.description}>{t(eventType === 'februtalis' ? 'inviteManagement.februtalisDescription' : 'inviteManagement.description')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
-            <Text style={styles.label}>{t('common.team')}</Text>
-            {teams.length === 0 ? (
-              <Text style={styles.emptyText}>{t('inviteManagement.noTeams')}</Text>
-            ) : (
-              <View style={styles.chipRow}>
-                {teams.map((team) => (
-                  <FilterChip
-                    key={team}
-                    label={team}
-                    selected={teamName === team}
-                    onPress={() => onTeamChange(team)}
-                    style={styles.chip}
-                  />
-                ))}
-              </View>
+            {eventType === 'diaknapok' && (
+              <>
+                <Text style={styles.label}>{t('common.team')}</Text>
+                {teams.length === 0 ? (
+                  <Text style={styles.emptyText}>{t('inviteManagement.noTeams')}</Text>
+                ) : (
+                  <View style={styles.chipRow}>
+                    {teams.map((team) => (
+                      <FilterChip
+                        key={team}
+                        label={team}
+                        selected={teamName === team}
+                        onPress={() => onTeamChange(team)}
+                        style={styles.chip}
+                      />
+                    ))}
+                  </View>
+                )}
+              </>
             )}
 
             <Text style={styles.label}>{t('common.email')}</Text>
@@ -110,9 +117,9 @@ export function InviteManagementScreen({
               ))}
             </View>
             <TouchableOpacity
-              style={[styles.button, teams.length === 0 && styles.disabledButton]}
+              style={[styles.button, eventType === 'diaknapok' && teams.length === 0 && styles.disabledButton]}
               onPress={onSendInvite}
-              disabled={teams.length === 0}
+              disabled={eventType === 'diaknapok' && teams.length === 0}
             >
               <Text style={styles.buttonText}>{t('inviteManagement.send')}</Text>
             </TouchableOpacity>

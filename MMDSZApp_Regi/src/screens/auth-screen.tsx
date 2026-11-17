@@ -1,9 +1,12 @@
 import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type AuthScreenProps = {
   isLoginMode: boolean;
+  isFebrutalisRegistrationMode: boolean;
+  eventType: EventSeason;
   fullName: string;
   teamName: string;
   email: string;
@@ -15,11 +18,14 @@ type AuthScreenProps = {
   onPasswordChange: (value: string) => void;
   onTogglePassword: () => void;
   onSubmit: () => void;
+  onToggleFebrutalisRegistration: () => void;
   onToggleMode: () => void;
 };
 
 export function AuthScreen({
   isLoginMode,
+  isFebrutalisRegistrationMode,
+  eventType,
   fullName,
   teamName,
   email,
@@ -31,6 +37,7 @@ export function AuthScreen({
   onPasswordChange,
   onTogglePassword,
   onSubmit,
+  onToggleFebrutalisRegistration,
   onToggleMode,
 }: AuthScreenProps) {
   const { t } = useTranslation();
@@ -49,6 +56,9 @@ export function AuthScreen({
               <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
             </>
           )}
+          {isLoginMode && isFebrutalisRegistrationMode && (
+            <TextInput style={styles.input} placeholder={t('auth.teamName')} placeholderTextColor="#888" value={teamName} onChangeText={onTeamNameChange} />
+          )}
           <TextInput style={styles.input} placeholder={t('common.email')} placeholderTextColor="#888" keyboardType="email-address" value={email} onChangeText={onEmailChange} autoCapitalize="none" />
           <View style={styles.passwordContainer}>
             <TextInput style={styles.passwordInput} placeholder={t('common.password')} placeholderTextColor="#888" secureTextEntry={securePassword} value={password} onChangeText={onPasswordChange} />
@@ -58,8 +68,22 @@ export function AuthScreen({
           </View>
 
           <TouchableOpacity style={styles.solidButton} onPress={onSubmit}>
-            <Text style={styles.solidButtonText}>{t(isLoginMode ? 'auth.login' : 'auth.register')}</Text>
+            <Text style={styles.solidButtonText}>
+              {t(isLoginMode
+                ? (isFebrutalisRegistrationMode ? 'auth.registerForFebrutalis' : 'auth.login')
+                : 'auth.register')}
+            </Text>
           </TouchableOpacity>
+
+          {eventType === 'februtalis' && isLoginMode && (
+            <TouchableOpacity style={styles.toggleMode} onPress={onToggleFebrutalisRegistration}>
+              <Text style={styles.toggleModeText}>
+                {t(isFebrutalisRegistrationMode
+                  ? 'auth.backToLogin'
+                  : 'auth.registerFebrutalisWithAccount')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity style={styles.toggleMode} onPress={onToggleMode}>
             <Text style={styles.toggleModeText}>{t(isLoginMode ? 'auth.switchToRegister' : 'auth.switchToLogin')}</Text>

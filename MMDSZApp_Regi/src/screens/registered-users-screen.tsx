@@ -2,21 +2,38 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensio
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { UserRole } from '@/src/types/auth';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type RegisteredUser = {
   id: string;
   name?: string;
   role?: UserRole;
   igazolas?: string;
+  teamName?: string;
+  teamKey?: string;
+  isVerified?: boolean;
+  isFebrutalisCaptain?: boolean;
 };
 
 type RegisteredUsersScreenProps = {
   users: RegisteredUser[];
+  eventType: EventSeason;
+  isLoading: boolean;
+  error: string | null;
   onBack: () => void;
   onRefresh: () => void;
+  onAssignCaptain: (teamKey: string, captainUid: string, captainName: string) => void;
 };
 
-export function RegisteredUsersScreen({ users, onBack, onRefresh }: RegisteredUsersScreenProps) {
+export function RegisteredUsersScreen({
+  users,
+  eventType,
+  isLoading,
+  error,
+  onBack,
+  onRefresh,
+  onAssignCaptain,
+}: RegisteredUsersScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
 
@@ -29,15 +46,42 @@ export function RegisteredUsersScreen({ users, onBack, onRefresh }: RegisteredUs
         </View>
         <Text style={styles.title}>👥 {t('users.title')}</Text>
         <ScrollView style={styles.list}>
-          {users.map(user => (
-            <View key={user.id} style={styles.userCard}>
-              <Text style={styles.userName}>👤 {user.name}</Text>
-              <Text style={styles.userRole}>{t('users.role', { role: translateRole(user.role, t) })}</Text>
-              <Text style={[styles.verification, { color: user.igazolas ? '#27AE60' : '#EC2127' }]}>
-                {user.igazolas ? `✅ ${t('users.idUploaded')}` : `❌ ${t('users.noId')}`}
-              </Text>
-            </View>
-          ))}
+          {error
+            ? <Text style={styles.error}>{t('users.loadError', { message: error })}</Text>
+            : isLoading
+              ? <Text style={styles.emptyState}>{t('common.loading')}</Text>
+              : eventType === 'februtalis' && users.length === 0
+            ? <Text style={styles.emptyState}>{t('users.emptyFebrutalis')}</Text>
+            : users.map(user => (
+              <View key={user.id} style={styles.userCard}>
+                <Text style={styles.userName}>👤 {user.name}</Text>
+                <Text style={styles.userRole}>{t('users.role', { role: translateRole(user.role, t) })}</Text>
+                {eventType === 'februtalis' && user.teamName && (
+                  <Text style={styles.userRole}>{t('users.eventTeam', { team: user.teamName })}</Text>
+                )}
+                <Text style={[styles.verification, { color: user.igazolas ? '#27AE60' : '#EC2127' }]}>
+                  {user.igazolas ? `✅ ${t('users.idUploaded')}` : `❌ ${t('users.noId')}`}
+                </Text>
+                {eventType === 'februtalis' && user.teamKey && (
+                  user.isVerified
+                    ? (
+                      <TouchableOpacity
+                        style={styles.assignCaptainButton}
+                        onPress={() => {
+                          if (user.teamKey) onAssignCaptain(user.teamKey, user.id, user.name ?? '');
+                        }}
+                      >
+                        <Text style={styles.assignCaptainText}>
+                          {t(user.isFebrutalisCaptain
+                            ? 'admin.changeFebrutalisCaptain'
+                            : 'admin.assignFebrutalisCaptain')}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                    : <Text style={styles.pendingApproval}>{t('admin.captainRequiresApproval')}</Text>
+                )}
+              </View>
+            ))}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -67,4 +111,9 @@ const styles = StyleSheet.create({
   userName: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 4 },
   userRole: { fontSize: 14, color: '#aaa' },
   verification: { marginTop: 4, fontWeight: 'bold' },
+  emptyState: { color: '#aaa', fontSize: 15, textAlign: 'center', marginTop: 24 },
+  error: { color: '#EC2127', fontSize: 14, textAlign: 'center', marginTop: 24 },
+  assignCaptainButton: { backgroundColor: '#27AE60', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12, marginTop: 10, alignSelf: 'flex-start' },
+  assignCaptainText: { color: '#FFFFFF', fontWeight: 'bold' },
+  pendingApproval: { color: '#aaa', fontSize: 12, marginTop: 8 },
 });
