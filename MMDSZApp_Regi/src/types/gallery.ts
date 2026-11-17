@@ -1,3 +1,5 @@
+import type { EventSeason } from '@/src/constants/event-schedule';
+
 export type GalleryImage = {
   id: string;
   image: string;
@@ -5,4 +7,5 @@ export type GalleryImage = {
   category?: string;
   uploadedBy?: string;
   createdAt?: Date;
+  eventType?: EventSeason;
 };

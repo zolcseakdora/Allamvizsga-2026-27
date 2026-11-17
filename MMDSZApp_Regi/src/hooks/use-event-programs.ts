@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  runTransaction,
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
@@ -122,20 +123,38 @@ export function useEventPrograms(edition: EventEdition | null) {
     date: string;
     weekday: string;
     order: number;
+    isProgramDayOnly?: boolean;
   }) => {
     if (!edition || edition.id.startsWith('preview-')) {
       throw new Error('No published event edition is selected for day changes.');
     }
+    const editionRef = doc(db, 'events', edition.id);
     const dayRef = day.id
       ? doc(db, 'events', edition.id, 'days', day.id)
       : doc(collection(db, 'events', edition.id, 'days'));
-    await setDoc(dayRef, {
-      date: day.date,
-      weekday: day.weekday.trim(),
-      order: day.order,
-      eventType: edition.type,
-      editionYear: edition.editionYear,
-    }, { merge: true });
+    await runTransaction(db, async (transaction) => {
+      const currentEdition = await transaction.get(editionRef);
+      if (!currentEdition.exists()) {
+        throw new Error('The selected event edition no longer exists.');
+      }
+
+      const currentData = currentEdition.data();
+      const currentStart = typeof currentData.startDate === 'string' ? currentData.startDate : edition.startDate;
+      const currentEnd = typeof currentData.endDate === 'string' ? currentData.endDate : edition.endDate;
+      const nextStart = day.date < currentStart ? day.date : currentStart;
+      const nextEnd = day.date > currentEnd ? day.date : currentEnd;
+      if (!day.isProgramDayOnly && (nextStart !== currentStart || nextEnd !== currentEnd)) {
+        transaction.update(editionRef, { startDate: nextStart, endDate: nextEnd });
+      }
+      transaction.set(dayRef, {
+        date: day.date,
+        weekday: day.weekday.trim(),
+        order: day.order,
+        eventType: edition.type,
+        editionYear: edition.editionYear,
+        ...(day.isProgramDayOnly ? { programDayOnly: true } : {}),
+      }, { merge: true });
+    });
     await refresh();
     return dayRef.id;
   }, [edition, refresh]);

@@ -50,7 +50,11 @@ export function ScheduleScreen({
   const visibleDays = days && days.length > 0
     ? days
     : EVENT_DAYS.map((weekday, order) => ({ id: weekday, weekday, date: '', order }));
-  const filteredPrograms = programs.filter((program) => program.day === selectedCategory || (program.day === undefined && visibleDays.some((day) => day.id === selectedCategory)));
+  const filteredPrograms = programs.filter((program) => (
+    program.dayId === selectedCategory
+    || program.day === selectedCategory
+    || (program.day === undefined && visibleDays.some((day) => day.id === selectedCategory))
+  ));
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>

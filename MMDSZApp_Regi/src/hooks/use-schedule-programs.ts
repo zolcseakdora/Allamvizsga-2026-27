@@ -100,13 +100,20 @@ export function useSchedulePrograms() {
   const hasEditionDays = Boolean(edition && hasLoadedEdition && editionDays.length > 0);
   const useLegacy = eventType === 'diaknapok' && !isPreview && !hasEditionDays;
 
+  const scheduleEditionDays = useMemo(
+    () => [...editionDays].sort((left, right) => (
+      left.date.localeCompare(right.date) || left.order - right.order
+    )),
+    [editionDays],
+  );
+
   const days = useMemo(() => {
-    if (hasEditionDays) return editionDays;
+    if (hasEditionDays) return scheduleEditionDays;
     if (eventType === 'februtalis') {
       return [...FEBRUTALIS_PREVIEW_DAYS];
     }
     return useLegacy ? getLegacyDays() : [];
-  }, [editionDays, eventType, hasEditionDays, useLegacy]);
+  }, [eventType, hasEditionDays, scheduleEditionDays, useLegacy]);
 
   const programs = useMemo(() => {
     if (hasEditionDays) {

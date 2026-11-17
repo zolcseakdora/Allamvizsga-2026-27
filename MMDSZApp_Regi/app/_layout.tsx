@@ -9,7 +9,7 @@ import { useWindowDimensions, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/src/hooks/use-color-scheme';
 import { AuthProvider, useAuth } from '@/src/context/AuthContext';
-import { EventSeasonProvider } from '@/src/context/EventSeasonContext';
+import { EventSeasonProvider, useEventSeason } from '@/src/context/EventSeasonContext';
 import { GalleryNavigationProvider } from '@/src/context/GalleryNavigationContext';
 import { ToastProvider } from '@/src/context/ToastContext';
 import { NotificationsProvider } from '@/src/hooks/use-notifications';
@@ -20,6 +20,7 @@ function RootLayoutNav() {
   const colorScheme = useColorScheme();
   const { t } = useTranslation();
   const { isLoggedIn, profile, isLoading } = useAuth(); 
+  const { eventType } = useEventSeason();
   const segments = useSegments();
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -27,6 +28,11 @@ function RootLayoutNav() {
   const hasApprovedAccess = Boolean(
     isLoggedIn && profile && (profile.isVerified || profile.role === UserRole.FOSZERVEZO),
   );
+  const navigationRole = eventType === 'februtalis'
+    ? profile?.role === UserRole.FOSZERVEZO
+      ? profile.role
+      : profile?.eventMemberships?.februtalis?.role ?? profile?.role
+    : profile?.role;
   
   const [isReady, setIsReady] = useState(false);
 
@@ -75,10 +81,10 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={styles.app}>
-        {hasApprovedAccess && profile && <AppNavigationHeader role={profile.role} />}
+        {hasApprovedAccess && navigationRole && <AppNavigationHeader role={navigationRole} />}
         <View style={[styles.contentRow, hasApprovedAccess && isDesktop && styles.desktopRow]}>
-          {hasApprovedAccess && isDesktop && profile && (
-            <AppNavigation role={profile.role} sidebar />
+          {hasApprovedAccess && isDesktop && navigationRole && (
+            <AppNavigation role={navigationRole} sidebar />
           )}
           <View style={styles.stack}>
             <Stack screenOptions={{ headerShown: false }}>
@@ -96,7 +102,7 @@ function RootLayoutNav() {
             </Stack>
           </View>
         </View>
-        {hasApprovedAccess && !isDesktop && profile && <AppNavigation role={profile.role} />}
+        {hasApprovedAccess && !isDesktop && navigationRole && <AppNavigation role={navigationRole} />}
       </View>
       <StatusBar style="auto" />
     </ThemeProvider>

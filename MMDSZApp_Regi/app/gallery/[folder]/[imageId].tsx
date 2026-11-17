@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GalleryImageScreen } from '@/src/screens/gallery-image-screen';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useGalleryNavigation } from '@/src/context/GalleryNavigationContext';
 import { useGallery } from '@/src/hooks/use-gallery';
 import { canRole } from '@/src/constants/roles';
@@ -19,8 +20,9 @@ export default function GalleryImageRoute() {
     imageId: string;
   }>();
   const { profile } = useAuth();
+  const { eventType } = useEventSeason();
   const galleryNavigation = useGalleryNavigation();
-  const { getImage, deleteImage } = useGallery();
+  const { getImage, deleteImage } = useGallery(eventType);
   const [loadResult, setLoadResult] = useState<{
     imageId: string;
     image: GalleryImage | null;
@@ -33,9 +35,12 @@ export default function GalleryImageRoute() {
   const loadError = currentLoadResult?.error ?? null;
   const isLoading = Boolean(imageId) && currentLoadResult === null;
   const imageIdList = useMemo(() => {
-    const folderImageIds = galleryNavigation.folder === folder ? galleryNavigation.imageIds : [];
+    const folderImageIds = galleryNavigation.folder === folder
+      && galleryNavigation.eventType === eventType
+      ? galleryNavigation.imageIds
+      : [];
     return folderImageIds.length > 0 ? folderImageIds : imageId ? [imageId] : [];
-  }, [folder, galleryNavigation.folder, galleryNavigation.imageIds, imageId]);
+  }, [eventType, folder, galleryNavigation.eventType, galleryNavigation.folder, galleryNavigation.imageIds, imageId]);
   const currentIndex = imageIdList.indexOf(imageId);
 
   useEffect(() => {
