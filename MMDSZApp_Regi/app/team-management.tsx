@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 
 import { TeamManagementScreen } from '@/src/screens/team-management-screen';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { db } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { canRole } from '@/src/constants/roles';
@@ -22,9 +23,18 @@ export default function TeamManagementRoute() {
   const router = useRouter();
   const { t } = useTranslation();
   const { profile } = useAuth();
+  const { eventType } = useEventSeason();
   const { getTeam, saveTeam } = useTeams();
-  const canInviteMembers = canRole(profile?.role, 'inviteMembers');
-  const teamName = normalizeTeamName(profile?.team ?? '');
+  const membership = eventType === 'februtalis'
+    ? profile?.eventMemberships?.februtalis
+    : undefined;
+  const activeRole = membership?.role ?? profile?.role;
+  const canInviteMembers = canRole(activeRole, 'inviteMembers');
+  const teamId = membership?.teamId;
+  const teamName = eventType === 'februtalis'
+    ? teamId ?? ''
+    : normalizeTeamName(profile?.team ?? '');
+  const [teamDisplayName, setTeamDisplayName] = useState(teamName);
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
@@ -35,12 +45,13 @@ export default function TeamManagementRoute() {
 
   const refresh = useCallback(async () => {
     if (!teamName) return;
-    const team = await getTeam(teamName);
+    const team = await getTeam(teamName, eventType);
+    setTeamDisplayName(team?.name ?? teamName);
     setTeamDescription(team?.description ?? '');
     setTeamVideoLink(team?.videoLink ?? '');
     setTeamLogo(team?.logo ?? null);
     setTeamFlag(team?.flag ?? null);
-  }, [getTeam, teamName]);
+  }, [eventType, getTeam, teamName]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -136,7 +147,11 @@ export default function TeamManagementRoute() {
     }
 
     try {
-      await saveTeam(teamName, { description: teamDescription, videoLink: teamVideoLink });
+      await saveTeam(teamName, {
+        description: teamDescription,
+        videoLink: teamVideoLink,
+        ...(teamDisplayName && eventType === 'februtalis' ? { name: teamDisplayName } : {}),
+      }, eventType);
       Alert.alert(t('alerts.teamSaved'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -146,7 +161,7 @@ export default function TeamManagementRoute() {
 
   return (
     <TeamManagementScreen
-      teamName={teamName}
+      teamName={teamDisplayName}
       teamDescription={teamDescription}
       teamVideoLink={teamVideoLink}
       teamLogo={teamLogo}

@@ -5,10 +5,13 @@ import { useTranslation } from 'react-i18next';
 import type { Sponsor } from '@/src/types/sponsor';
 import type { Team } from '@/src/types/team';
 import { normalizeTeamName, teamNameKey } from '@/src/utils/team-name';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type TeamsScreenProps = {
   teams: Team[];
   sponsors: Sponsor[];
+  eventType: EventSeason;
+  currentTeamId?: string;
   onBack: () => void;
   onRefresh: () => void;
   onOpenLink: (link?: string) => void;
@@ -26,6 +29,8 @@ function teamCompleteness(team: Team) {
 export function TeamsScreen({
   teams,
   sponsors,
+  eventType,
+  currentTeamId,
   onBack,
   onRefresh,
   onOpenLink,
@@ -75,9 +80,18 @@ export function TeamsScreen({
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         >
+          {eventType === 'februtalis' && currentTeamId && (
+            <Text style={styles.registrationTitle}>
+              {t('teams.yourFebrutalisTeam', {
+                team: teams.find((team) => team.id === currentTeamId)?.name ?? '',
+              })}
+            </Text>
+          )}
           <View style={styles.grid}>
             {visibleTeams.length === 0 ? (
-              <Text style={styles.emptyState}>{t('teams.empty')}</Text>
+              <Text style={styles.emptyState}>
+                {t(eventType === 'februtalis' ? 'admin.noRegisteredFebrutalisTeams' : 'teams.empty')}
+              </Text>
             ) : (
               visibleTeams.map((team) => (
                 <View key={team.id} style={[styles.teamItem, { width: `${100 / columns}%` }]}>
@@ -132,6 +146,7 @@ const styles = StyleSheet.create({
   mobileTitle: { marginTop: 0 },
   subtitle: { fontSize: 13, color: '#aaa', marginBottom: 20, textAlign: 'center' },
   manageButton: { backgroundColor: '#EC2127', padding: 12, borderRadius: 8, alignItems: 'center' },
+  registrationTitle: { color: '#FFF', fontWeight: '700', textAlign: 'center', marginBottom: 10 },
   manageButtonText: { color: '#FFF', fontWeight: 'bold' },
   duplicateWarning: { color: '#F39C12', fontSize: 12, textAlign: 'center', marginTop: 8 },
   list: { flex: 1, width: '100%', marginTop: 10 },

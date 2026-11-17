@@ -30,9 +30,30 @@ service cloud.firestore {
         (me().role == 'Csapatkapitány' || me().role == 'Alcsapatkapitány');
     }
 
+    function isFebrutalisCaptain(teamId) {
+      return hasProfile()
+        && me().keys().hasAny(['eventMemberships'])
+        && me().eventMemberships.keys().hasAny(['februtalis'])
+        && me().eventMemberships.februtalis.teamId == teamId
+        && me().eventMemberships.februtalis.role == 'Csapatkapitány';
+    }
+
     // Jóváhagyott felhasználó (a főszervezőnek nem kell jóváhagyás)
     function isApproved() {
       return hasProfile() && (me().isVerified == true || me().role == 'Főszervező');
+    }
+
+    function isFebrutalisOrganizer() {
+      return isApproved()
+        && me().keys().hasAny(['eventMemberships'])
+        && me().eventMemberships.keys().hasAny(['februtalis'])
+        && me().eventMemberships.februtalis.role == 'Szervező';
+    }
+
+    function isFebrutalisOrganizerForEvent(eventId) {
+      return isFebrutalisOrganizer()
+        && exists(/databases/$(database)/documents/events/$(eventId))
+        && get(/databases/$(database)/documents/events/$(eventId)).data.type == 'februtalis';
     }
 
     function validEventDate(value) {
@@ -93,14 +114,20 @@ service cloud.firestore {
     }
 
     function validEventDay(eventId, data) {
-      let edition = get(/databases/$(database)/documents/events/$(eventId)).data;
+      let edition = getAfter(/databases/$(database)/documents/events/$(eventId)).data;
       return data.keys().hasAll(['date', 'weekday', 'order'])
         && validEventDate(data.date)
-        && data.date >= edition.startDate
-        && data.date <= edition.endDate
+        && (
+          (data.date >= edition.startDate && data.date <= edition.endDate)
+          || (
+            data.keys().hasAny(['programDayOnly'])
+            && data.programDayOnly == true
+          )
+        )
         && data.weekday in ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap']
         && data.order is int
         && data.order >= 0
+        && (!data.keys().hasAny(['programDayOnly']) || data.programDayOnly is bool)
         && (!data.keys().hasAny(['eventType']) || data.eventType == edition.type)
         && (!data.keys().hasAny(['editionYear']) || data.editionYear == edition.editionYear);
     }
@@ -163,8 +190,16 @@ service cloud.firestore {
       return d.status == 'Függőben'
         && d.email == d.email.lower()
         && (
+          (isAdmin()
+            && d.eventType == 'februtalis'
+            && d.role in ['Szervező', 'Zsűri']
+            && !d.keys().hasAny(['team']))
+          ||
           // Főszervező: szervezőt és kapitányt/alkapitányt hívhat
-          (isAdmin() && d.role in ['Szervező', 'Csapatkapitány', 'Alcsapatkapitány'])
+          (isAdmin()
+            && !d.keys().hasAny(['eventType'])
+            && d.team is string
+            && d.role in ['Szervező', 'Csapatkapitány', 'Alcsapatkapitány'])
           // Kapitány/alkapitány: csak a saját csapatába, csapattagot vagy alkapitányt
           || (isCaptain() && d.team == me().team
               && d.role in ['Csapattag', 'Alcsapatkapitány'])
@@ -191,12 +226,27 @@ service cloud.firestore {
             && request.resource.data.role == resource.data.role
             && request.resource.data.team == resource.data.team
             && request.resource.data.email == resource.data.email
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['eventMemberships'])
+            && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['eventVerifications'])
             && (request.resource.data.isVerified == resource.data.isVerified
                 || request.resource.data.isVerified == false))
         // Meghívó beváltása: a szerepkör és a csapat a meghívóból jön
         || (signedIn()
             && request.auth.uid == uid
             && hasOpenInvite()
+            && get(inviteRef()).data.eventType == 'februtalis'
+            && request.resource.data.role == resource.data.role
+            && request.resource.data.team == resource.data.team
+            && request.resource.data.keys().hasAny(['eventMemberships'])
+            && request.resource.data.eventMemberships.februtalis.role == get(inviteRef()).data.role
+            && request.resource.data.eventMemberships.februtalis.keys().hasOnly(['role'])
+            && request.resource.data.email == resource.data.email
+            && request.resource.data.isVerified == resource.data.isVerified
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['eventMemberships']))
+        || (signedIn()
+            && request.auth.uid == uid
+            && hasOpenInvite()
+            && !get(inviteRef()).data.keys().hasAny(['eventType'])
             && request.resource.data.role == get(inviteRef()).data.role
             && request.resource.data.team == get(inviteRef()).data.team
             && request.resource.data.email == resource.data.email
@@ -206,25 +256,78 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---------- Eseményregisztrációk ----------
+    match /event_registrations/{registrationId} {
+      allow get: if isAdmin()
+        || (signedIn() && request.auth.uid == resource.data.uid);
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && registrationId == request.auth.uid + '_februtalis'
+        && request.resource.data.keys().hasOnly([
+          'uid',
+          'eventType',
+          'teamName',
+          'teamKey',
+          'createdAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.eventType == 'februtalis'
+        && request.resource.data.teamName is string
+        && request.resource.data.teamName.size() >= 2
+        && request.resource.data.teamName.size() <= 60
+        && request.resource.data.teamKey is string
+        && request.resource.data.teamKey == request.resource.data.teamName.lower()
+        && getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+          in ['Csapattag', 'Csapatkapitány', 'Alcsapatkapitány']
+        && (
+          !getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys().hasAny(['eventMemberships'])
+          || !getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.eventMemberships.keys().hasAny(['februtalis'])
+          || getAfter(/databases/$(database)/documents/users/$(request.auth.uid)).data.eventMemberships.februtalis.role
+            in ['Csapattag', 'Csapatkapitány', 'Alcsapatkapitány']
+        )
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     // ---------- Csapatok ----------
     match /teams/{teamId} {
       allow read: if isApproved();
       // Admin bármelyiket, a kapitány/alkapitány csak a saját csapatát szerkesztheti
       allow create, update: if isAdmin()
-        || (isCaptain() && me().team == teamId);
+        || (
+          isFebrutalisOrganizer()
+          && request.resource.data.eventType == 'februtalis'
+          && (!exists(/databases/$(database)/documents/teams/$(teamId))
+            || get(/databases/$(database)/documents/teams/$(teamId)).data.eventType == 'februtalis')
+        )
+        || (isCaptain() && me().team == teamId)
+        || (
+          isFebrutalisCaptain(teamId)
+          && request.resource.data.eventType == 'februtalis'
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+        );
       allow delete: if isAdmin();
     }
 
     // ---------- Események / edition adatok ----------
     match /events/{eventId} {
       allow read: if isApproved();
-      allow create, update: if isAdmin() && validEdition(request.resource.data);
+      allow create: if isAdmin() && validEdition(request.resource.data);
+      allow update: if (isAdmin() && validEdition(request.resource.data))
+        || (
+          isFebrutalisOrganizerForEvent(eventId)
+          && resource.data.type == 'februtalis'
+          && request.resource.data.type == 'februtalis'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['startDate', 'endDate'])
+          && validEdition(request.resource.data)
+        );
       allow delete: if false;
     }
 
     match /events/{eventId}/days/{dayId} {
       allow read: if isApproved();
-      allow create, update: if isAdmin()
+      allow create, update: if (isAdmin() || isFebrutalisOrganizerForEvent(eventId))
         && exists(/databases/$(database)/documents/events/$(eventId))
         && validEventDay(eventId, request.resource.data);
       allow delete: if false;
@@ -232,11 +335,11 @@ service cloud.firestore {
 
     match /events/{eventId}/days/{dayId}/programItems/{programItemId} {
       allow read: if isApproved();
-      allow create, update: if isAdmin()
+      allow create, update: if (isAdmin() || isFebrutalisOrganizerForEvent(eventId))
         && exists(/databases/$(database)/documents/events/$(eventId))
         && exists(/databases/$(database)/documents/events/$(eventId)/days/$(dayId))
         && validProgramItem(eventId, dayId, request.resource.data);
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || isFebrutalisOrganizerForEvent(eventId);
     }
 
     // ---------- Programok (események) ----------
@@ -248,20 +351,25 @@ service cloud.firestore {
     // ---------- Értesítések (üzenőfal) ----------
     match /notifications/{notifId} {
       allow read: if isApproved();
-      allow create, update, delete: if isAdmin();   // csak admin írhat ki üzenetet
+      allow create, update: if false;
+      allow delete: if isAdmin();
     }
 
     // ---------- Galéria ----------
     match /gallery/{docId} {
       allow read: if isApproved();
-      allow create: if isApproved();
+      allow create: if isApproved()
+        && (!request.resource.data.keys().hasAny(['eventType'])
+          || request.resource.data.eventType in ['februtalis', 'diaknapok']);
       allow update, delete: if isAdmin();
     }
 
     // ---------- Galéria, nagy képek ----------
     match /gallery_images/{docId} {
       allow read: if isApproved();
-      allow create: if isApproved();
+      allow create: if isApproved()
+        && (!request.resource.data.keys().hasAny(['eventType'])
+          || request.resource.data.eventType in ['februtalis', 'diaknapok']);
       allow update, delete: if isAdmin();
     }
 

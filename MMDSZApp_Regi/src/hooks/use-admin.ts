@@ -1,18 +1,28 @@
-import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
 
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { createNotification } from '@/src/services/notifications';
+import type { NotificationAudience } from '@/src/services/notifications';
+import {
+  assignFebrutalisTeamCaptain as assignFebrutalisTeamCaptainCall,
+  listFebrutalisRegistrations,
+} from '@/src/services/event-admin';
 import { UserRole } from '@/src/types/auth';
 import { normalizeTeamName, teamNameKey } from '@/src/utils/team-name';
 import type { Team } from '@/src/types/team';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 export type RegisteredUser = {
   id: string;
   name?: string;
   role?: UserRole;
   igazolas?: string;
+  teamName?: string;
+  teamKey?: string;
+  isVerified?: boolean;
+  isFebrutalisCaptain?: boolean;
 };
 
 export type PendingUser = {
@@ -21,14 +31,20 @@ export type PendingUser = {
   role?: UserRole;
   email?: string;
   team?: string;
-  isVerified?: boolean;
+  isVerified: boolean;
   igazolas: string;
+  eventType: EventSeason;
+  isLegacy: boolean;
 };
 
 function toTeam(id: string, data: Record<string, unknown>): Team {
   return {
     id,
+    eventType: data.eventType === 'februtalis' || data.eventType === 'diaknapok'
+      ? data.eventType
+      : undefined,
     name: typeof data.name === 'string' ? data.name : undefined,
+    captainUid: typeof data.captainUid === 'string' ? data.captainUid : undefined,
     logo: typeof data.logo === 'string' ? data.logo : undefined,
     flag: typeof data.flag === 'string' ? data.flag : undefined,
     description: typeof data.description === 'string' ? data.description : undefined,
@@ -52,15 +68,21 @@ export function useAdmin() {
     }
   }, [profile?.role]);
 
-  const refreshTeams = useCallback(async () => {
+  const refreshTeams = useCallback(async (eventType: EventSeason = 'diaknapok') => {
     const snapshot = await getDocs(collection(db, 'teams'));
-    setTeams(snapshot.docs.map((item) => toTeam(item.id, item.data())));
+    setTeams(snapshot.docs
+      .filter((item) => (
+        eventType === 'februtalis'
+          ? item.data().eventType === 'februtalis'
+          : item.data().eventType === undefined || item.data().eventType === 'diaknapok'
+      ))
+      .map((item) => toTeam(item.id, item.data())));
   }, []);
 
-  const deleteTeam = useCallback(async (teamId: string) => {
+  const deleteTeam = useCallback(async (teamId: string, eventType: EventSeason = 'diaknapok') => {
     requireHeadOrganizer();
     await deleteDoc(doc(db, 'teams', teamId));
-    await refreshTeams();
+    await refreshTeams(eventType);
   }, [refreshTeams, requireHeadOrganizer]);
 
   const normalizeUserTeamNames = useCallback(async () => {
@@ -83,20 +105,120 @@ export function useAdmin() {
     return updates.length;
   }, [requireHeadOrganizer]);
 
-  const refreshRegisteredUsers = useCallback(async () => {
-    const snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+  const refreshRegisteredUsers = useCallback(async (eventType: EventSeason = 'diaknapok') => {
+    if (eventType === 'februtalis') {
+      let registrations;
+      try {
+        registrations = await listFebrutalisRegistrations();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`Februtális registrations request failed: ${message}`);
+      }
+      const users = await Promise.all(registrations.map(async (registration): Promise<RegisteredUser | null> => {
+        const registrationData = registration;
+        const uid = registrationData.uid;
+        if (typeof uid !== 'string') return null;
+        let userSnapshot;
+        try {
+          userSnapshot = await getDoc(doc(db, 'users', uid));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(`users profile lookup failed: ${message}`);
+        }
+        if (!userSnapshot.exists()) return null;
+        const data = userSnapshot.data();
+        const role = toUserRole(data.role);
+        const memberships = data.eventMemberships;
+        const februtalisMembership = memberships && typeof memberships === 'object'
+          ? (memberships as Record<string, unknown>).februtalis
+          : undefined;
+        const membershipData = februtalisMembership && typeof februtalisMembership === 'object'
+          ? februtalisMembership as Record<string, unknown>
+          : undefined;
+        if (
+          role === UserRole.SZERVEZO
+          || role === UserRole.ZSURI
+          || role === UserRole.FOSZERVEZO
+          || membershipData?.role === UserRole.SZERVEZO
+          || membershipData?.role === UserRole.ZSURI
+        ) {
+          return null;
+        }
+        const verification = data.eventVerifications;
+        const februtalisVerification = verification && typeof verification === 'object'
+          ? (verification as Record<string, unknown>).februtalis
+          : undefined;
+        const diaknapokVerification = verification && typeof verification === 'object'
+          ? (verification as Record<string, unknown>).diaknapok
+          : undefined;
+        const verificationData = februtalisVerification && typeof februtalisVerification === 'object'
+          ? februtalisVerification as Record<string, unknown>
+          : undefined;
+        const diaknapokVerificationData = diaknapokVerification && typeof diaknapokVerification === 'object'
+          ? diaknapokVerification as Record<string, unknown>
+          : undefined;
+        return {
+          id: uid,
+          name: typeof data.name === 'string' ? data.name : undefined,
+          role,
+          igazolas: typeof verificationData?.imageUrl === 'string'
+            ? verificationData.imageUrl
+            : data.isVerified === true
+              ? typeof data.igazolas === 'string'
+                ? data.igazolas
+                : typeof diaknapokVerificationData?.imageUrl === 'string'
+                  ? diaknapokVerificationData.imageUrl
+                  : undefined
+              : undefined,
+          teamName: typeof registrationData.teamName === 'string'
+            ? registrationData.teamName
+            : undefined,
+          teamKey: typeof registrationData.teamKey === 'string'
+            ? registrationData.teamKey
+            : undefined,
+          isVerified: data.isVerified === true,
+          isFebrutalisCaptain: membershipData?.role === UserRole.CSAPATKAPITANY,
+        };
+      }));
+      setRegisteredUsers(users.filter((item): item is RegisteredUser => item !== null));
+      return;
+    }
+
+    let snapshot;
+    try {
+      snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`users query failed: ${message}`);
+    }
     setRegisteredUsers(snapshot.docs.map((item) => {
       const data = item.data();
       return { id: item.id, ...data, role: toUserRole(data.role) } as RegisteredUser;
     }));
   }, []);
 
-  const refreshPendingUsers = useCallback(async () => {
+  const refreshPendingUsers = useCallback(async (eventType: EventSeason = 'diaknapok') => {
     const snapshot = await getDocs(collection(db, 'users'));
     const pending: PendingUser[] = [];
     snapshot.docs.forEach((item) => {
       const data = item.data();
-      if (typeof data.igazolas !== 'string') return;
+      const eventVerifications = data.eventVerifications;
+      const verification = eventVerifications && typeof eventVerifications === 'object'
+        ? (eventVerifications as Record<string, unknown>)[eventType]
+        : undefined;
+      const verificationData = verification && typeof verification === 'object'
+        ? verification as Record<string, unknown>
+        : undefined;
+      const isEventVerification = typeof verificationData?.imageUrl === 'string';
+      const isLegacy = !isEventVerification
+        && eventType === 'diaknapok'
+        && typeof data.igazolas === 'string';
+      const imageUrl = isEventVerification
+        ? verificationData.imageUrl as string
+        : isLegacy
+          ? data.igazolas as string
+          : undefined;
+      if (!imageUrl) return;
 
       pending.push({
         id: item.id,
@@ -104,16 +226,26 @@ export function useAdmin() {
         role: toUserRole(data.role),
         email: typeof data.email === 'string' ? data.email : undefined,
         team: typeof data.team === 'string' ? data.team : undefined,
-        isVerified: data.isVerified === true,
-        igazolas: data.igazolas,
+        isVerified: isEventVerification
+          ? verificationData.status === 'approved'
+          : data.isVerified === true,
+        igazolas: imageUrl,
+        eventType,
+        isLegacy,
       });
     });
     setPendingUsers(pending);
   }, []);
 
-  const approveUser = useCallback(async (userId: string) => {
-    await updateDoc(doc(db, 'users', userId), { isVerified: true });
-    await refreshPendingUsers();
+  const approveUser = useCallback(async (
+    userId: string,
+    eventType: EventSeason,
+    isLegacy: boolean,
+  ) => {
+    const updates: Record<string, unknown> = { isVerified: true };
+    if (!isLegacy) updates[`eventVerifications.${eventType}.status`] = 'approved';
+    await updateDoc(doc(db, 'users', userId), updates);
+    await refreshPendingUsers(eventType);
   }, [refreshPendingUsers]);
 
   const createMissingTeams = useCallback(async () => {
@@ -146,6 +278,11 @@ export function useAdmin() {
     return missingTeamNames.size;
   }, []);
 
+  const assignFebrutalisTeamCaptain = useCallback(async (teamKey: string, captainUid: string) => {
+    requireHeadOrganizer();
+    return assignFebrutalisTeamCaptainCall(teamKey, captainUid);
+  }, [requireHeadOrganizer]);
+
   const addEvent = useCallback(async (
     event: {
       id?: string;
@@ -177,10 +314,15 @@ export function useAdmin() {
     return eventId;
   }, []);
 
-  const sendNotification = useCallback(async (title: string, body: string) => {
+  const sendNotification = useCallback(async (
+    title: string,
+    body: string,
+    eventType: EventSeason,
+    audience: NotificationAudience,
+  ) => {
     if (!user) throw new Error('A signed-in user is required to send notifications');
-    await createNotification(title, body, user.uid, profile?.name || user.displayName || '');
-  }, [profile?.name, user]);
+    await createNotification(title, body, eventType, audience);
+  }, [user]);
 
   return {
     registeredUsers,
@@ -193,6 +335,7 @@ export function useAdmin() {
     refreshPendingUsers,
     approveUser,
     createMissingTeams,
+    assignFebrutalisTeamCaptain,
     addEvent,
     sendNotification,
   };
