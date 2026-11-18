@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, setDoc,deleteDoc, doc, getDoc, getDocs, orderBy, query, updateDoc, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { useCallback, useState } from 'react';
 
@@ -6,7 +6,8 @@ import { auth, db, functions } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
 import { createNotification } from '@/src/services/notifications';
 import { UserRole } from '@/src/types/auth';
-import { normalizeTeamName } from '@/src/utils/team-name';
+import { normalizeTeamName, teamNameKey } from '@/src/utils/team-name';
+import { isRegistrationReviewPending } from '@/src/utils/registration-review';
 import type { Team } from '@/src/types/team';
 
 export type RegisteredUser = {
@@ -14,6 +15,8 @@ export type RegisteredUser = {
   name?: string;
   role?: UserRole;
   igazolas?: string;
+  email?: string;
+  requestedTeamName?: string;
 };
 
 export type PendingUser = {
@@ -89,7 +92,7 @@ export function useAdmin() {
     const snapshot = await getDocs(query(collection(db, 'users'), orderBy('createdAt', 'desc')));
     setRegisteredUsers(snapshot.docs.map((item) => {
       const data = item.data();
-      return { id: item.id, ...data, role: toUserRole(data.role) } as RegisteredUser;
+      return { id: item.id, ...data, role: toUserRole(data.role), pendingRole: toUserRole(data.pendingRole) } as RegisteredUser;
     }));
   }, []);
 
@@ -109,6 +112,10 @@ export function useAdmin() {
       const isLegacyPending = !accountStatus && !membershipStatus
         && data.isVerified !== true && typeof data.igazolas === 'string' && !!data.igazolas.trim();
       if (!isPending && !isLegacyPending) return;
+      // Az igazolas-nezoben csak valoban feltoltott diakigazolvanyok vannak.
+      const requestedRole = toUserRole(data.pendingRole) ?? toUserRole(data.role);
+      if (requestedRole === UserRole.SZERVEZO || requestedRole === UserRole.ZSURI) return;
+      if (typeof data.igazolas !== 'string' || !data.igazolas.trim()) return;
 
       const isCaptainApplication = accountStatus === 'pending_captain_approval'
         || membershipStatus === 'pending_captain_approval';
@@ -161,6 +168,59 @@ export function useAdmin() {
     await refreshPendingUsers();
   }, [refreshPendingUsers, requireHeadOrganizer]);
 
+  // Regisztracio elbiralasa: a tenyleges szerepkort csak a Firebase Functions allitja be.
+  const reviewRegistration = useCallback(async (userId: string, approved: boolean) => {
+    requireHeadOrganizer();
+    const userRef = doc(db, 'users', userId);
+    const userSnapshot = await getDoc(userRef);
+    if (!userSnapshot.exists()) throw new Error('A felhasznaloi profil nem talalhato.');
+    const data = userSnapshot.data();
+    if (!isRegistrationReviewPending(data)) throw new Error('A felhasznalo nem var regisztracios jovahagyasra.');
+    const status = data.accountStatus === 'pending_captain_approval'
+      || data.membershipStatus === 'pending_captain_approval'
+      ? 'pending_captain_approval'
+      : data.accountStatus ?? data.membershipStatus;
+    if (status === 'pending_captain_approval') {
+      const reviewCaptainRegistration = httpsCallable<{ uid: string; approved: boolean }, { status: string }>(functions, 'reviewCaptainRegistration');
+      await reviewCaptainRegistration({ uid: userId, approved });
+    } else if (['pending_verification', 'pending_admin_approval', 'pending_admin_activation'].includes(status)) {
+      const reviewPendingMembership = httpsCallable<{ uid: string; approved: boolean }, { status: string }>(functions, 'reviewPendingMembership');
+      await reviewPendingMembership({ uid: userId, approved });
+    } else {
+      throw new Error('A regisztracio nem elbiralhato.');
+    }
+    await Promise.all([refreshRegisteredUsers(), refreshPendingUsers()]);
+  }, [requireHeadOrganizer, refreshRegisteredUsers, refreshPendingUsers]);
+  const createMissingTeams = useCallback(async () => {
+    const [usersSnapshot, teamsSnapshot] = await Promise.all([
+      getDocs(collection(db, 'users')),
+      getDocs(collection(db, 'teams')),
+    ]);
+    const existingTeamNames = new Set(teamsSnapshot.docs.flatMap((team) => {
+      const names = [team.id];
+      const dataName: unknown = team.data().name;
+      if (typeof dataName === 'string') names.push(dataName);
+      return names.map(teamNameKey).filter(Boolean);
+    }));
+    const missingTeamNames = new Map<string, string>();
+
+    usersSnapshot.docs.forEach((item) => {
+      const team = item.data().team;
+      if (typeof team !== 'string') return;
+
+      const name = normalizeTeamName(team);
+      const key = teamNameKey(name);
+      if (!key || key === teamNameKey('Egyéni') || existingTeamNames.has(key)) return;
+      if (!missingTeamNames.has(key)) missingTeamNames.set(key, name);
+    });
+
+    await Promise.all([...missingTeamNames.values()].map((name) => (
+      setDoc(doc(db, 'teams', name), { name }, { merge: true })
+    )));
+
+    return missingTeamNames.size;
+  }, []);
+
   const addEvent = useCallback(async (
     event: {
       id?: string;
@@ -206,6 +266,7 @@ export function useAdmin() {
     normalizeUserTeamNames,
     refreshRegisteredUsers,
     refreshPendingUsers,
+    reviewRegistration,
     approveUser,
     addEvent,
     sendNotification,
