@@ -1,6 +1,5 @@
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Notification } from '@/src/hooks/use-notifications';
@@ -9,17 +8,9 @@ type NotificationsScreenProps = {
   notifications: Notification[];
   unreadNotificationIds: ReadonlySet<string>;
   canRead: boolean;
-  canSend: boolean;
   isLoading: boolean;
   error: string | null;
-  title: string;
-  body: string;
-  isSending: boolean;
   onBack: () => void;
-  onTitleChange: (value: string) => void;
-  onBodyChange: (value: string) => void;
-  onSend: () => void;
-  onDelete: (notification: Notification) => void;
 };
 
 function formatTime(notification: Notification, locale: string, pendingLabel: string) {
@@ -34,21 +25,12 @@ export function NotificationsScreen({
   notifications,
   unreadNotificationIds,
   canRead,
-  canSend,
   isLoading,
   error,
-  title,
-  body,
-  isSending,
   onBack,
-  onTitleChange,
-  onBodyChange,
-  onSend,
-  onDelete,
 }: NotificationsScreenProps) {
   const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
@@ -61,38 +43,6 @@ export function NotificationsScreen({
         <Text style={styles.title}>🔔 {t('notifications.title')}</Text>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-          {canSend && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{t('notifications.composeTitle')}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={t('notifications.titlePlaceholder')}
-                placeholderTextColor="#888"
-                value={title}
-                onChangeText={onTitleChange}
-                maxLength={120}
-              />
-              <TextInput
-                style={styles.bodyInput}
-                placeholder={t('notifications.bodyPlaceholder')}
-                placeholderTextColor="#888"
-                value={body}
-                onChangeText={onBodyChange}
-                multiline
-                textAlignVertical="top"
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, isSending && styles.disabledButton]}
-                onPress={onSend}
-                disabled={isSending}
-              >
-                <Text style={styles.buttonText}>
-                  {isSending ? t('notifications.sending') : t('notifications.send')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {!canRead ? (
             <Text style={styles.message}>{t('notifications.approvalRequired')}</Text>
           ) : isLoading ? (
@@ -122,39 +72,6 @@ export function NotificationsScreen({
                   <Text style={styles.meta}>
                     {t('notifications.sentBy', { name: notification.createdByName || t('notifications.unknownSender') })}
                   </Text>
-                  {canSend && (
-                    pendingDeleteId === notification.id ? (
-                      <View style={styles.deleteConfirmation}>
-                        <Text style={styles.meta}>
-                          {t('notifications.deleteConfirmation', { title: notification.title })}
-                        </Text>
-                        <View style={styles.deleteActions}>
-                          <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() => setPendingDeleteId(null)}
-                          >
-                            <Text style={styles.meta}>{t('common.cancel')}</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={styles.deleteButton}
-                            onPress={() => {
-                              setPendingDeleteId(null);
-                              onDelete(notification);
-                            }}
-                          >
-                            <Text style={styles.deleteButtonText}>{t('notifications.delete')}</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.deleteButton}
-                        onPress={() => setPendingDeleteId(notification.id)}
-                      >
-                        <Text style={styles.deleteButtonText}>{t('notifications.delete')}</Text>
-                      </TouchableOpacity>
-                    )
-                  )}
                 </View>
               );
             })
@@ -172,13 +89,6 @@ const styles = StyleSheet.create({
   backText: { color: '#EC2127', fontSize: 16, fontWeight: 'bold' },
   title: { fontSize: 21, fontWeight: 'bold', color: '#EC2127', marginVertical: 15, textAlign: 'center' },
   scroll: { width: '100%' },
-  card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
-  cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#FFF', marginBottom: 10 },
-  input: { borderWidth: 1, borderColor: '#444', borderRadius: 8, padding: 12, marginBottom: 10, color: '#FFF', backgroundColor: '#121212' },
-  bodyInput: { minHeight: 100, borderWidth: 1, borderColor: '#444', borderRadius: 8, padding: 12, marginBottom: 12, color: '#FFF', backgroundColor: '#121212' },
-  sendButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 13, alignItems: 'center' },
-  disabledButton: { opacity: 0.6 },
-  buttonText: { color: '#FFF', fontWeight: 'bold' },
   notificationCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 15, marginBottom: 12 },
   unreadCard: { borderColor: '#EC2127', borderLeftWidth: 5 },
   notificationHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 },
@@ -186,11 +96,6 @@ const styles = StyleSheet.create({
   unreadBadge: { color: '#FFF', backgroundColor: '#EC2127', overflow: 'hidden', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3, fontSize: 11, fontWeight: 'bold' },
   notificationBody: { color: '#DDD', fontSize: 14, lineHeight: 21, marginBottom: 12 },
   meta: { color: '#999', fontSize: 12, marginTop: 3 },
-  deleteButton: { alignSelf: 'flex-end', paddingHorizontal: 12, paddingVertical: 8, marginTop: 8, borderWidth: 1, borderColor: '#EC2127', borderRadius: 6 },
-  deleteButtonText: { color: '#EC2127', fontWeight: 'bold' },
-  deleteConfirmation: { marginTop: 8, padding: 10, backgroundColor: '#2A1A1A', borderRadius: 6 },
-  deleteActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 8 },
-  cancelButton: { paddingHorizontal: 12, paddingVertical: 8, marginTop: 8 },
   message: { color: '#AAA', textAlign: 'center', marginVertical: 25 },
   error: { color: '#EC2127', textAlign: 'center', marginVertical: 25 },
 });

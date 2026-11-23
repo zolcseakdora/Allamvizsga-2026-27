@@ -1,4 +1,5 @@
-import { FlatList, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { FlatList, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -7,6 +8,7 @@ import type { GalleryImage } from '@/src/types/gallery';
 
 type GalleryScreenProps = {
   selectedFolder: string | null;
+  folders?: typeof GALLERY_FOLDERS;
   images: GalleryImage[];
   folderCounts: Record<string, number>;
   imageCount: number;
@@ -23,6 +25,7 @@ type GalleryScreenProps = {
 
 export function GalleryScreen({
   selectedFolder,
+  folders = GALLERY_FOLDERS,
   images,
   folderCounts,
   imageCount,
@@ -45,7 +48,7 @@ export function GalleryScreen({
   const horizontalPadding = width < 900 ? 12 : 24;
   const contentWidth = Math.min(width, 1200) - horizontalPadding * 2;
   const imageSize = Math.max(0, (contentWidth - (columns - 1) * 8) / columns);
-  const selectedFolderInfo = GALLERY_FOLDERS.find(folder => folder.id === selectedFolder);
+  const selectedFolderInfo = folders.find(folder => folder.id === selectedFolder);
   const folderLabel = selectedFolderInfo ? t(selectedFolderInfo.nameKey) : selectedFolder ?? '';
   const folderCardColumns = width < 600 ? 2 : 3;
   const folderCardWidth = `${100 / folderCardColumns - 1.5}%` as `${number}%`;
@@ -75,7 +78,7 @@ export function GalleryScreen({
               contentContainerStyle={styles.folderGrid}
               showsVerticalScrollIndicator={false}
             >
-              {GALLERY_FOLDERS.map(folder => (
+              {folders.map(folder => (
                 <TouchableOpacity
                   key={folder.id}
                   style={[styles.folderCard, { width: folderCardWidth, minWidth: width >= 600 ? 220 : 0 }]}
@@ -134,7 +137,7 @@ export function GalleryScreen({
                     accessibilityRole="button"
                     accessibilityLabel={t('gallery.openImage')}
                   >
-                    <Image source={{ uri: item.thumb ?? item.image }} style={styles.galleryImage} resizeMode="cover" />
+                    <Image source={{ uri: item.thumb ?? item.image }} style={styles.galleryImage} contentFit="cover" />
                   </TouchableOpacity>
                 )}
                 ListFooterComponent={hasMoreImages ? (

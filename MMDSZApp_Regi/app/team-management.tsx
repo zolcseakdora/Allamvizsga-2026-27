@@ -1,13 +1,15 @@
 import * as ImagePicker from 'expo-image-picker';
-import { addDoc, collection, doc, setDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '@/src/context/ToastContext';
 
 import { TeamManagementScreen } from '@/src/screens/team-management-screen';
 import { useAuth } from '@/src/context/AuthContext';
-import { db } from '@/src/config/firebase';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
+import { functions } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { canRole } from '@/src/constants/roles';
 
@@ -15,16 +17,31 @@ import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { processImage } from '@/src/services/images';
 import { normalizeTeamName } from '@/src/utils/team-name';
+import { useSponsors } from '@/src/hooks/use-sponsors';
+import type { Sponsor } from '@/src/types/sponsor';
 
 type InviteRole = UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
 
 export default function TeamManagementRoute() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { profile } = useAuth();
+  const { showToast } = useToast();
+  const { profile, isLoading } = useAuth();
+  const { eventType } = useEventSeason();
   const { getTeam, saveTeam } = useTeams();
-  const canInviteMembers = canRole(profile?.role, 'inviteMembers');
-  const teamName = normalizeTeamName(profile?.team ?? '');
+  const { sponsors, refreshSponsors, addSponsor, updateSponsor, deleteSponsor } = useSponsors();
+  const membership = eventType === 'februtalis'
+    ? profile?.eventMemberships?.februtalis
+    : undefined;
+  const activeRole = eventType === 'februtalis' ? membership?.role : profile?.role;
+  const teamId = membership?.teamId;
+  const teamName = eventType === 'februtalis'
+    ? teamId ?? ''
+    : normalizeTeamName(profile?.team ?? '');
+  // Diáknapok: jóváhagyott kapitány/alkapitány; FebruTális: a főszervező által kijelölt csapatkapitány.
+  const canManageTeam = canRole(activeRole, 'inviteMembers')
+    && (eventType === 'februtalis' ? Boolean(teamId) : profile?.isVerified === true);
+  const [teamDisplayName, setTeamDisplayName] = useState(teamName);
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
@@ -32,23 +49,43 @@ export default function TeamManagementRoute() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<InviteRole>(UserRole.CSAPATTAG);
   const [uploadingImage, setUploadingImage] = useState<'logo' | 'flag' | null>(null);
+  const [sponsorName, setSponsorName] = useState('');
+  const [sponsorLogo, setSponsorLogo] = useState<string>();
+  const [editingSponsorId, setEditingSponsorId] = useState<string>();
+  const [isManagingSponsors, setIsManagingSponsors] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !canManageTeam) router.replace('/');
+  }, [canManageTeam, isLoading, router]);
 
   const refresh = useCallback(async () => {
-    if (!teamName) return;
-    const team = await getTeam(teamName);
+    if (!canManageTeam || !teamName) return;
+    const [team] = await Promise.all([getTeam(teamName, eventType), refreshSponsors()]);
+    setTeamDisplayName(team?.name ?? teamName);
     setTeamDescription(team?.description ?? '');
     setTeamVideoLink(team?.videoLink ?? '');
     setTeamLogo(team?.logo ?? null);
     setTeamFlag(team?.flag ?? null);
-  }, [getTeam, teamName]);
+  }, [canManageTeam, eventType, getTeam, refreshSponsors, teamName]);
 
   useEffect(() => {
+    if (!canManageTeam) return;
     const timer = setTimeout(() => {
-      void refresh();
+      void refresh().catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        showToast(t('alerts.generic', { message }), 'error');
+      });
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [refresh]);
+  }, [canManageTeam, refresh, t]);
+
+  const handleRefresh = () => {
+    void refresh().catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    });
+  };
 
   const uploadTeamImage = async (type: 'logo' | 'flag') => {
     if (!teamName) return;
@@ -75,7 +112,7 @@ export default function TeamManagementRoute() {
         maxBytes: 700000,
       });
 
-      await saveTeam(teamName, { [type]: dataUrl });
+      await saveTeam(teamName, { [type]: dataUrl }, eventType);
       if (type === 'logo') setTeamLogo(dataUrl);
       else setTeamFlag(dataUrl);
     } catch (error) {
@@ -90,8 +127,116 @@ export default function TeamManagementRoute() {
     }
   };
 
+  const handlePickSponsorLogo = async () => {
+    try {
+      // A böngésző fájlválasztóját közvetlenül a kattintásból kell elindítani.
+      // Weben a jogosultságkérés nem szükséges, és megszakíthatja a user gesture-t.
+      if (Platform.OS !== 'web') {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          showToast(t('alerts.permissionRequired'), 'error');
+          return;
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 1,
+        base64: false,
+      });
+      const uri = result.canceled ? undefined : result.assets[0]?.uri;
+      if (!uri) return;
+
+      setIsManagingSponsors(true);
+      const { dataUrl } = await processImage(uri, {
+        maxSide: 256,
+        quality: 0.7,
+        maxBytes: 200000,
+      });
+      setSponsorLogo(dataUrl);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'image-too-large') {
+        showToast(t('alerts.imageTooLarge'), 'error');
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsManagingSponsors(false);
+    }
+  };
+
+  const clearSponsorForm = () => {
+    setSponsorName('');
+    setSponsorLogo(undefined);
+    setEditingSponsorId(undefined);
+  };
+
+  const handleSaveSponsor = async () => {
+    if (!sponsorName.trim() || !sponsorLogo) {
+      showToast(t('teamManagement.sponsorFieldsRequired'), 'error');
+      return;
+    }
+
+    setIsManagingSponsors(true);
+    try {
+      const sponsor = { name: sponsorName, logo: sponsorLogo };
+      if (editingSponsorId) {
+        await updateSponsor(editingSponsorId, sponsor);
+        showToast(t('teamManagement.sponsorUpdated'), 'success');
+      } else {
+        await addSponsor(sponsor);
+        showToast(t('teamManagement.sponsorAdded'), 'success');
+      }
+      clearSponsorForm();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      showToast(t('alerts.generic', { message }), 'error');
+    } finally {
+      setIsManagingSponsors(false);
+    }
+  };
+
+  const handleEditSponsor = (sponsor: Sponsor) => {
+    setEditingSponsorId(sponsor.id);
+    setSponsorName(sponsor.name);
+    setSponsorLogo(sponsor.logo);
+  };
+
+  const handleDeleteSponsor = (sponsor: Sponsor) => {
+    const remove = () => {
+      setIsManagingSponsors(true);
+      void deleteSponsor(sponsor.id)
+        .then(() => {
+          if (editingSponsorId === sponsor.id) clearSponsorForm();
+          showToast(t('teamManagement.sponsorDeleted'), 'success');
+        })
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          showToast(t('alerts.generic', { message }), 'error');
+        })
+        .finally(() => setIsManagingSponsors(false));
+    };
+
+    const title = t('teamManagement.deleteSponsor');
+    const message = t('teamManagement.confirmDeleteSponsor', { name: sponsor.name });
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}\n\n${message}`)) remove();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('teamManagement.deleteSponsor'), style: 'destructive', onPress: remove },
+    ]);
+  };
+
   const handleInvite = async () => {
-    if (!canInviteMembers) {
+    if (!canManageTeam) {
+      Alert.alert(t('alerts.inviteNotAllowed'));
+      return;
+    }
+    if (eventType === 'februtalis') {
+      // FebruTális-csapatba a besorolást a főszervező végzi (joinFebrutalisTeam).
       Alert.alert(t('alerts.inviteNotAllowed'));
       return;
     }
@@ -102,30 +247,22 @@ export default function TeamManagementRoute() {
 
     try {
       const normalizedEmail = inviteEmail.trim().toLowerCase();
-      const translatedRole = inviteRole === UserRole.CSAPATTAG ? t('roles.member') : t('roles.deputy');
-      const normalizedTeamName = normalizeTeamName(teamName);
-      const body = t('teamManagement.inviteEmailBody', { teamName: normalizedTeamName, role: translatedRole });
-      await setDoc(doc(db, 'invites', normalizedEmail), {
+      // Meghívót kizárólag a szerver hozhat létre. A szerver ellenőrzi,
+      // hogy a meghívó a kapitány/alkapitány SAJÁT csapatába szól-e.
+      const createInvite = httpsCallable<
+        { email: string; role: InviteRole; team: string },
+        { status: string }
+      >(functions, 'createInvite');
+      await createInvite({
         email: normalizedEmail,
-        team: normalizedTeamName,
         role: inviteRole,
-        invitedBy: profile?.name || UserRole.CSAPATKAPITANY,
-        createdAt: new Date(),
-        status: 'Függőben',
-      });
-      await addDoc(collection(db, 'mail'), {
-        to: normalizedEmail,
-        message: {
-          subject: t('teamManagement.inviteEmailSubject'),
-          text: `${t('teamManagement.inviteEmailGreeting')} ${body} ${t('teamManagement.inviteEmailAction')}`,
-          html: `<h3>${t('teamManagement.inviteEmailGreeting')}</h3><p>${body}</p><p>${t('teamManagement.inviteEmailAction')}</p>`,
-        },
+        team: normalizeTeamName(teamName),
       });
       setInviteEmail('');
-      Alert.alert(t('alerts.inviteSent', { email: normalizedEmail }));
+      showToast(t('teamManagement.inviteQueued'), 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      Alert.alert(t('alerts.generic', { message }));
+      showToast(t('alerts.generic', { message }), 'error');
     }
   };
 
@@ -136,7 +273,11 @@ export default function TeamManagementRoute() {
     }
 
     try {
-      await saveTeam(teamName, { description: teamDescription, videoLink: teamVideoLink });
+      await saveTeam(teamName, {
+        description: teamDescription,
+        videoLink: teamVideoLink,
+        ...(teamDisplayName && eventType === 'februtalis' ? { name: teamDisplayName } : {}),
+      }, eventType);
       Alert.alert(t('alerts.teamSaved'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -146,7 +287,8 @@ export default function TeamManagementRoute() {
 
   return (
     <TeamManagementScreen
-      teamName={teamName}
+      teamName={teamDisplayName}
+      sponsors={sponsors.filter((sponsor) => sponsor.team === teamName)}
       teamDescription={teamDescription}
       teamVideoLink={teamVideoLink}
       teamLogo={teamLogo}
@@ -154,8 +296,12 @@ export default function TeamManagementRoute() {
       uploadingImage={uploadingImage}
       inviteEmail={inviteEmail}
       inviteRole={inviteRole}
+      sponsorName={sponsorName}
+      sponsorLogo={sponsorLogo}
+      editingSponsor={Boolean(editingSponsorId)}
+      isManagingSponsors={isManagingSponsors}
       onBack={() => goBackOrHome(router)}
-      onRefresh={() => void refresh()}
+      onRefresh={handleRefresh}
       onDescriptionChange={setTeamDescription}
       onVideoLinkChange={setTeamVideoLink}
       onUploadTeamImage={(type) => void uploadTeamImage(type)}
@@ -163,6 +309,12 @@ export default function TeamManagementRoute() {
       onInviteEmailChange={setInviteEmail}
       onInviteRoleChange={setInviteRole}
       onSendTeamInvite={() => void handleInvite()}
+      onSponsorNameChange={setSponsorName}
+      onPickSponsorLogo={() => void handlePickSponsorLogo()}
+      onSaveSponsor={() => void handleSaveSponsor()}
+      onCancelSponsorEdit={clearSponsorForm}
+      onEditSponsor={handleEditSponsor}
+      onDeleteSponsor={handleDeleteSponsor}
     />
   );
 }

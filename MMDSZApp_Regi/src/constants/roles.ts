@@ -29,6 +29,7 @@ export type NavigationItem = {
 
 const allRoles = Object.values(UserRole);
 const organizers = [UserRole.FOSZERVEZO, UserRole.SZERVEZO] as const;
+const juries = [UserRole.ZSURI] as const;
 const captains = [UserRole.CSAPATKAPITANY, UserRole.ALCSAPATKAPITANY] as const;
 const headOrganizer = [UserRole.FOSZERVEZO] as const;
 
@@ -60,6 +61,8 @@ export const can: Record<Permission, readonly UserRole[]> = {
   uploadIgazolas: [...captains, UserRole.CSAPATTAG],
 };
 
+export const judgeRoles = [...juries] as const;
+
 export function canRole(role: UserRole | undefined, permission: Permission) {
   return role !== undefined && can[permission].includes(role);
 }
@@ -67,10 +70,11 @@ export function canRole(role: UserRole | undefined, permission: Permission) {
 export function navigationItemsForRole(
   role: UserRole | undefined,
   group: NavigationItem['mobile'] | NavigationItem['desktop'],
+  options: { februtalisOrganizer?: boolean } = {},
 ) {
   return navigationItems.filter((item) => (
     item[group === 'tab' || group === 'more' ? 'mobile' : 'desktop'] === group
     && role !== undefined
-    && item.roles.includes(role)
+    && (item.roles.includes(role) || (item.key === 'admin' && options.februtalisOrganizer === true))
   ));
 }

@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { ProfileScreen } from '@/src/screens/profile-screen';
 import { auth, db } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { UserRole } from '@/src/types/auth';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { processImage } from '@/src/services/images';
@@ -16,7 +17,11 @@ export default function ProfileRoute() {
   const router = useRouter();
   const { t } = useTranslation();
   const { user, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const [isUploading, setIsUploading] = useState(false);
+  const eventVerification = profile?.eventVerifications?.[eventType];
+  const hasIgazolas = Boolean(eventVerification?.imageUrl
+    || (eventType === 'diaknapok' && !eventVerification && profile?.igazolas));
 
   const handleSaveName = async (name: string) => {
     if (!auth.currentUser) return;
@@ -74,8 +79,10 @@ export default function ProfileRoute() {
       team={profile?.team ?? ''}
       role={profile?.role ?? UserRole.CSAPATTAG}
       profileImage={profile?.profileImage ?? null}
-      hasIgazolas={Boolean(profile?.igazolas)}
-      isVerified={profile?.isVerified ?? false}
+      hasIgazolas={hasIgazolas}
+      isVerified={eventVerification
+        ? eventVerification.status === 'approved'
+        : profile?.isVerified ?? false}
       isUploading={isUploading}
       onBack={() => goBackOrHome(router)}
       onUploadProfileImage={handleUploadProfileImage}

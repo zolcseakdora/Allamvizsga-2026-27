@@ -1,0 +1,44 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'Főszervező';
+    }
+
+    function isApproved() {
+      return signedIn()
+        && (firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isVerified == true
+          || isAdmin());
+    }
+
+    match /gallery/{eventType}/{uid}/{imageId}/{fileName} {
+      allow read: if isApproved();
+      allow create: if isApproved()
+        && request.auth.uid == uid
+        && eventType in ['februtalis', 'diaknapok']
+        && imageId.matches('^[A-Za-z0-9_-]+$')
+        && fileName in ['image.jpg', 'thumb.jpg']
+        && request.resource.size <= 700000
+        && request.resource.contentType == 'image/jpeg';
+      allow update: if false;
+      // A feltöltő a saját képét is törölheti (a Firestore-szabály is engedi neki).
+      allow delete: if isAdmin() || (signedIn() && request.auth.uid == uid);
+    }
+
+    match /student-verifications/{uid}/{eventType}/{fileName} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && eventType in ['februtalis', 'diaknapok']
+        && fileName.matches('^[A-Za-z0-9_-]+\\.jpg$')
+        && request.resource.size <= 700000
+        && request.resource.contentType == 'image/jpeg';
+      allow update, delete: if false;
+    }
+  }
+}

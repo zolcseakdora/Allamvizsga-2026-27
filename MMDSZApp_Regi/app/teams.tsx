@@ -9,18 +9,26 @@ import { useAuth } from '@/src/context/AuthContext';
 import { canRole } from '@/src/constants/roles';
 import { goBackOrHome } from '@/src/utils/navigation';
 import { UserRole } from '@/src/types/auth';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 
 export default function TeamsRoute() {
   const router = useRouter();
   const { teams, refresh } = useTeams();
   const { sponsors, refreshSponsors } = useSponsors();
   const { profile } = useAuth();
-  const canManageTeam = canRole(profile?.role, 'inviteMembers');
+  const { eventType } = useEventSeason();
+  const currentTeamId = eventType === 'februtalis'
+    ? profile?.eventMemberships?.februtalis?.teamId
+    : undefined;
+  const currentRole = eventType === 'februtalis'
+    ? profile?.eventMemberships?.februtalis?.role ?? profile?.role
+    : profile?.role;
+  const canManageTeam = canRole(currentRole, 'inviteMembers');
 
   useEffect(() => {
-    void refresh();
+    void refresh(eventType);
     void refreshSponsors();
-  }, [refresh, refreshSponsors]);
+  }, [eventType, refresh, refreshSponsors]);
 
   const handleOpenLink = (link?: string) => {
     if (link) {
@@ -32,9 +40,11 @@ export default function TeamsRoute() {
     <TeamsScreen
       teams={teams}
       sponsors={sponsors}
+      eventType={eventType}
+      currentTeamId={currentTeamId}
       onBack={() => goBackOrHome(router)}
       onRefresh={() => {
-        void refresh();
+        void refresh(eventType);
         void refreshSponsors();
       }}
       onOpenLink={handleOpenLink}

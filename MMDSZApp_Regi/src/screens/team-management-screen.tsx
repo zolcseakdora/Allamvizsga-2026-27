@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { FilterChip } from '@/src/components/controls/filter-chip';
 
 import { UserRole } from '@/src/types/auth';
+import type { Sponsor } from '@/src/types/sponsor';
 
 type TeamManagementScreenProps = {
   teamName: string;
+  sponsors: Sponsor[];
   teamDescription: string;
   teamVideoLink: string;
   teamLogo: string | null;
@@ -15,6 +17,10 @@ type TeamManagementScreenProps = {
   uploadingImage: 'logo' | 'flag' | null;
   inviteEmail: string;
   inviteRole: UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY;
+  sponsorName: string;
+  sponsorLogo?: string;
+  editingSponsor: boolean;
+  isManagingSponsors: boolean;
   onBack: () => void;
   onRefresh: () => void;
   onDescriptionChange: (value: string) => void;
@@ -24,10 +30,17 @@ type TeamManagementScreenProps = {
   onInviteEmailChange: (value: string) => void;
   onInviteRoleChange: (role: UserRole.CSAPATTAG | UserRole.ALCSAPATKAPITANY) => void;
   onSendTeamInvite: () => void;
+  onSponsorNameChange: (value: string) => void;
+  onPickSponsorLogo: () => void;
+  onSaveSponsor: () => void;
+  onCancelSponsorEdit: () => void;
+  onEditSponsor: (sponsor: Sponsor) => void;
+  onDeleteSponsor: (sponsor: Sponsor) => void;
 };
 
 export function TeamManagementScreen({
   teamName,
+  sponsors,
   teamDescription,
   teamVideoLink,
   teamLogo,
@@ -35,6 +48,10 @@ export function TeamManagementScreen({
   uploadingImage,
   inviteEmail,
   inviteRole,
+  sponsorName,
+  sponsorLogo,
+  editingSponsor,
+  isManagingSponsors,
   onBack,
   onRefresh,
   onDescriptionChange,
@@ -44,6 +61,12 @@ export function TeamManagementScreen({
   onInviteEmailChange,
   onInviteRoleChange,
   onSendTeamInvite,
+  onSponsorNameChange,
+  onPickSponsorLogo,
+  onSaveSponsor,
+  onCancelSponsorEdit,
+  onEditSponsor,
+  onDeleteSponsor,
 }: TeamManagementScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
@@ -88,6 +111,78 @@ export function TeamManagementScreen({
           </View>
 
           <View style={[styles.teamColumn, isDesktop && styles.desktopColumn]}>
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🤝 {t('teamManagement.sponsors')}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t('teamManagement.sponsorNamePlaceholder')}
+                placeholderTextColor="#888"
+                value={sponsorName}
+                onChangeText={onSponsorNameChange}
+                editable={!isManagingSponsors}
+              />
+              <TouchableOpacity
+                style={styles.outlineButton}
+                onPress={onPickSponsorLogo}
+                disabled={isManagingSponsors}
+              >
+                <Text style={styles.outlineButtonText}>
+                  {sponsorLogo ? t('teamManagement.changeSponsorLogo') : t('teamManagement.chooseSponsorLogo')}
+                </Text>
+              </TouchableOpacity>
+              {sponsorLogo && (
+                <Image source={{ uri: sponsorLogo }} style={styles.sponsorPreview} resizeMode="contain" />
+              )}
+              <TouchableOpacity
+                style={[styles.solidButton, isManagingSponsors && styles.disabledButton]}
+                onPress={onSaveSponsor}
+                disabled={isManagingSponsors}
+              >
+                <Text style={styles.solidButtonText}>
+                  {isManagingSponsors
+                    ? t('common.uploading')
+                    : t(editingSponsor ? 'teamManagement.saveSponsor' : 'teamManagement.addSponsor')}
+                </Text>
+              </TouchableOpacity>
+              {editingSponsor && (
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={onCancelSponsorEdit}
+                  disabled={isManagingSponsors}
+                >
+                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+              )}
+              {sponsors.length === 0 ? (
+                <Text style={styles.cardText}>{t('teamManagement.noSponsors')}</Text>
+              ) : (
+                <View style={styles.sponsorList}>
+                  {sponsors.map((sponsor) => (
+                    <View key={sponsor.id} style={styles.sponsorRow}>
+                      <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
+                      <Text style={styles.sponsorName} numberOfLines={2}>{sponsor.name}</Text>
+                      <View style={styles.sponsorActions}>
+                        <TouchableOpacity
+                          style={styles.sponsorActionButton}
+                          onPress={() => onEditSponsor(sponsor)}
+                          disabled={isManagingSponsors}
+                        >
+                          <Text style={styles.sponsorActionText}>{t('teamManagement.editSponsor')}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.sponsorActionButton, styles.deleteSponsorButton]}
+                          onPress={() => onDeleteSponsor(sponsor)}
+                          disabled={isManagingSponsors}
+                        >
+                          <Text style={styles.sponsorActionText}>{t('teamManagement.deleteSponsor')}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
             <View style={styles.card}>
               <Text style={styles.cardTitle}>✉️ {t('teamManagement.inviteTitle')}</Text>
               <Text style={styles.cardText}>{t('teamManagement.inviteDescription')}</Text>
@@ -157,6 +252,20 @@ const styles = StyleSheet.create({
   roleRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   roleChip: { flex: 1 },
   solidButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
+  disabledButton: { opacity: 0.7 },
   inviteButton: { backgroundColor: '#27AE60', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },
   solidButtonText: { color: '#FFFFFF', fontWeight: 'bold', letterSpacing: 1, textAlign: 'center' },
+  outlineButton: { borderWidth: 1, borderColor: '#EC2127', borderRadius: 8, padding: 12, alignItems: 'center', marginBottom: 12 },
+  outlineButtonText: { color: '#FFFFFF', fontWeight: '600', textAlign: 'center' },
+  cancelButton: { alignItems: 'center', paddingVertical: 12 },
+  cancelButtonText: { color: '#aaa', fontWeight: '600' },
+  sponsorPreview: { width: 120, height: 80, alignSelf: 'center', marginBottom: 12 },
+  sponsorList: { marginTop: 14 },
+  sponsorRow: { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#333', paddingVertical: 10, gap: 10 },
+  sponsorLogo: { width: 56, height: 48 },
+  sponsorName: { color: '#FFF', flex: 1, fontSize: 14 },
+  sponsorActions: { flexDirection: 'row', gap: 6 },
+  sponsorActionButton: { backgroundColor: '#333', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 7 },
+  deleteSponsorButton: { backgroundColor: '#7A2024' },
+  sponsorActionText: { color: '#FFF', fontSize: 12, fontWeight: '600' },
 });

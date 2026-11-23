@@ -13,7 +13,7 @@ const FALLBACK_QUALITIES = [0.7, 0.6, 0.5, 0.4, 0.3];
 export async function processImage(
   uri: string,
   { maxSide, quality, maxBytes }: ProcessImageOptions,
-): Promise<{ dataUrl: string }> {
+): Promise<{ dataUrl: string; uri: string }> {
   const qualities = [...new Set([quality, ...FALLBACK_QUALITIES.filter(value => value < quality)])]
     .filter(value => value > 0 && value <= 1);
   const sizes: number[] = [];
@@ -48,7 +48,7 @@ export async function processImage(
       if (!result.base64) throw new Error('image-processing-failed');
 
       const dataUrl = `data:image/jpeg;base64,${result.base64}`;
-      if (dataUrl.length <= maxBytes) return { dataUrl };
+      if (dataUrl.length <= maxBytes) return { dataUrl, uri: result.uri };
     }
   }
 

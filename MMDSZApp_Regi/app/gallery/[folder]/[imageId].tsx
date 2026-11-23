@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { GalleryImageScreen } from '@/src/screens/gallery-image-screen';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useGalleryNavigation } from '@/src/context/GalleryNavigationContext';
 import { useGallery } from '@/src/hooks/use-gallery';
 import { canRole } from '@/src/constants/roles';
@@ -18,24 +19,35 @@ export default function GalleryImageRoute() {
     folder: string;
     imageId: string;
   }>();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const galleryNavigation = useGalleryNavigation();
-  const { getImage, deleteImage } = useGallery();
+  const { getImage, deleteImage } = useGallery(eventType);
   const [loadResult, setLoadResult] = useState<{
     imageId: string;
     image: GalleryImage | null;
     error?: string;
   } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const canManageGallery = canRole(profile?.role, 'manageGallery');
   const currentLoadResult = loadResult?.imageId === imageId ? loadResult : null;
   const image = currentLoadResult?.image ?? null;
+  const isApprovedAccount = profile !== null && (
+    profile.accountStatus === 'active'
+    || (!profile.accountStatus && (profile.isVerified || canRole(profile.role, 'manageGallery')))
+  );
+  const canManageGallery = Boolean(isApprovedAccount && (
+    canRole(profile?.role, 'manageGallery')
+    || (user && image?.uploadedByUid === user.uid)
+  ));
   const loadError = currentLoadResult?.error ?? null;
   const isLoading = Boolean(imageId) && currentLoadResult === null;
   const imageIdList = useMemo(() => {
-    const folderImageIds = galleryNavigation.folder === folder ? galleryNavigation.imageIds : [];
+    const folderImageIds = galleryNavigation.folder === folder
+      && galleryNavigation.eventType === eventType
+      ? galleryNavigation.imageIds
+      : [];
     return folderImageIds.length > 0 ? folderImageIds : imageId ? [imageId] : [];
-  }, [folder, galleryNavigation.folder, galleryNavigation.imageIds, imageId]);
+  }, [eventType, folder, galleryNavigation.eventType, galleryNavigation.folder, galleryNavigation.imageIds, imageId]);
   const currentIndex = imageIdList.indexOf(imageId);
 
   useEffect(() => {

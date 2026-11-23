@@ -27,9 +27,11 @@ export function GameDetailScreen({ game, showScoring, onBack }: GameDetailScreen
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
             <Text style={styles.icon}>{game.icon}</Text>
             <Text style={[styles.title, width < 900 && styles.mobileTitle]}>
-              {getGameText(game.title, i18n.language)}
+              {game.titleKey ? t(game.titleKey) : getGameText(game.title, i18n.language)}
             </Text>
-            <Text style={styles.description}>{getGameText(game.description, i18n.language)}</Text>
+            <Text style={styles.description}>
+              {game.descriptionKey ? t(game.descriptionKey) : getGameText(game.description, i18n.language)}
+            </Text>
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('games.schedule')}</Text>
               <Text style={styles.sectionText}>{t('games.schedulePlaceholder')}</Text>

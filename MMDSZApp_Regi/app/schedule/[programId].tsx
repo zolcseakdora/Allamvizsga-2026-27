@@ -6,18 +6,17 @@ import { useTranslation } from 'react-i18next';
 
 import { ProgramDetailsScreen } from '@/src/screens/program-details-screen';
 import { useAuth } from '@/src/context/AuthContext';
-import { usePrograms } from '@/src/hooks/use-programs';
-import type { Program } from '@/src/types/program';
+import { useSchedulePrograms } from '@/src/hooks/use-schedule-programs';
 import { canRole } from '@/src/constants/roles';
 import { goBackOrHome } from '@/src/utils/navigation';
 
 export default function ProgramDetailsRoute() {
   const router = useRouter();
   const { t } = useTranslation();
-  const { programId } = useLocalSearchParams<{ programId: string }>();
+  const { programId, dayId } = useLocalSearchParams<{ programId: string; dayId?: string }>();
   const { profile } = useAuth();
-  const { getProgram, getProgramImage, deleteProgram } = usePrograms();
-  const [program, setProgram] = useState<Program | null>(null);
+  const { getProgram, getProgramImage, deleteProgram } = useSchedulePrograms();
+  const [program, setProgram] = useState<{ id?: string; title?: string; time?: string; helyszín?: string; day?: string; image?: string; description?: string } | null>(null);
   const [programImage, setProgramImage] = useState<string>();
   const [isImageLoading, setIsImageLoading] = useState(false);
   const [isLoadingProgram, setIsLoadingProgram] = useState(true);
@@ -33,19 +32,19 @@ export default function ProgramDetailsRoute() {
     setProgram(null);
     setProgramImage(undefined);
     setIsImageLoading(false);
-    void getProgram(programId)
+    void getProgram(programId, dayId || undefined)
       .then(async (nextProgram) => {
         if (!isActive) return;
         setProgram(nextProgram);
-        if (!nextProgram || (!nextProgram.thumb && !nextProgram.image)) {
+        if (!nextProgram || (!nextProgram.image && !nextProgram.thumb)) {
           setProgramImage(nextProgram?.image);
           setIsImageLoading(false);
           return;
         }
         setIsImageLoading(true);
-        setProgramImage(nextProgram.thumb ?? nextProgram.image);
+        setProgramImage(nextProgram.image ?? nextProgram.thumb);
         try {
-          const image = await getProgramImage(programId);
+          const image = await getProgramImage(programId, dayId || undefined);
           if (isActive) setProgramImage(image ?? nextProgram.image ?? nextProgram.thumb);
         } catch (error) {
           if (!isActive) return;
@@ -67,7 +66,7 @@ export default function ProgramDetailsRoute() {
     return () => {
       isActive = false;
     };
-  }, [getProgram, getProgramImage, programId, t]);
+  }, [dayId, getProgram, getProgramImage, programId, t]);
 
   const isAdmin = canRole(profile?.role, 'manageAdmin');
 
@@ -83,9 +82,9 @@ export default function ProgramDetailsRoute() {
       isImageLoading={isImageLoading}
       isAdmin={isAdmin}
       onBack={() => goBackOrHome(router)}
-      onEdit={(id) => router.push({ pathname: '/admin', params: { programId: id } })}
+      onEdit={(id) => router.push({ pathname: '/admin', params: { programId: id, dayId: dayId ?? '' } })}
       onDelete={(id) => {
-        void deleteProgram(id)
+        void deleteProgram(id, dayId || undefined)
           .then(() => goBackOrHome(router))
           .catch((error: unknown) => {
             const message = error instanceof Error ? error.message : String(error);

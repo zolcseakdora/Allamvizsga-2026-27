@@ -1,9 +1,12 @@
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@/src/context/AuthContext';
+import { UserRole } from '@/src/types/auth';
 
 type VerificationPendingScreenProps = {
   hasIgazolas: boolean;
+  eventName: string;
   emailVerified: boolean;
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
@@ -16,6 +19,7 @@ type VerificationPendingScreenProps = {
 
 export function VerificationPendingScreen({
   hasIgazolas,
+  eventName,
   emailVerified,
   isCheckingEmail,
   isResendingEmail,
@@ -26,14 +30,19 @@ export function VerificationPendingScreen({
   onLogout,
 }: VerificationPendingScreenProps) {
   const { t } = useTranslation();
+  const { profile } = useAuth();
+  const pendingStaff = profile?.pendingRole === UserRole.SZERVEZO
+    || profile?.pendingRole === UserRole.ZSURI;
+  const requiresStudentId = !pendingStaff;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webWrapper}>
         <View style={styles.card}>
           <Text style={styles.title}>⏳ {t('verification.title')}</Text>
+          <Text style={styles.eventName}>{eventName}</Text>
           <Text style={styles.cardText}>
-            {t('verification.message')}
+            {t(pendingStaff ? 'verification.pendingStaffMessage' : 'verification.message')}
           </Text>
 
           <Text style={[styles.emailStatus, { color: emailVerified ? '#27AE60' : '#F39C12' }]}>
@@ -63,13 +72,13 @@ export function VerificationPendingScreen({
             </>
           )}
 
-          {!hasIgazolas ? (
+          {requiresStudentId && (!hasIgazolas ? (
             <TouchableOpacity style={styles.solidButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
               <Text style={styles.solidButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('verification.uploadId')}</Text>
             </TouchableOpacity>
           ) : (
             <Text style={styles.uploadedText}>✅ {t('verification.uploaded')}</Text>
-          )}
+          ))}
 
           <TouchableOpacity style={styles.outlineButton} onPress={onLogout}>
             <Text style={styles.outlineButtonText}>{t('common.logout')}</Text>
@@ -85,6 +94,7 @@ const styles = StyleSheet.create({
   webWrapper: { width: '100%', maxWidth: 450, flex: 1, padding: 20, justifyContent: 'center' },
   card: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15 },
   title: { fontSize: 20, fontWeight: 'bold', color: '#F39C12', marginBottom: 6, textAlign: 'center', letterSpacing: 1 },
+  eventName: { color: '#aaa', fontSize: 13, fontWeight: 'bold', textAlign: 'center' },
   cardText: { fontSize: 14, color: '#aaa', lineHeight: 20, textAlign: 'center', marginVertical: 15 },
   emailStatus: { textAlign: 'center', fontWeight: 'bold', marginBottom: 12 },
   solidButton: { backgroundColor: '#EC2127', borderRadius: 8, paddingVertical: 14, alignItems: 'center' },

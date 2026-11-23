@@ -8,12 +8,16 @@ import { useAuth } from '@/src/context/AuthContext';
 import { useGalleryNavigation } from '@/src/context/GalleryNavigationContext';
 import { useGallery } from '@/src/hooks/use-gallery';
 import { goBackOrHome } from '@/src/utils/navigation';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
+import { FEBRUTALIS_GALLERY_FOLDERS, GALLERY_FOLDERS } from '@/src/constants/gallery';
 
 export default function GalleryFolderRoute() {
   const router = useRouter();
   const { t } = useTranslation();
   const { folder } = useLocalSearchParams<{ folder: string }>();
   const { profile } = useAuth();
+  const { eventType } = useEventSeason();
+  const folders = eventType === 'februtalis' ? FEBRUTALIS_GALLERY_FOLDERS : GALLERY_FOLDERS;
   const { setImageIds } = useGalleryNavigation();
   const {
     images,
@@ -24,7 +28,7 @@ export default function GalleryFolderRoute() {
     refresh,
     loadMore,
     upload,
-  } = useGallery();
+  } = useGallery(eventType);
 
   const showError = useCallback((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
@@ -35,7 +39,7 @@ export default function GalleryFolderRoute() {
     if (folder) void refresh(folder).catch(showError);
   }, [folder, refresh, showError]);
 
-  if (!folder) return null;
+  if (!folder || !folders.some((entry) => entry.id === folder)) return null;
 
   const handleUpload = async () => {
     try {
@@ -58,6 +62,7 @@ export default function GalleryFolderRoute() {
   return (
     <GalleryScreen
       selectedFolder={folder}
+      folders={folders}
       images={images}
       folderCounts={{}}
       imageCount={imageCount}
@@ -69,7 +74,7 @@ export default function GalleryFolderRoute() {
       onSelectFolder={() => undefined}
       onUploadImage={() => { void handleUpload(); }}
       onSelectImage={(image, imageIds) => {
-        setImageIds(folder, imageIds);
+        setImageIds(folder, imageIds, eventType);
         router.push({
           pathname: '/gallery/[folder]/[imageId]',
           params: { folder, imageId: image.id },
