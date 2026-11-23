@@ -5,7 +5,12 @@ const { randomUUID } = require('node:crypto');
 const { HttpsError, onCall } = require('firebase-functions/v2/https');
 
 if (!getApps().some((app) => app.name === '[DEFAULT]')) {
-  initializeApp();
+  // Éles környezetben a Cloud Functions adja a FIREBASE_CONFIG-ot (benne a Storage bucket nevével);
+  // emulátoros teszteknél ez hiányozhat, ezért a projekt alapértelmezett bucketjét használjuk.
+  const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT;
+  initializeApp(!process.env.FIREBASE_CONFIG && projectId
+    ? { projectId, storageBucket: `${projectId}.appspot.com` }
+    : undefined);
 }
 
 const db = getFirestore();
