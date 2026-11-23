@@ -295,3 +295,62 @@ describe('Galéria jogosultságok', () => {
     }
   });
 });
+
+describe('Összefésült funkciók (FebruTális / Storage-galéria)', () => {
+  it('a galéria eseménytípussal és Storage-URL-lel is feltölthető', async () => {
+    const firestore = userContext('member');
+    const batch = writeBatch(firestore);
+    batch.set(doc(firestore, 'gallery', 'event-photo'), {
+      image: 'https://firebasestorage.googleapis.com/v0/b/x/o/image.jpg',
+      thumb: 'https://firebasestorage.googleapis.com/v0/b/x/o/thumb.jpg',
+      category: 'Sportok',
+      eventType: 'februtalis',
+      uploadedBy: 'member',
+      uploadedByUid: 'member',
+      createdAt: new Date(),
+    });
+    batch.set(doc(firestore, 'gallery_images', 'event-photo'), {
+      image: 'https://firebasestorage.googleapis.com/v0/b/x/o/image.jpg',
+      eventType: 'februtalis',
+      uploadedByUid: 'member',
+    });
+    await assertSucceeds(batch.commit());
+  });
+
+  it('ismeretlen eseménytípussal nem tölthető fel kép', async () => {
+    const firestore = userContext('member');
+    await assertFails(setDoc(doc(firestore, 'gallery/bad-event'), {
+      thumb: 'x', category: 'Sportok', eventType: 'nyari', uploadedBy: 'member', uploadedByUid: 'member', createdAt: new Date(),
+    }));
+  });
+
+  it('a FebruTális-kapitány a saját FebruTális-csapatát szerkesztheti, másét nem', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      await setDoc(doc(firestore, 'teams/feb-alfa'), { name: 'Feb Alfa', eventType: 'februtalis', captainUid: 'feb-captain' });
+      await setDoc(doc(firestore, 'teams/feb-beta'), { name: 'Feb Beta', eventType: 'februtalis', captainUid: 'x' });
+      await setDoc(doc(firestore, 'users/feb-captain'), {
+        name: 'feb-captain', email: 'feb-captain@example.test', role: 'Csapattag', team: '', isVerified: true,
+        eventMemberships: { februtalis: { role: 'Csapatkapitány', teamId: 'feb-alfa' } },
+      });
+    });
+    const firestore = userContext('feb-captain');
+    await assertSucceeds(updateDoc(doc(firestore, 'teams/feb-alfa'), { description: 'Új leírás', eventType: 'februtalis' }));
+    await assertFails(updateDoc(doc(firestore, 'teams/feb-alfa'), { captainUid: 'feb-captain-2', eventType: 'februtalis' }));
+    await assertFails(updateDoc(doc(firestore, 'teams/feb-beta'), { description: 'Idegen', eventType: 'februtalis' }));
+    await assertFails(updateDoc(doc(firestore, 'teams/Alfa'), { description: 'Idegen' }));
+  });
+
+  it('a főszervező jóváhagyhatja az eseményenkénti igazolást, a felhasználó magának nem', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), 'users/member'), {
+        eventVerifications: { februtalis: { imageUrl: 'https://x/y.jpg', status: 'pending' } },
+      });
+    });
+    await assertFails(updateDoc(doc(userContext('member'), 'users/member'), { 'eventVerifications.februtalis.status': 'approved' }));
+    await assertSucceeds(updateDoc(doc(userContext('admin'), 'users/member'), {
+      isVerified: true,
+      'eventVerifications.februtalis.status': 'approved',
+    }));
+  });
+});

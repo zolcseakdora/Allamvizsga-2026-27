@@ -70,10 +70,11 @@ export function canRole(role: UserRole | undefined, permission: Permission) {
 export function navigationItemsForRole(
   role: UserRole | undefined,
   group: NavigationItem['mobile'] | NavigationItem['desktop'],
+  options: { februtalisOrganizer?: boolean } = {},
 ) {
   return navigationItems.filter((item) => (
     item[group === 'tab' || group === 'more' ? 'mobile' : 'desktop'] === group
     && role !== undefined
-    && item.roles.includes(role)
+    && (item.roles.includes(role) || (item.key === 'admin' && options.februtalisOrganizer === true))
   ));
 }

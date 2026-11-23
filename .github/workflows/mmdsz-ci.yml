@@ -6,6 +6,7 @@ on:
       - main
       - develop
       - release/mmdsz-v1
+      - 'release/**'
       - 'fix/**'
       - 'feature/kozos-kapitanyi-kod'
   pull_request:
@@ -55,6 +56,22 @@ jobs:
         working-directory: functions
         run: npm run build
 
+      - name: Esemeny-fuggvenyek (FebruTalis) fuggosegeinek telepitese
+        working-directory: MMDSZApp_Regi/functions
+        run: npm ci
+
+      - name: Offline szerveroldali es segedfuggveny-tesztek
+        working-directory: MMDSZApp_Regi
+        run: >-
+          node --test
+          tests/registration-functions.test.cjs
+          tests/invite-security.test.cjs
+          tests/registration-review.test.cjs
+          src/constants/event-countdown.test.mjs
+          src/constants/event-programs.test.mjs
+          src/constants/event-schedule.test.mjs
+          src/utils/event-data.test.mjs
+
       - name: Firebase CLI telepitese
         run: npm install --global firebase-tools@14
 
@@ -64,6 +81,10 @@ jobs:
       - name: Kozos kapitanyi kod integracios tesztje
         working-directory: functions
         run: firebase --config ../firebase.json emulators:exec --only auth,firestore,functions --project demo-mmdsz-shared-code "node tests/shared-captain-code.test.cjs"
+
+      - name: Esemenykezelo fuggvenyek es Storage-szabalyok tesztje
+        working-directory: MMDSZApp_Regi/functions
+        run: firebase --config ../../firebase.json emulators:exec --only firestore,storage --project demo-event-admin-validation "node --test test/*.test.js"
 
       - name: Playwright bongeszok telepitese
         working-directory: MMDSZApp_Regi

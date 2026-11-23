@@ -8,6 +8,7 @@ import { useToast } from '@/src/context/ToastContext';
 
 import { TeamManagementScreen } from '@/src/screens/team-management-screen';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { functions } from '@/src/config/firebase';
 import { useTeams } from '@/src/hooks/use-teams';
 import { canRole } from '@/src/constants/roles';
@@ -26,10 +27,21 @@ export default function TeamManagementRoute() {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { profile, isLoading } = useAuth();
+  const { eventType } = useEventSeason();
   const { getTeam, saveTeam } = useTeams();
   const { sponsors, refreshSponsors, addSponsor, updateSponsor, deleteSponsor } = useSponsors();
-  const canManageTeam = profile?.isVerified === true && canRole(profile?.role, 'inviteMembers');
-  const teamName = normalizeTeamName(profile?.team ?? '');
+  const membership = eventType === 'februtalis'
+    ? profile?.eventMemberships?.februtalis
+    : undefined;
+  const activeRole = eventType === 'februtalis' ? membership?.role : profile?.role;
+  const teamId = membership?.teamId;
+  const teamName = eventType === 'februtalis'
+    ? teamId ?? ''
+    : normalizeTeamName(profile?.team ?? '');
+  // Diáknapok: jóváhagyott kapitány/alkapitány; FebruTális: a főszervező által kijelölt csapatkapitány.
+  const canManageTeam = canRole(activeRole, 'inviteMembers')
+    && (eventType === 'februtalis' ? Boolean(teamId) : profile?.isVerified === true);
+  const [teamDisplayName, setTeamDisplayName] = useState(teamName);
   const [teamDescription, setTeamDescription] = useState('');
   const [teamVideoLink, setTeamVideoLink] = useState('');
   const [teamLogo, setTeamLogo] = useState<string | null>(null);
@@ -48,12 +60,13 @@ export default function TeamManagementRoute() {
 
   const refresh = useCallback(async () => {
     if (!canManageTeam || !teamName) return;
-    const [team] = await Promise.all([getTeam(teamName), refreshSponsors()]);
+    const [team] = await Promise.all([getTeam(teamName, eventType), refreshSponsors()]);
+    setTeamDisplayName(team?.name ?? teamName);
     setTeamDescription(team?.description ?? '');
     setTeamVideoLink(team?.videoLink ?? '');
     setTeamLogo(team?.logo ?? null);
     setTeamFlag(team?.flag ?? null);
-  }, [canManageTeam, getTeam, refreshSponsors, teamName]);
+  }, [canManageTeam, eventType, getTeam, refreshSponsors, teamName]);
 
   useEffect(() => {
     if (!canManageTeam) return;
@@ -99,7 +112,7 @@ export default function TeamManagementRoute() {
         maxBytes: 700000,
       });
 
-      await saveTeam(teamName, { [type]: dataUrl });
+      await saveTeam(teamName, { [type]: dataUrl }, eventType);
       if (type === 'logo') setTeamLogo(dataUrl);
       else setTeamFlag(dataUrl);
     } catch (error) {
@@ -222,6 +235,11 @@ export default function TeamManagementRoute() {
       Alert.alert(t('alerts.inviteNotAllowed'));
       return;
     }
+    if (eventType === 'februtalis') {
+      // FebruTális-csapatba a besorolást a főszervező végzi (joinFebrutalisTeam).
+      Alert.alert(t('alerts.inviteNotAllowed'));
+      return;
+    }
     if (!inviteEmail.trim() || !teamName) {
       Alert.alert(t('alerts.inviteEmailRequired'));
       return;
@@ -255,7 +273,11 @@ export default function TeamManagementRoute() {
     }
 
     try {
-      await saveTeam(teamName, { description: teamDescription, videoLink: teamVideoLink });
+      await saveTeam(teamName, {
+        description: teamDescription,
+        videoLink: teamVideoLink,
+        ...(teamDisplayName && eventType === 'februtalis' ? { name: teamDisplayName } : {}),
+      }, eventType);
       Alert.alert(t('alerts.teamSaved'));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -265,7 +287,7 @@ export default function TeamManagementRoute() {
 
   return (
     <TeamManagementScreen
-      teamName={teamName}
+      teamName={teamDisplayName}
       sponsors={sponsors.filter((sponsor) => sponsor.team === teamName)}
       teamDescription={teamDescription}
       teamVideoLink={teamVideoLink}

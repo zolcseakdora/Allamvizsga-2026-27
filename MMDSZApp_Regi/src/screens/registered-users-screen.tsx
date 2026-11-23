@@ -4,17 +4,33 @@ import { useTranslation } from 'react-i18next';
 import { UserRole } from '@/src/types/auth';
 import type { RegisteredUser } from '@/src/hooks/use-admin';
 import { isRegistrationReviewPending, registrationStatusLabel, requestedRegistrationRole } from '@/src/utils/registration-review';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
-type Props = {
+type RegisteredUsersScreenProps = {
   users: RegisteredUser[];
+  eventType: EventSeason;
+  isLoading: boolean;
+  error: string | null;
   onBack: () => void;
   onRefresh: () => void;
   canReviewRegistrations: boolean;
   onReviewRegistration: (userId: string, approved: boolean) => void;
   reviewingUserId?: string;
+  onAssignCaptain: (teamKey: string, captainUid: string, captainName: string) => void;
 };
 
-export function RegisteredUsersScreen({ users, onBack, onRefresh, canReviewRegistrations, onReviewRegistration, reviewingUserId }: Props) {
+export function RegisteredUsersScreen({
+  users,
+  eventType,
+  isLoading,
+  error,
+  onBack,
+  onRefresh,
+  canReviewRegistrations,
+  onReviewRegistration,
+  reviewingUserId,
+  onAssignCaptain,
+}: RegisteredUsersScreenProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   return (
@@ -26,34 +42,64 @@ export function RegisteredUsersScreen({ users, onBack, onRefresh, canReviewRegis
         </View>
         <Text style={styles.title}>👥 {t('users.title')}</Text>
         <ScrollView style={styles.list}>
-          {users.map((user) => {
-            const pending = isRegistrationReviewPending(user);
-            const requestedRole = requestedRegistrationRole(user) as UserRole | undefined;
-            const isBusy = reviewingUserId === user.id;
-            return (
-              <View key={user.id} style={styles.card}>
-                <Text style={styles.name}>👤 {user.name || 'Névtelen felhasználó'}</Text>
-                {user.email ? <Text style={styles.detail}>{user.email}</Text> : null}
-                <Text style={styles.detail}>Jelenlegi szerepkör: {translateRole(user.role, t)}</Text>
-                {pending && <Text style={styles.requested}>Kért szerepkör: {translateRole(requestedRole, t)}</Text>}
-                <Text style={styles.detail}>Regisztráció: {registrationStatusLabel(user)}</Text>
-                {user.requestedTeamName ? <Text style={styles.detail}>Kért csapat: {user.requestedTeamName}</Text> : null}
-                <Text style={[styles.document, { color: user.igazolas ? '#27AE60' : '#EC2127' }]}>
-                  {user.igazolas ? `✅ ${t('users.idUploaded')}` : `❌ ${t('users.noId')}`}
-                </Text>
-                {pending && canReviewRegistrations && (
-                  <View style={styles.actions}>
-                    <TouchableOpacity disabled={isBusy} onPress={() => onReviewRegistration(user.id, true)} style={[styles.approve, isBusy && styles.disabled]}>
-                      <Text style={styles.actionText}>{isBusy ? 'Feldolgozás...' : '✅ Jóváhagyás'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity disabled={isBusy} onPress={() => onReviewRegistration(user.id, false)} style={[styles.reject, isBusy && styles.disabled]}>
-                      <Text style={styles.actionText}>❌ Elutasítás</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            );
-          })}
+          {error
+            ? <Text style={styles.error}>{t('users.loadError', { message: error })}</Text>
+            : isLoading
+              ? <Text style={styles.emptyState}>{t('common.loading')}</Text>
+              : eventType === 'februtalis' && users.length === 0
+                ? <Text style={styles.emptyState}>{t('users.emptyFebrutalis')}</Text>
+                : users.map((user) => {
+                  // A regisztrációs jóváhagyás csak a Diáknapokra vonatkozik.
+                  const pending = eventType === 'diaknapok' && isRegistrationReviewPending(user);
+                  const requestedRole = requestedRegistrationRole(user) as UserRole | undefined;
+                  const isBusy = reviewingUserId === user.id;
+                  return (
+                    <View key={user.id} style={styles.card}>
+                      <Text style={styles.name}>👤 {user.name || 'Névtelen felhasználó'}</Text>
+                      {user.email ? <Text style={styles.detail}>{user.email}</Text> : null}
+                      <Text style={styles.detail}>Jelenlegi szerepkör: {translateRole(user.role, t)}</Text>
+                      {pending && <Text style={styles.requested}>Kért szerepkör: {translateRole(requestedRole, t)}</Text>}
+                      {eventType === 'diaknapok' && (
+                        <Text style={styles.detail}>Regisztráció: {registrationStatusLabel(user)}</Text>
+                      )}
+                      {user.requestedTeamName ? <Text style={styles.detail}>Kért csapat: {user.requestedTeamName}</Text> : null}
+                      {eventType === 'februtalis' && user.teamName ? (
+                        <Text style={styles.detail}>{t('users.eventTeam', { team: user.teamName })}</Text>
+                      ) : null}
+                      <Text style={[styles.document, { color: user.igazolas ? '#27AE60' : '#EC2127' }]}>
+                        {user.igazolas ? `✅ ${t('users.idUploaded')}` : `❌ ${t('users.noId')}`}
+                      </Text>
+                      {pending && canReviewRegistrations && (
+                        <View style={styles.actions}>
+                          <TouchableOpacity disabled={isBusy} onPress={() => onReviewRegistration(user.id, true)} style={[styles.approve, isBusy && styles.disabled]}>
+                            <Text style={styles.actionText}>{isBusy ? 'Feldolgozás...' : '✅ Jóváhagyás'}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity disabled={isBusy} onPress={() => onReviewRegistration(user.id, false)} style={[styles.reject, isBusy && styles.disabled]}>
+                            <Text style={styles.actionText}>❌ Elutasítás</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {eventType === 'februtalis' && user.teamKey ? (
+                        user.isVerified
+                          ? (
+                            <TouchableOpacity
+                              style={styles.assignCaptainButton}
+                              onPress={() => {
+                                if (user.teamKey) onAssignCaptain(user.teamKey, user.id, user.name ?? '');
+                              }}
+                            >
+                              <Text style={styles.assignCaptainText}>
+                                {t(user.isFebrutalisCaptain
+                                  ? 'admin.changeFebrutalisCaptain'
+                                  : 'admin.assignFebrutalisCaptain')}
+                              </Text>
+                            </TouchableOpacity>
+                          )
+                          : <Text style={styles.pendingApproval}>{t('admin.captainRequiresApproval')}</Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
         </ScrollView>
       </View>
     </SafeAreaView>
@@ -89,4 +135,9 @@ const styles = StyleSheet.create({
   reject: { backgroundColor: '#AE252B', paddingVertical: 12, paddingHorizontal: 18, borderRadius: 8 },
   actionText: { color: '#FFF', fontWeight: 'bold' },
   disabled: { opacity: 0.5 },
+  emptyState: { color: '#aaa', fontSize: 15, textAlign: 'center', marginTop: 24 },
+  error: { color: '#EC2127', fontSize: 14, textAlign: 'center', marginTop: 24 },
+  assignCaptainButton: { backgroundColor: '#27AE60', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12, marginTop: 10, alignSelf: 'flex-start' },
+  assignCaptainText: { color: '#FFFFFF', fontWeight: 'bold' },
+  pendingApproval: { color: '#aaa', fontSize: 12, marginTop: 8 },
 });

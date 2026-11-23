@@ -1,25 +1,29 @@
 import * as ImagePicker from 'expo-image-picker';
-import { doc, updateDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { VerificationPendingScreen } from '@/src/screens/verification-pending-screen';
-import { auth, db } from '@/src/config/firebase';
+import { auth } from '@/src/config/firebase';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useToast } from '@/src/context/ToastContext';
 import { processImage } from '@/src/services/images';
+import { uploadStudentVerification } from '@/src/services/student-verification';
 
 export default function VerificationRoute() {
   const { t } = useTranslation();
   const { profile, user, logout, resendVerificationEmail, confirmEmailAndRedeem } = useAuth();
+  const { eventType } = useEventSeason();
   const { showToast } = useToast();
   const router = useRouter();
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [isUploadingIgazolas, setIsUploadingIgazolas] = useState(false);
 
-  const hasIgazolas = Boolean(profile?.igazolas);
+  const eventVerification = profile?.eventVerifications?.[eventType];
+  const hasIgazolas = Boolean(eventVerification?.imageUrl
+    || (eventType === 'diaknapok' && !eventVerification && profile?.igazolas));
   const emailVerified = user?.emailVerified ?? false;
 
   const handleLogout = async () => {
@@ -45,8 +49,8 @@ export default function VerificationRoute() {
 
       setIsUploadingIgazolas(true);
       try {
-        const { dataUrl } = await processImage(uri, { maxSide: 1600, quality: 0.7, maxBytes: 700000 });
-        await updateDoc(doc(db, 'users', uid), { igazolas: dataUrl, isVerified: false });
+        const { uri: processedUri } = await processImage(uri, { maxSide: 1600, quality: 0.7, maxBytes: 700000 });
+        await uploadStudentVerification(processedUri, uid, eventType);
         showToast(t('alerts.idUploaded'), 'success');
       } finally {
         setIsUploadingIgazolas(false);
@@ -83,7 +87,9 @@ export default function VerificationRoute() {
       } else if (result === 'none') {
         showToast(t('alerts.noPendingInvite'), 'success');
       } else {
-        showToast(t('alerts.inviteAccepted', { team: result.team }), 'success');
+        showToast(result.eventType
+          ? t('alerts.eventInviteAccepted', { eventName: t(`eventNames.${result.eventType}`) })
+          : t('alerts.inviteAccepted', { team: result.team }), 'success');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -96,6 +102,7 @@ export default function VerificationRoute() {
   return (
     <VerificationPendingScreen
       hasIgazolas={hasIgazolas}
+      eventName={t(`eventNames.${eventType}`)}
       emailVerified={emailVerified}
       isCheckingEmail={isCheckingEmail}
       isResendingEmail={isResendingEmail}

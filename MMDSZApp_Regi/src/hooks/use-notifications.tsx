@@ -28,6 +28,9 @@ import { canRole } from '@/src/constants/roles';
 import { db } from '@/src/config/firebase';
 import { createNotification, isLocallyCreatedNotification } from '@/src/services/notifications';
 import { UserRole } from '@/src/types/auth';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
+import type { EventSeason } from '@/src/constants/event-schedule';
+import type { NotificationAudience } from '@/src/services/notifications';
 
 export type Notification = {
   id: string;
@@ -36,6 +39,8 @@ export type Notification = {
   createdAt: Timestamp | null;
   createdBy: string;
   createdByName: string;
+  eventType: EventSeason;
+  audience: NotificationAudience;
 };
 
 type NotificationsContextValue = {
@@ -48,7 +53,12 @@ type NotificationsContextValue = {
   canSend: boolean;
   error: string | null;
   markAllSeen: () => Promise<void>;
-  sendNotification: (title: string, body: string) => Promise<void>;
+  sendNotification: (
+    title: string,
+    body: string,
+    eventType: EventSeason,
+    audience: NotificationAudience,
+  ) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
 };
 
@@ -58,6 +68,7 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const { user, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const canRead = Boolean(
     user
     && profile
@@ -67,6 +78,7 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
   const canSend = canRole(profile?.role, 'sendNotifications');
   const [notificationData, setNotificationData] = useState<{
     uid: string;
+    eventType: EventSeason;
     notifications: Notification[];
   } | null>(null);
   const [seenAtData, setSeenAtData] = useState<{ uid: string; seenAt: number | null } | null>(null);
@@ -124,8 +136,12 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt : null,
             createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
             createdByName: typeof data.createdByName === 'string' ? data.createdByName : '',
+            eventType: (data.eventType === 'februtalis' ? 'februtalis' : 'diaknapok') as EventSeason,
+            audience: data.audience === 'captains' || data.audience === 'organizers'
+              ? data.audience
+              : 'everyone',
           };
-        });
+        }).filter((notification) => notification.eventType === eventType);
 
         const nextIds = new Set(nextNotifications.map((item) => item.id));
         if (hasServerBaseline.current && seenNotificationIds.current) {
@@ -141,15 +157,15 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
         }
         seenNotificationIds.current = nextIds;
         if (!snapshot.metadata.fromCache) hasServerBaseline.current = true;
-        setNotificationData({ uid: user.uid, notifications: nextNotifications });
+        setNotificationData({ uid: user.uid, eventType, notifications: nextNotifications });
         setErrorData(null);
       },
       (snapshotError) => {
-        setNotificationData({ uid: user.uid, notifications: [] });
+        setNotificationData({ uid: user.uid, eventType, notifications: [] });
         setErrorData({ uid: user.uid, error: snapshotError.message });
       },
     );
-  }, [canRead, showToast, t, user]);
+  }, [canRead, eventType, showToast, t, user]);
 
   const markAllSeen = useCallback(async () => {
     if (!user || !canRead) return;
@@ -170,12 +186,17 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
     }
   }, [canRead, user]);
 
-  const sendNotification = useCallback(async (title: string, body: string) => {
+  const sendNotification = useCallback(async (
+    title: string,
+    body: string,
+    targetEventType: EventSeason,
+    audience: NotificationAudience,
+  ) => {
     if (!canSend || !user) {
       throw new Error(t('notifications.notAllowedToSend'));
     }
-    await createNotification(title, body, user.uid, profile?.name || user.displayName || '');
-  }, [canSend, profile?.name, t, user]);
+    await createNotification(title, body, targetEventType, audience);
+  }, [canSend, t, user]);
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!canSend) {
@@ -185,13 +206,16 @@ export function NotificationsProvider({ children }: PropsWithChildren) {
   }, [canSend, t]);
 
   const notifications = useMemo(
-    () => canRead && user && notificationData?.uid === user.uid
+    () => canRead && user
+      && notificationData?.uid === user.uid
+      && notificationData.eventType === eventType
       ? notificationData.notifications
       : [],
-    [canRead, notificationData, user],
+    [canRead, eventType, notificationData, user],
   );
   const isLoading = Boolean(
-    canRead && user && notificationData?.uid !== user.uid,
+    canRead && user
+      && (notificationData?.uid !== user.uid || notificationData.eventType !== eventType),
   );
   const error = user && errorData?.uid === user.uid ? errorData.error : null;
   const effectiveSeenAt = user

@@ -3,12 +3,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { ImageAspectFrame } from '@/src/components/image-aspect-frame';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type HomeScreenProps = {
+  eventType: EventSeason;
   emailVerified: boolean;
   isCheckingEmail: boolean;
   isResendingEmail: boolean;
   timeLeft: { days: number; hours: number; minutes: number };
+  eventTitle: string;
+  eventName: string;
+  eventDateLabel: string;
+  countdownStatus: 'upcoming' | 'ongoing' | 'ended' | 'unpublished';
   showIgazolasUpload: boolean;
   hasIgazolas: boolean;
   isVerified: boolean;
@@ -19,10 +25,15 @@ type HomeScreenProps = {
 };
 
 export function HomeScreen({
+  eventType,
   emailVerified,
   isCheckingEmail,
   isResendingEmail,
   timeLeft,
+  eventTitle,
+  eventName,
+  eventDateLabel,
+  countdownStatus,
   showIgazolasUpload,
   hasIgazolas,
   isVerified,
@@ -35,6 +46,7 @@ export function HomeScreen({
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isWideDesktop = width >= 1200;
+  const statusLabel = countdownStatus === 'ongoing' ? t('home.ongoing') : countdownStatus === 'ended' ? t('home.ended') : '';
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
@@ -44,29 +56,32 @@ export function HomeScreen({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.countdownCard}>
-            <Text style={styles.countdownTitle}>🎉 {t('home.countdownTitle')}</Text>
-            <Text style={styles.countdownSub}>{t('home.date')}</Text>
+            <Text style={styles.countdownTitle}>🎉 {eventTitle}</Text>
+            <Text style={styles.countdownSub}>{eventDateLabel}</Text>
             <View style={styles.timerRow}>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.days}</Text><Text style={styles.timeLabel}>{t('home.days')}</Text></View>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.hours}</Text><Text style={styles.timeLabel}>{t('home.hours')}</Text></View>
               <View style={styles.timeBox}><Text style={styles.timeValue}>{timeLeft.minutes}</Text><Text style={styles.timeLabel}>{t('home.minutes')}</Text></View>
             </View>
+            {statusLabel ? <Text style={styles.countdownStatus}>{statusLabel}</Text> : null}
           </View>
 
-          <View style={[styles.newsGrid, isDesktop && styles.desktopNewsGrid]}>
-            <View style={[styles.newsCard, !isDesktop && styles.mobileNewsCard, isDesktop && styles.desktopNewsCard, isWideDesktop && styles.desktopNewsCardWide]}>
-              <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
-              <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
-              <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
-              <ImageAspectFrame source={require('@/assets/images/felvonulas.png')} style={styles.bandImageFrame} />
+          {eventType === 'diaknapok' && (
+            <View style={[styles.newsGrid, isDesktop && styles.desktopNewsGrid]}>
+              <View style={[styles.newsCard, !isDesktop && styles.mobileNewsCard, isDesktop && styles.desktopNewsCard, isWideDesktop && styles.desktopNewsCardWide]}>
+                <Text style={styles.newsBadge}>🚩 {t('home.paradeTime')}</Text>
+                <Text style={styles.cardTitle}>{t('home.paradeTitle')}</Text>
+                <Text style={styles.cardText}>{t('home.paradeBody')}</Text>
+                <ImageAspectFrame source={require('@/assets/images/felvonulas.png')} style={styles.bandImageFrame} />
+              </View>
+              <View style={[styles.newsCard, !isDesktop && styles.mobileNewsCard, isDesktop && styles.desktopNewsCard, isWideDesktop && styles.desktopNewsCardWide]}>
+                <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
+                <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
+                <Text style={styles.cardText}>{t('home.concertBody')}</Text>
+                <ImageAspectFrame source={require('@/assets/images/dondi.png')} style={styles.bandImageFrame} />
+              </View>
             </View>
-            <View style={[styles.newsCard, !isDesktop && styles.mobileNewsCard, isDesktop && styles.desktopNewsCard, isWideDesktop && styles.desktopNewsCardWide]}>
-              <Text style={[styles.newsBadge, styles.concertBadge]}>🎸 {t('home.concertTime')}</Text>
-              <Text style={styles.cardTitle}>{t('home.concertTitle')}</Text>
-              <Text style={styles.cardText}>{t('home.concertBody')}</Text>
-              <ImageAspectFrame source={require('@/assets/images/dondi.png')} style={styles.bandImageFrame} />
-            </View>
-          </View>
+          )}
 
           {!emailVerified && (
             <View style={styles.emailWarningCard}>
@@ -97,13 +112,19 @@ export function HomeScreen({
             <View style={styles.studentCard}>
               <Text style={styles.cardTitle}>🎓 {t('home.studentCard')}</Text>
               {hasIgazolas ? (
-                <Text style={[styles.verificationStatus, { color: isVerified ? '#27AE60' : '#F39C12' }]}>
-                  {isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`}
-                </Text>
+                <>
+                  <Text style={styles.eventName}>{eventName}</Text>
+                  <Text style={[styles.verificationStatus, { color: isVerified ? '#27AE60' : '#F39C12' }]}>
+                    {isVerified ? `✅ ${t('verification.accepted')}` : `⏳ ${t('verification.pending')}`}
+                  </Text>
+                </>
               ) : (
-                <TouchableOpacity style={styles.outlineButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
-                  <Text style={styles.outlineButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('home.uploadPhoto')}</Text>
-                </TouchableOpacity>
+                <>
+                  <Text style={styles.eventName}>{eventName}</Text>
+                  <TouchableOpacity style={styles.outlineButton} onPress={onUploadIgazolas} disabled={isUploadingIgazolas}>
+                    <Text style={styles.outlineButtonText}>📸 {isUploadingIgazolas ? t('common.uploading') : t('home.uploadPhoto')}</Text>
+                  </TouchableOpacity>
+                </>
               )}
             </View>
           )}
@@ -125,6 +146,7 @@ const styles = StyleSheet.create({
   countdownTitle: { color: '#FFF', fontSize: 15, fontWeight: 'bold', letterSpacing: 0.5, textAlign: 'center' },
   countdownSub: { color: '#aaa', fontSize: 13, marginBottom: 10, textAlign: 'center' },
   timerRow: { flexDirection: 'row', justifyContent: 'space-around', width: '100%' },
+  countdownStatus: { color: '#EC2127', fontSize: 12, fontWeight: 'bold', marginTop: 10, textAlign: 'center' },
   timeBox: { backgroundColor: '#121212', borderRadius: 8, padding: 8, width: '30%', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   timeValue: { color: '#EC2127', fontSize: 18, fontWeight: 'bold' },
   timeLabel: { color: '#FFF', fontSize: 11 },
@@ -141,6 +163,7 @@ const styles = StyleSheet.create({
   bandImageFrame: { borderRadius: 8, marginTop: 10 },
   studentCard: { backgroundColor: '#1E1E1E', borderWidth: 1, borderColor: '#333', borderRadius: 10, padding: 16, marginBottom: 15, alignItems: 'center' },
   verificationStatus: { fontWeight: 'bold', marginTop: 5 },
+  eventName: { color: '#aaa', fontSize: 12, marginBottom: 6 },
   outlineButton: { borderWidth: 2, borderColor: '#EC2127', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 15, alignItems: 'center', marginBottom: 14, backgroundColor: '#1E1E1E' },
   outlineButtonText: { color: '#FFF', fontWeight: 'bold' },
 });

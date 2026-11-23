@@ -43,11 +43,13 @@ export function GamesScreen({ title, subtitle, items, onBack, onSelect }: GamesS
                 style={[styles.folderCard, { width: cardWidth, minWidth: width >= 900 ? 220 : 0 }]}
                 onPress={() => onSelect(item)}
                 accessibilityRole="button"
-                accessibilityLabel={getGameText(item.title, i18n.language)}
+                accessibilityLabel={item.titleKey
+                  ? t(item.titleKey)
+                  : getGameText(item.title, i18n.language)}
               >
                 <Text style={styles.folderIcon}>{item.icon}</Text>
                 <Text style={styles.folderName} numberOfLines={2}>
-                  {getGameText(item.title, i18n.language)}
+                  {item.titleKey ? t(item.titleKey) : getGameText(item.title, i18n.language)}
                 </Text>
               </TouchableOpacity>
             ))}

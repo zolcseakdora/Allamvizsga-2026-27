@@ -23,7 +23,7 @@ function declaration(name, kind, optional = false) {
 }
 const snippets = [
   ...['HEAD_ORGANIZER','ORGANIZER','JURY','CAPTAIN','DEPUTY_CAPTAIN','TEAM_MEMBER','INVITE_LIFETIME_MS'].map(n=>declaration(n,'variable')),
-  ...['requireUid','requiredString','normalizeTeamName','profileIsActive','validEmail','escapeHtml'].map(n=>declaration(n,'function')),
+  ...['requireUid','requiredString','normalizeTeamName','profileIsActive','validEmail','escapeHtml','inviteEventType'].map(n=>declaration(n,'function')),
   declaration('configuredHttpsUrl','function',true),
   ...['createInvite','prepareInvitedRegistration','redeemInvite'].map(n=>declaration(n,'variable')),
 ].filter(Boolean).join('\n\n');
@@ -149,3 +149,31 @@ test('16. Fososzervezo szerepkor nem szerezheto meghivoval',async()=>{
 });
 test.todo('Kulon, egyszer hasznalhato, lejarato meghivo-token kell a regisztracios linkbe');
 test.todo('Idegen e-mail-cimre ne lehessen Firebase Auth fiokot lefoglalni a meghivo ellenorzese elott');
+
+// ----- Összefésülés (feature/Butyka): FebruTális-meghívók -----
+test('FebruTalis: foszervezo szervezot hivhat meg, az eseménytípus a meghívóba kerül',async()=>{
+  const f=fixture({hasInvite:false,inviterRole:'Főszervező'});
+  await f.invoke('createInvite',{email:'feb@example.org',role:'Zsűri',eventType:'februtalis'},'inviter');
+  const invite=f.data.get('invites/feb@example.org');
+  assert.equal(invite.eventType,'februtalis');
+  assert.equal(invite.role,'Zsűri');
+});
+test('FebruTalis: kapitany nem kuldhet FebruTalis-meghivot',async()=>{
+  const f=fixture({hasInvite:false});
+  await expectsError(f.invoke('createInvite',{...validInvite,eventType:'februtalis'},'inviter'),'permission-denied');
+});
+test('Ervenytelen esemenytipus elutasitva',async()=>{
+  const f=fixture({hasInvite:false,inviterRole:'Főszervező'});
+  await expectsError(f.invoke('createInvite',{email:'x@example.org',role:'Szervező',eventType:'nyari'},'inviter'),'invalid-argument');
+});
+test('FebruTalis-meghivo bevaltasa pendingEventType-ot ad, a szerepkor nem aktiv',async()=>{
+  const f=fixture({invitedRole:'Szervező',inviteTeam:'',hasProfile:true,emailVerified:true});
+  f.data.get('invites/teszt@example.org').eventType='februtalis';
+  const result=await f.invoke('redeemInvite',{name:'Teszt Elek'});
+  assert.equal(result.status,'accepted');
+  assert.equal(result.eventType,'februtalis');
+  const p=f.data.get('users/invitee');
+  assert.equal(p.pendingEventType,'februtalis');
+  assert.equal(p.role,'Csapattag');
+  assert.equal(p.accountStatus,'pending_admin_activation');
+});

@@ -12,19 +12,32 @@ import {
   Timestamp,
   where,
   writeBatch,
+  type QueryConstraint,
   type QueryDocumentSnapshot,
   type DocumentData,
 } from 'firebase/firestore';
 import { useCallback, useRef, useState } from 'react';
 
-import { auth, db } from '@/src/config/firebase';
-import { GALLERY_FOLDERS } from '@/src/constants/gallery';
+import { auth, db, storage } from '@/src/config/firebase';
+import { FEBRUTALIS_GALLERY_FOLDERS, GALLERY_FOLDERS } from '@/src/constants/gallery';
+import type { EventSeason } from '@/src/constants/event-schedule';
 import type { GalleryImage } from '@/src/types/gallery';
-import { makeThumbnail, processImage } from '@/src/services/images';
+import { processImage } from '@/src/services/images';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 
 const PAGE_SIZE = 24;
 
-function toGalleryImage(id: string, data: Record<string, unknown>, includeFullImage = true): GalleryImage | null {
+function toGalleryImage(
+  id: string,
+  data: Record<string, unknown>,
+  includeFullImage = true,
+  eventType: EventSeason = 'diaknapok',
+): GalleryImage | null {
+  const storedEventType = data.eventType === 'februtalis' || data.eventType === 'diaknapok'
+    ? data.eventType
+    : 'diaknapok';
+  if (storedEventType !== eventType) return null;
+
   const storedImage = typeof data.image === 'string' && data.image.length > 10 ? data.image : undefined;
   const thumb = typeof data.thumb === 'string' && data.thumb.length > 10 ? data.thumb : storedImage;
   const fallbackImage = includeFullImage ? storedImage ?? thumb : thumb ?? storedImage;
@@ -44,10 +57,24 @@ function toGalleryImage(id: string, data: Record<string, unknown>, includeFullIm
     uploadedBy: typeof data.uploadedBy === 'string' ? data.uploadedBy : undefined,
     uploadedByUid: typeof data.uploadedByUid === 'string' ? data.uploadedByUid : undefined,
     createdAt,
+    eventType: storedEventType,
   };
 }
 
-export function useGallery() {
+function folderQueryConstraints(folder: string, eventType: EventSeason): QueryConstraint[] {
+  const constraints: QueryConstraint[] = [where('category', '==', folder)];
+  if (eventType === 'februtalis') constraints.push(where('eventType', '==', 'februtalis'));
+  constraints.push(orderBy('createdAt', 'desc'));
+  return constraints;
+}
+
+async function imageBlob(uri: string) {
+  const response = await fetch(uri);
+  if (!response.ok) throw new Error('gallery-image-read-failed');
+  return response.blob();
+}
+
+export function useGallery(eventType: EventSeason = 'diaknapok') {
   const [images, setImages] = useState<GalleryImage[]>([]);
   const [imageCount, setImageCount] = useState(0);
   const [hasMoreImages, setHasMoreImages] = useState(false);
@@ -64,25 +91,44 @@ export function useGallery() {
     setImageCount(0);
     setHasMoreImages(false);
 
-    const folderQuery = query(
+    const countQuery = query(
       collection(db, 'gallery'),
       where('category', '==', folder),
-      orderBy('createdAt', 'desc'),
+      ...(eventType === 'februtalis' ? [where('eventType', '==', 'februtalis')] : []),
     );
-    const [snapshot, countSnapshot] = await Promise.all([
-      getDocs(query(folderQuery, limit(PAGE_SIZE))),
-      getCountFromServer(folderQuery),
+    const [countSnapshot, februtalisCountSnapshot] = await Promise.all([
+      getCountFromServer(countQuery),
+      eventType === 'diaknapok'
+        ? getCountFromServer(query(
+          collection(db, 'gallery'),
+          where('category', '==', folder),
+          where('eventType', '==', 'februtalis'),
+        ))
+        : Promise.resolve(null),
     ]);
+    let cursor: QueryDocumentSnapshot<DocumentData> | null = null;
+    let hasMore = true;
+    const page: GalleryImage[] = [];
+
+    while (page.length < PAGE_SIZE && hasMore) {
+      const constraints = folderQueryConstraints(folder, eventType);
+      if (cursor) constraints.push(startAfter(cursor));
+      constraints.push(limit(PAGE_SIZE));
+      const snapshot = await getDocs(query(collection(db, 'gallery'), ...constraints));
+      cursor = snapshot.docs.at(-1) ?? cursor;
+      hasMore = snapshot.docs.length === PAGE_SIZE;
+      page.push(...snapshot.docs
+        .map(item => toGalleryImage(item.id, item.data(), false, eventType))
+        .filter((item): item is GalleryImage => item !== null));
+    }
 
     if (requestId !== requestIdRef.current) return;
 
-    cursorRef.current = snapshot.docs.at(-1) ?? null;
-    setImages(snapshot.docs
-      .map(item => toGalleryImage(item.id, item.data(), false))
-      .filter((item): item is GalleryImage => item !== null));
-    setImageCount(countSnapshot.data().count);
-    setHasMoreImages(snapshot.docs.length === PAGE_SIZE);
-  }, []);
+    cursorRef.current = cursor;
+    setImages(page.slice(0, PAGE_SIZE));
+    setImageCount(countSnapshot.data().count - (februtalisCountSnapshot?.data().count ?? 0));
+    setHasMoreImages(hasMore);
+  }, [eventType]);
 
   const loadMore = useCallback(async (folder: string) => {
     const cursor = cursorRef.current;
@@ -92,40 +138,52 @@ export function useGallery() {
     loadingMoreRef.current = true;
     setIsLoadingMore(true);
     try {
-      const snapshot = await getDocs(query(
-        collection(db, 'gallery'),
-        where('category', '==', folder),
-        orderBy('createdAt', 'desc'),
-        startAfter(cursor),
-        limit(PAGE_SIZE),
-      ));
+      let nextCursor: QueryDocumentSnapshot<DocumentData> | null = cursor;
+      let hasMore = true;
+      const nextImages: GalleryImage[] = [];
+      while (nextImages.length < PAGE_SIZE && hasMore) {
+        const constraints = folderQueryConstraints(folder, eventType);
+        if (nextCursor) constraints.push(startAfter(nextCursor));
+        constraints.push(limit(PAGE_SIZE));
+        const snapshot = await getDocs(query(collection(db, 'gallery'), ...constraints));
+        nextCursor = snapshot.docs.at(-1) ?? nextCursor;
+        hasMore = snapshot.docs.length === PAGE_SIZE;
+        nextImages.push(...snapshot.docs
+          .map(item => toGalleryImage(item.id, item.data(), false, eventType))
+          .filter((item): item is GalleryImage => item !== null));
+      }
 
       if (requestId !== requestIdRef.current) return;
 
-      cursorRef.current = snapshot.docs.at(-1) ?? null;
-      const nextImages = snapshot.docs
-        .map(item => toGalleryImage(item.id, item.data(), false))
-        .filter((item): item is GalleryImage => item !== null);
+      cursorRef.current = nextCursor;
       setImages(current => [...current, ...nextImages]);
-      setHasMoreImages(snapshot.docs.length === PAGE_SIZE);
+      setHasMoreImages(hasMore);
     } finally {
       loadingMoreRef.current = false;
       if (requestId === requestIdRef.current) setIsLoadingMore(false);
     }
-  }, []);
+  }, [eventType]);
 
   const getFolderCounts = useCallback(async () => {
-    const entries = await Promise.all(GALLERY_FOLDERS.map(async folder => {
-      const folderQuery = query(
+    const folders = eventType === 'februtalis' ? FEBRUTALIS_GALLERY_FOLDERS : GALLERY_FOLDERS;
+    const entries = await Promise.all(folders.map(async folder => {
+      const allFolderQuery = query(
         collection(db, 'gallery'),
         where('category', '==', folder.id),
       );
-      const snapshot = await getCountFromServer(folderQuery);
-      return [folder.id, snapshot.data().count] as const;
+      const [allCount, februtalisCount] = await Promise.all([
+        getCountFromServer(eventType === 'februtalis'
+          ? query(allFolderQuery, where('eventType', '==', 'februtalis'))
+          : allFolderQuery),
+        eventType === 'diaknapok'
+          ? getCountFromServer(query(allFolderQuery, where('eventType', '==', 'februtalis')))
+          : Promise.resolve(null),
+      ]);
+      return [folder.id, allCount.data().count - (februtalisCount?.data().count ?? 0)] as const;
     }));
 
     return Object.fromEntries(entries) as Record<string, number>;
-  }, []);
+  }, [eventType]);
 
   const getImage = useCallback(async (imageId: string) => {
     const [gallerySnapshot, imageSnapshot] = await Promise.all([
@@ -133,21 +191,40 @@ export function useGallery() {
       getDoc(doc(db, 'gallery_images', imageId)),
     ]);
     const galleryData = gallerySnapshot.exists() ? gallerySnapshot.data() : {};
+    if (!gallerySnapshot.exists()) return null;
+    const storedEventType = galleryData.eventType === 'februtalis' || galleryData.eventType === 'diaknapok'
+      ? galleryData.eventType
+      : 'diaknapok';
+    if (storedEventType !== eventType) return null;
     const fullImage = imageSnapshot.exists()
       ? imageSnapshot.data().image
       : galleryData.image;
 
     if (typeof fullImage !== 'string' || fullImage.length <= 10) return null;
 
-    return toGalleryImage(imageId, { ...galleryData, image: fullImage });
-  }, []);
+    return toGalleryImage(imageId, { ...galleryData, image: fullImage }, true, eventType);
+  }, [eventType]);
 
   const deleteImage = useCallback(async (imageId: string) => {
+    const imageSnapshot = await getDoc(doc(db, 'gallery', imageId));
+    if (!imageSnapshot.exists()) return;
+    const storedEventType = imageSnapshot.data().eventType === 'februtalis'
+      ? 'februtalis'
+      : 'diaknapok';
+    if (storedEventType !== eventType) throw new Error('gallery-event-mismatch');
+    const fullImageSnapshot = await getDoc(doc(db, 'gallery_images', imageId));
+    const imageUrl = fullImageSnapshot.data()?.image;
+    const thumbUrl = imageSnapshot.data()?.thumb;
     const batch = writeBatch(db);
     batch.delete(doc(db, 'gallery', imageId));
     batch.delete(doc(db, 'gallery_images', imageId));
     await batch.commit();
-  }, []);
+    for (const url of [imageUrl, thumbUrl]) {
+      if (typeof url !== 'string' || !url.startsWith('https://firebasestorage.googleapis.com/')) continue;
+      const encodedPath = new URL(url).pathname.split('/o/')[1];
+      if (encodedPath) await deleteObject(ref(storage, decodeURIComponent(encodedPath)));
+    }
+  }, [eventType]);
 
   const upload = useCallback(async (folder: string, uploadedBy: string) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -167,25 +244,46 @@ export function useGallery() {
     try {
       let uploadedCount = 0;
       for (const asset of result.assets) {
-        const [{ dataUrl: image }, { dataUrl: thumb }] = await Promise.all([
+        const [{ uri: imageUri }, { uri: thumbUri }] = await Promise.all([
           processImage(asset.uri, { maxSide: 1600, quality: 0.7, maxBytes: 700000 }),
-          makeThumbnail(asset.uri),
+          processImage(asset.uri, { maxSide: 400, quality: 0.6, maxBytes: 40000 }),
         ]);
 
         const imageId = doc(collection(db, 'gallery')).id;
-        const batch = writeBatch(db);
-        batch.set(doc(db, 'gallery', imageId), {
-          thumb,
-          category: folder,
-          uploadedBy: uploadedBy || 'Névtelen',
-          uploadedByUid: uploaderUid,
-          createdAt: new Date(),
-        });
-        batch.set(doc(db, 'gallery_images', imageId), {
-          image,
-          uploadedByUid: uploaderUid,
-        });
-        await batch.commit();
+        const eventPrefix = `gallery/${eventType}/${uploaderUid}/${imageId}`;
+        const imageRef = ref(storage, `${eventPrefix}/image.jpg`);
+        const thumbRef = ref(storage, `${eventPrefix}/thumb.jpg`);
+        let imageUploaded = false;
+        let thumbUploaded = false;
+        try {
+          await uploadBytes(imageRef, await imageBlob(imageUri), { contentType: 'image/jpeg' });
+          imageUploaded = true;
+          await uploadBytes(thumbRef, await imageBlob(thumbUri), { contentType: 'image/jpeg' });
+          thumbUploaded = true;
+          const [image, thumb] = await Promise.all([getDownloadURL(imageRef), getDownloadURL(thumbRef)]);
+          const batch = writeBatch(db);
+          batch.set(doc(db, 'gallery', imageId), {
+            image,
+            thumb,
+            category: folder,
+            eventType,
+            uploadedBy: uploadedBy || 'Névtelen',
+            uploadedByUid: uploaderUid,
+            createdAt: new Date(),
+          });
+          batch.set(doc(db, 'gallery_images', imageId), {
+            image,
+            eventType,
+            uploadedByUid: uploaderUid,
+          });
+          await batch.commit();
+        } catch (error) {
+          await Promise.all([
+            ...(imageUploaded ? [deleteObject(imageRef)] : []),
+            ...(thumbUploaded ? [deleteObject(thumbRef)] : []),
+          ]);
+          throw error;
+        }
         uploadedCount += 1;
       }
 
@@ -193,7 +291,7 @@ export function useGallery() {
     } finally {
       setIsUploading(false);
     }
-  }, []);
+  }, [eventType]);
 
   return {
     images,

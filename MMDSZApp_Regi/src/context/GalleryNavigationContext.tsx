@@ -1,20 +1,27 @@
 import { createContext, useCallback, useContext, useMemo, useState, type PropsWithChildren } from 'react';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type GalleryNavigationContextValue = {
   folder: string | null;
   imageIds: string[];
-  setImageIds: (folder: string, imageIds: string[]) => void;
+  eventType: EventSeason | null;
+  setImageIds: (folder: string, imageIds: string[], eventType?: EventSeason) => void;
 };
 
 const GalleryNavigationContext = createContext<GalleryNavigationContextValue | undefined>(undefined);
 
 export function GalleryNavigationProvider({ children }: PropsWithChildren) {
-  const [galleryNavigation, setGalleryNavigation] = useState<{ folder: string | null; imageIds: string[] }>({
+  const [galleryNavigation, setGalleryNavigation] = useState<{
+    folder: string | null;
+    imageIds: string[];
+    eventType: EventSeason | null;
+  }>({
     folder: null,
     imageIds: [],
+    eventType: null,
   });
-  const setImageIds = useCallback((folder: string, imageIds: string[]) => {
-    setGalleryNavigation({ folder, imageIds });
+  const setImageIds = useCallback((folder: string, imageIds: string[], eventType?: EventSeason) => {
+    setGalleryNavigation({ folder, imageIds, eventType: eventType ?? null });
   }, []);
   const value = useMemo(
     () => ({ ...galleryNavigation, setImageIds }),

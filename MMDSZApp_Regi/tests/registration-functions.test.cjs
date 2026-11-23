@@ -21,6 +21,7 @@ const sourceFile = ts.createSourceFile(SOURCE, sourceText, ts.ScriptTarget.Lates
 const functions = [
   'requireUid', 'requiredString', 'normalizeTeamName',
   'profileIsActive', 'assertHeadOrganizer', 'validTeamName',
+  'diaknapokVerification', 'hasStudentVerification', 'approvedVerificationUpdate',
 ];
 const constants = [
   'HEAD_ORGANIZER', 'ORGANIZER', 'JURY', 'CAPTAIN', 'DEPUTY_CAPTAIN', 'TEAM_MEMBER',
@@ -304,4 +305,55 @@ test('Kapitanyi elutasitas nem hoz letre csapatot, jogosultsagot sem ad', async 
 test('Mar elbiralt kapitanyi kerelmet nem lehet ujra elbiralni', async () => {
   const f=fixture({captain:true,captainRequestStatus:'approved'});
   await rejectedWith(f.captain({approved:false}), 'failed-precondition');
+});
+
+// ----- Összefésülés (feature/Butyka): eseményenkénti igazolás és FebruTális-meghívó -----
+test('Csapattag-meghivo (pendingRole nelkul) igazolassal jovahagyhato', async () => {
+  const f=fixture({pendingRole:null, proof:'https://example.test/igazolas.jpg',
+    membershipStatus:'pending_verification', accountStatus:'pending_verification'});
+  assert.equal((await f.member({approved:true})).status,'approved');
+  const u=f.database.get('users/target');
+  assert.equal(u.role,'Csapattag');
+  assert.equal(u.accountStatus,'active');
+});
+
+test('Az eseményenkénti Diáknapok-igazolás is elfogadott, és jóváhagyottra vált', async () => {
+  const f=fixture({pendingRole:'Alcsapatkapitány', membershipStatus:'pending_admin_approval', accountStatus:'pending_admin_approval'});
+  f.database.get('users/target').eventVerifications = {
+    diaknapok: {imageUrl:'https://example.test/diaknapok.jpg', status:'pending'},
+  };
+  await f.member({approved:true});
+  const u=f.database.get('users/target');
+  assert.equal(u.role,'Alcsapatkapitány');
+  assert.equal(u['eventVerifications.diaknapok.status'],'approved');
+});
+
+test('A FebruTális-igazolás nem helyettesíti a Diáknapok-igazolást', async () => {
+  const f=fixture({pendingRole:'Csapattag', membershipStatus:'pending_verification', accountStatus:'pending_verification'});
+  f.database.get('users/target').eventVerifications = {
+    februtalis: {imageUrl:'https://example.test/feb.jpg', status:'pending'},
+  };
+  await rejectedWith(f.member({approved:true}), 'failed-precondition');
+});
+
+test('FebruTális-szervező jóváhagyása csak az eseménytagságot állítja be', async () => {
+  const f=fixture({pendingRole:'Szervező'});
+  f.database.get('users/target').pendingEventType = 'februtalis';
+  await f.member({approved:true});
+  const u=f.database.get('users/target');
+  assert.equal(u.role,'Csapattag');
+  assert.equal(JSON.stringify(u['eventMemberships.februtalis']), JSON.stringify({role:'Szervező'}));
+  assert.equal(u.pendingEventType, undefined);
+  assert.equal(u.accountStatus,'active');
+});
+
+test('Kapitány a feltöltött Diáknapok-igazolással is jóváhagyható', async () => {
+  const f=fixture({captain:true});
+  f.database.get('users/target').eventVerifications = {
+    diaknapok: {imageUrl:'https://example.test/kapitany.jpg', status:'pending'},
+  };
+  await f.captain({approved:true});
+  const u=f.database.get('users/target');
+  assert.equal(u.role,'Csapatkapitány');
+  assert.equal(u['eventVerifications.diaknapok.status'],'approved');
 });

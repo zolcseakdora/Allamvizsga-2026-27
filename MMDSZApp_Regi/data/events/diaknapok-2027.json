@@ -1,0 +1,26 @@
+{
+  "id": "diaknapok-2027",
+  "type": "diaknapok",
+  "editionYear": 2027,
+  "title": "Diáknapok 2027",
+  "titleEn": "Student Days 2027",
+  "displayTitle": "28. MAROSVÁSÁRHELYI DIÁKNAPOK",
+  "dateLabel": "2027. május 19-22.",
+  "startDate": "2027-05-19",
+  "endDate": "2027-05-22",
+  "timeZone": "Europe/Bucharest",
+  "published": true,
+  "theme": {
+    "primary": "#EC2127",
+    "background": "#121212",
+    "surface": "#1E1E1E",
+    "border": "#333333",
+    "activeSurface": "#321719"
+  },
+  "days": [
+    { "id": "2027-05-19", "date": "2027-05-19", "weekday": "Szerda", "order": 0, "programItems": [] },
+    { "id": "2027-05-20", "date": "2027-05-20", "weekday": "Csütörtök", "order": 1, "programItems": [] },
+    { "id": "2027-05-21", "date": "2027-05-21", "weekday": "Péntek", "order": 2, "programItems": [] },
+    { "id": "2027-05-22", "date": "2027-05-22", "weekday": "Szombat", "order": 3, "programItems": [] }
+  ]
+}

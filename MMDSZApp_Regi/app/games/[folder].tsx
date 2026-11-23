@@ -1,16 +1,19 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-import { GAMES, getGameText } from '@/src/constants/games';
+import { FEBRUTALIS_GAMES, GAMES, getGameText } from '@/src/constants/games';
 import type { GameEntry } from '@/src/constants/games';
 import { GamesScreen } from '@/src/screens/games-screen';
 import { goBackOrHome } from '@/src/utils/navigation';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 
 export default function GamesFolderRoute() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
+  const { eventType } = useEventSeason();
+  const games = eventType === 'februtalis' ? FEBRUTALIS_GAMES : GAMES;
   const { folder } = useLocalSearchParams<{ folder: string }>();
-  const folderEntry = GAMES.find(item => item.id === folder && item.type === 'folder');
+  const folderEntry = games.find(item => item.id === folder && item.type === 'folder');
 
   const selectGame = (item: GameEntry) => {
     if (item.route) {

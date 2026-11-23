@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { AuthScreen } from '@/src/screens/auth-screen';
 import { useAuth } from '@/src/context/AuthContext';
 import { useToast } from '@/src/context/ToastContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
+import { normalizeTeamName } from '@/src/utils/team-name';
 
 import { AuthMode } from '@/src/types/auth';
 
@@ -17,10 +19,12 @@ export default function AuthRoute() {
     if (invite === '1') setMode(AuthMode.REGISTER_INVITED);
   }, [invite]);
   const { t } = useTranslation();
-  const { login, register } = useAuth();
+  const { login, register, registerForEvent } = useAuth();
+  const { eventType } = useEventSeason();
   const { showToast } = useToast();
   const router = useRouter();
 
+  const [isFebrutalisRegistrationMode, setIsFebrutalisRegistrationMode] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,16 +39,29 @@ export default function AuthRoute() {
     setTeamName('');
     setRegistrationCode('');
     setSecurePassword(true);
+    setIsFebrutalisRegistrationMode(false);
   };
 
   const handleLogin = async () => {
-    if ( !email || !password ) return showToast(t('alerts.requiredFields'), 'error');
-
+    if (!email || !password) return showToast(t('alerts.emailPasswordRequired'), 'error');
+    const februtalisTeamName = normalizeTeamName(teamName);
+    if (isFebrutalisRegistrationMode && (februtalisTeamName.length < 2 || februtalisTeamName.length > 60)) {
+      return showToast(t('auth.teamNameRequired'), 'error');
+    }
     try {
       await login(email, password);
+      if (isFebrutalisRegistrationMode) {
+        await registerForEvent('februtalis', februtalisTeamName);
+        showToast(t('auth.februtalisRegistrationComplete'), 'success');
+      }
       router.replace('/'); 
-    } catch {
-      showToast(t('alerts.wrongCredentials'), 'error');
+    } catch (error) {
+      if (isFebrutalisRegistrationMode) {
+        const message = error instanceof Error ? error.message : String(error);
+        showToast(t('alerts.generic', { message }), 'error');
+      } else {
+        showToast(t('alerts.wrongCredentials'), 'error');
+      }
     }
   };
 
@@ -75,6 +92,8 @@ export default function AuthRoute() {
   return (
     <AuthScreen
       mode={mode}
+      isFebrutalisRegistrationMode={isFebrutalisRegistrationMode}
+      eventType={eventType}
       fullName={fullName}
       teamName={teamName}
       registrationCode={registrationCode}
@@ -88,7 +107,11 @@ export default function AuthRoute() {
       onPasswordChange={setPassword}
       onTogglePassword={() => setSecurePassword(!securePassword)}
       onSubmit={mode === AuthMode.LOGIN ? handleLogin : handleRegister}
-      onSetMode={setMode}
+      onSetMode={(nextMode) => { setMode(nextMode); resetForm(); }}
+      onToggleFebrutalisRegistration={() => {
+        setIsFebrutalisRegistrationMode((current) => !current);
+        setTeamName('');
+      }}
     />
   );
 }
