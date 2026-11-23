@@ -11,9 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { AuthMode } from '../types/auth';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 type AuthScreenProps = {
   mode: AuthMode;
+  isFebrutalisRegistrationMode?: boolean;
+  eventType?: EventSeason;
   fullName: string;
   teamName: string;
   registrationCode?: string;
@@ -28,10 +31,13 @@ type AuthScreenProps = {
   onTogglePassword: () => void;
   onSubmit: () => void;
   onSetMode: (mode: AuthMode) => void;
+  onToggleFebrutalisRegistration?: () => void;
 };
 
 export function AuthScreen({
   mode,
+  isFebrutalisRegistrationMode = false,
+  eventType = 'diaknapok',
   fullName,
   teamName,
   registrationCode,
@@ -46,6 +52,7 @@ export function AuthScreen({
   onTogglePassword,
   onSubmit,
   onSetMode,
+  onToggleFebrutalisRegistration,
 }: AuthScreenProps) {
   const { t, i18n } = useTranslation();
 
@@ -142,6 +149,17 @@ export function AuthScreen({
             </>
           )}
 
+          {/* FebruTális-jelentkezés meglévő fiókkal: csapatnév */}
+          {mode === AuthMode.LOGIN && isFebrutalisRegistrationMode && (
+            <TextInput
+              style={styles.input}
+              placeholder={t('auth.teamName')}
+              placeholderTextColor="#888"
+              value={teamName}
+              onChangeText={onTeamNameChange}
+            />
+          )}
+
           {/* E-mail cím */}
           <TextInput
             style={styles.input}
@@ -180,11 +198,22 @@ export function AuthScreen({
             <Text style={styles.solidButtonText}>
               {t(
                 mode === AuthMode.LOGIN
-                  ? 'auth.login'
+                  ? (isFebrutalisRegistrationMode ? 'auth.registerForFebrutalis' : 'auth.login')
                   : 'auth.register'
               )}
             </Text>
           </TouchableOpacity>
+
+          {/* FebruTális: jelentkezés meglévő fiókkal */}
+          {eventType === 'februtalis' && mode === AuthMode.LOGIN && onToggleFebrutalisRegistration && (
+            <TouchableOpacity style={styles.toggleMode} onPress={onToggleFebrutalisRegistration}>
+              <Text style={styles.toggleModeText}>
+                {t(isFebrutalisRegistrationMode
+                  ? 'auth.backToLogin'
+                  : 'auth.registerFebrutalisWithAccount')}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Nyelvfüggő navigáció */}
           <View style={styles.toggleMode}>
@@ -203,7 +232,7 @@ export function AuthScreen({
             )}
 
             {/* Regisztráció csapatkapitányként */}
-            {mode === AuthMode.LOGIN && (
+            {mode === AuthMode.LOGIN && !isFebrutalisRegistrationMode && (
               <TouchableOpacity
                 onPress={() =>
                   onSetMode(AuthMode.REGISTER_CAPTAIN)
@@ -216,7 +245,7 @@ export function AuthScreen({
                 </Text>
               </TouchableOpacity>
             )}
-            {mode === AuthMode.LOGIN && (
+            {mode === AuthMode.LOGIN && !isFebrutalisRegistrationMode && (
               <TouchableOpacity
                 onPress={() => onSetMode(AuthMode.REGISTER_INVITED)}
                 style={{ marginTop: 18 }}

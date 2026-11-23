@@ -4,7 +4,9 @@ The callable functions are the trusted write path for captain registration codes
 
 Build locally with `npm run build` from this directory. The configured runtime is Node.js 22 and functions are assigned to `europe-west1`.
 
-The Expo app has not yet been migrated to call these functions. Do not deploy these functions or the accompanying Firestore rules until the app registration, invitation, and approval screens use the callable endpoints and the complete workflow has been tested in an approved local Emulator environment. No data migration is included.
+The Expo app now calls these functions for registration, invitations and approvals. The FebruTális / event functions live in a second codebase (`MMDSZApp_Regi/functions`, codebase `events`); both codebases run in `europe-west1`. See `KITELEPITES.md` in the repository root for the deployment steps.
+
+`createInvite` needs `MMDSZ_APP_URL` (or `MMDSZ_INSTALL_URL`) in `functions/.env`; see `functions/.env.example`.
 
 Registration codes and invitations currently expire after 30 days. Codes are stored as SHA-256 hashes and can be redeemed once. Invitation expiration and membership assignment are checked and updated transactionally.
 

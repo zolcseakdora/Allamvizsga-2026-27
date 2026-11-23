@@ -10,6 +10,8 @@ export type GameEntry = {
   type: 'folder' | 'game';
   children: GameEntry[];
   description: LocalizedGameText;
+  titleKey?: string;
+  descriptionKey?: string;
   route?: '/photo-hunt';
 };
 
@@ -89,6 +91,49 @@ export const GAMES: GameEntry[] = [
     hu: 'Mutassátok be a csapatotokat egy videóban!',
     en: 'Introduce your team in a video!',
   }),
+];
+
+export const FEBRUTALIS_GAMES: GameEntry[] = [
+  {
+    id: 'pub-crawl',
+    title: { hu: 'Kocsmatúra', en: 'Pub crawl' },
+    titleKey: 'games.februtalis.pubCrawl',
+    icon: '🍻',
+    type: 'game',
+    children: [],
+    description: { hu: '', en: '' },
+    descriptionKey: 'games.februtalis.pubCrawlDescription',
+  },
+  {
+    id: 'case',
+    title: { hu: 'Case', en: 'Case' },
+    titleKey: 'games.februtalis.case',
+    icon: '💼',
+    type: 'game',
+    children: [],
+    description: { hu: '', en: '' },
+    descriptionKey: 'games.februtalis.caseDescription',
+  },
+  {
+    id: 'gokart-a',
+    title: { hu: 'Gokart játékok A-tömb', en: 'Go-kart games Block A' },
+    titleKey: 'games.februtalis.gokartA',
+    icon: '🏎️',
+    type: 'game',
+    children: [],
+    description: { hu: '', en: '' },
+    descriptionKey: 'games.februtalis.gokartDescription',
+  },
+  {
+    id: 'gokart-b',
+    title: { hu: 'Gokart játékok B-tömb', en: 'Go-kart games Block B' },
+    titleKey: 'games.februtalis.gokartB',
+    icon: '🏎️',
+    type: 'game',
+    children: [],
+    description: { hu: '', en: '' },
+    descriptionKey: 'games.februtalis.gokartDescription',
+  },
 ];
 
 export function getGameText(text: LocalizedGameText, language: string) {

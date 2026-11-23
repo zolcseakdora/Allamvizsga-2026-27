@@ -61,6 +61,33 @@ function assertHeadOrganizer(profile: Profile | undefined) {
   }
 }
 
+// Diákigazolvány: a régi `igazolas` mező vagy az eseményenkénti feltöltés
+// (eventVerifications.diaknapok.imageUrl, submitStudentVerification).
+function diaknapokVerification(profile: Record<string, unknown>) {
+  const verifications = profile.eventVerifications;
+  const entry = verifications && typeof verifications === 'object'
+    ? (verifications as Record<string, unknown>).diaknapok
+    : undefined;
+  return entry && typeof entry === 'object' ? entry as Record<string, unknown> : undefined;
+}
+
+function hasStudentVerification(profile: Record<string, unknown>) {
+  if (typeof profile.igazolas === 'string' && profile.igazolas.trim()) return true;
+  const imageUrl = diaknapokVerification(profile)?.imageUrl;
+  return typeof imageUrl === 'string' && imageUrl.trim().length > 0;
+}
+
+// Jóváhagyáskor az eseményenkénti Diáknapok-igazolást is elfogadottra állítjuk.
+function approvedVerificationUpdate(profile: Record<string, unknown>): Record<string, unknown> {
+  return diaknapokVerification(profile) ? { 'eventVerifications.diaknapok.status': 'approved' } : {};
+}
+
+function inviteEventType(value: unknown): 'februtalis' | 'diaknapok' {
+  if (value === undefined || value === null || value === 'diaknapok') return 'diaknapok';
+  if (value === 'februtalis') return 'februtalis';
+  throw new HttpsError('invalid-argument', 'Érvénytelen eseménytípus.');
+}
+
 function hashCode(code: string) {
   return createHash('sha256').update(code, 'utf8').digest('hex');
 }
@@ -301,10 +328,7 @@ export const reviewCaptainRegistration = onCall(async (request) => {
     ) {
       throw new HttpsError('failed-precondition', 'A kapitányi fiók állapota már megváltozott.');
     }
-    if (approved && (
-      typeof profileSnapshot.get('igazolas') !== 'string'
-      || !(profileSnapshot.get('igazolas') as string).trim()
-    )) {
+    if (approved && !hasStudentVerification(profileSnapshot.data() as Profile)) {
       throw new HttpsError('failed-precondition', 'Kapitány jóváhagyásához feltöltött diákigazolvány szükséges.');
     }
     const teamName = validTeamName(requiredString(registrationSnapshot.get('teamName'), 'csapatnév', 80));
@@ -331,6 +355,7 @@ export const reviewCaptainRegistration = onCall(async (request) => {
         requestedTeamName: FieldValue.delete(),
         approvedAt: now,
         approvedBy: reviewerUid,
+        ...approvedVerificationUpdate(profileSnapshot.data() as Profile),
       });
       transaction.update(registrationRef, {
         status: 'approved',
@@ -363,6 +388,7 @@ export const createInvite = onCall(async (request) => {
   const teamName = typeof request.data?.team === 'string'
     ? normalizeTeamName(request.data.team)
     : '';
+  const eventType = inviteEventType(request.data?.eventType);
 
   const appUrl = configuredHttpsUrl(process.env.MMDSZ_APP_URL);
   const installUrl = configuredHttpsUrl(process.env.MMDSZ_INSTALL_URL);
@@ -393,7 +419,7 @@ export const createInvite = onCall(async (request) => {
       if (![ORGANIZER, JURY].includes(role)) {
         throw new HttpsError('permission-denied', 'A főszervező ezen a felületen szervezőt vagy zsűrit hívhat meg.');
       }
-    } else if (profile.role === CAPTAIN || profile.role === DEPUTY_CAPTAIN) {
+    } else if (eventType === 'diaknapok' && (profile.role === CAPTAIN || profile.role === DEPUTY_CAPTAIN)) {
       if (![TEAM_MEMBER, DEPUTY_CAPTAIN].includes(role) || !teamName || teamName !== profile.team) {
         throw new HttpsError('permission-denied', 'Kapitány csak saját csapatába hívhat csapattagot vagy alkapitányt.');
       }
@@ -426,6 +452,7 @@ export const createInvite = onCall(async (request) => {
       email,
       team,
       role,
+      eventType,
       status: 'Függőben',
       createdBy: uid,
       createdAt: FieldValue.serverTimestamp(),
@@ -434,8 +461,8 @@ export const createInvite = onCall(async (request) => {
     transaction.create(mailRef, {
       to: email,
       message: {
-        subject: 'MMDSZ alkalmazás – meghívó',
-        text: `Meghívást kaptál az MMDSZ alkalmazásba. Szerepkör: ${role}.${team ? ` Csapat: ${team}.` : ''}\n` +
+        subject: eventType === 'februtalis' ? 'MMDSZ alkalmazás – FebruTális meghívó' : 'MMDSZ alkalmazás – meghívó',
+        text: `Meghívást kaptál az MMDSZ alkalmazásba${eventType === 'februtalis' ? ' (FebruTális)' : ''}. Szerepkör: ${role}.${team ? ` Csapat: ${team}.` : ''}\n` +
           `A meghívó 30 napig érvényes. Az e-mail-cím megerősítése és a főszervező jóváhagyása kötelező.\n` +
           `${textLinks}\nAz alkalmazásban válaszd a „Meghívóval regisztrálok” lehetőséget.`,
         html: `<p>Meghívást kaptál az MMDSZ alkalmazásba${escapedTeam ? ` a(z) <strong>${escapedTeam}</strong> csapatba` : ''}, <strong>${escapedRole}</strong> szerepkörbe.</p>` +
@@ -558,6 +585,11 @@ export const redeemInvite = onCall(async (request) => {
     }
 
     const pendingRole = role === TEAM_MEMBER ? undefined : role;
+    // FebruTális-meghívó: a szerepkör jóváhagyás után csak az eseménytagságba kerül.
+    const eventType = inviteEventType(inviteSnapshot.get('eventType'));
+    if (eventType === 'februtalis' && role !== ORGANIZER && role !== JURY) {
+      throw new HttpsError('failed-precondition', 'A FebruTális-meghívó szerepköre érvénytelen.');
+    }
     const membershipStatus = role === TEAM_MEMBER
       ? 'pending_verification'
       : role === DEPUTY_CAPTAIN
@@ -575,6 +607,9 @@ export const redeemInvite = onCall(async (request) => {
       ...(name ? { name } : {}),
       ...(pendingRole ? { pendingRole } : {}),
       ...(!pendingRole ? { pendingRole: FieldValue.delete() } : {}),
+      ...(eventType === 'februtalis'
+        ? { pendingEventType: 'februtalis' }
+        : { pendingEventType: FieldValue.delete() }),
       ...(!profileSnapshot.exists ? { createdAt: now } : {}),
     };
 
@@ -584,7 +619,9 @@ export const redeemInvite = onCall(async (request) => {
       acceptedBy: uid,
       acceptedAt: now,
     });
-    return { status: 'accepted' as const, team: invitedTeam };
+    return eventType === 'februtalis'
+      ? { status: 'accepted' as const, team: invitedTeam, eventType }
+      : { status: 'accepted' as const, team: invitedTeam };
   });
 
   return result;
@@ -615,7 +652,11 @@ export const reviewPendingMembership = onCall(async (request) => {
     ]);
     assertHeadOrganizer(reviewerSnapshot.exists ? reviewerSnapshot.data() as Profile : undefined);
     if (!profileSnapshot.exists) throw new HttpsError('not-found', 'A felhasználói profil nem található.');
-    const profile = profileSnapshot.data() as Profile & { membershipStatus?: unknown; pendingRole?: unknown };
+    const profile = profileSnapshot.data() as Profile & {
+      membershipStatus?: unknown;
+      pendingRole?: unknown;
+      pendingEventType?: unknown;
+    };
     const allowedStatuses = ['pending_verification', 'pending_admin_approval', 'pending_admin_activation'];
     if (!allowedStatuses.includes(profile.membershipStatus as string)) {
       throw new HttpsError('failed-precondition', 'A felhasználó nem vár jóváhagyásra.');
@@ -629,6 +670,7 @@ export const reviewPendingMembership = onCall(async (request) => {
       transaction.update(profileRef, {
         team: '',
         pendingRole: FieldValue.delete(),
+        pendingEventType: FieldValue.delete(),
         accountStatus: 'rejected',
         membershipStatus: 'rejected',
         isVerified: false,
@@ -639,18 +681,26 @@ export const reviewPendingMembership = onCall(async (request) => {
     }
 
     const pendingRole = profile.pendingRole;
-    const role = typeof pendingRole === 'string' ? pendingRole : TEAM_MEMBER;
+    // Csapattag-meghívónál a redeemInvite nem tárol pendingRole-t (pending_verification).
+    const role = typeof pendingRole === 'string'
+      ? pendingRole
+      : profile.membershipStatus === 'pending_verification' ? TEAM_MEMBER : '';
     if (![TEAM_MEMBER, DEPUTY_CAPTAIN, ORGANIZER, JURY].includes(role)) {
       throw new HttpsError('failed-precondition', 'A kért szerepkör érvénytelen.');
     }
     // A csapattag és az alkapitány egyaránt csak diákigazolvánnyal aktiválható.
     // A szervező és a zsűri meghívásához nem kérünk ilyen igazolást.
-    if ((role === TEAM_MEMBER || role === DEPUTY_CAPTAIN)
-      && (typeof profile.igazolas !== 'string' || !profile.igazolas.trim())) {
+    if ((role === TEAM_MEMBER || role === DEPUTY_CAPTAIN) && !hasStudentVerification(profile)) {
       throw new HttpsError('failed-precondition', 'Csapattag vagy alkapitány jóváhagyásához igazolás szükséges.');
     }
+    const isFebrutalisInvite = profile.pendingEventType === 'februtalis';
     transaction.update(profileRef, {
-      role,
+      // FebruTális-szervező/zsűri: a globális szerepkör nem változik, csak az eseménytagság.
+      ...(isFebrutalisInvite
+        ? { 'eventMemberships.februtalis': { role } }
+        : { role }),
+      pendingEventType: FieldValue.delete(),
+      ...approvedVerificationUpdate(profile),
       pendingRole: FieldValue.delete(),
       accountStatus: 'active',
       membershipStatus: 'active',

@@ -8,6 +8,7 @@ import { UserRole } from '@/src/types/auth';
 export type OrganizerInviteRole = UserRole.SZERVEZO | UserRole.ZSURI;
 
 type InviteManagementScreenProps = {
+  eventType: 'februtalis' | 'diaknapok';
   email: string;
   role: OrganizerInviteRole;
   isSending: boolean;
@@ -18,18 +19,20 @@ type InviteManagementScreenProps = {
 };
 
 export function InviteManagementScreen({
-  email, role, isSending, onBack, onEmailChange, onRoleChange, onSendInvite,
+  eventType, email, role, isSending, onBack, onEmailChange, onRoleChange, onSendInvite,
 }: InviteManagementScreenProps) {
   const { t } = useTranslation();
+  // A főszervező mindkét eseményre szervezőt vagy zsűrit hívhat meg; a szerver is csak ezt engedi.
   const options: OrganizerInviteRole[] = [UserRole.SZERVEZO, UserRole.ZSURI];
+  const isFebrutalis = eventType === 'februtalis';
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.container}>
       <View style={styles.wrapper}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Text style={styles.backText}>← {t('common.back')}</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>✉️ {t('inviteManagement.title')}</Text>
-        <Text style={styles.description}>{t('inviteManagement.description')}</Text>
+        <Text style={styles.title}>✉️ {t(isFebrutalis ? 'inviteManagement.februtalisTitle' : 'inviteManagement.title')}</Text>
+        <Text style={styles.description}>{t(isFebrutalis ? 'inviteManagement.februtalisDescription' : 'inviteManagement.description')}</Text>
         <ScrollView contentContainerStyle={styles.card}>
           <Text style={styles.label}>{t('common.email')}</Text>
           <TextInput

@@ -1,4 +1,6 @@
+
 import type { User } from 'firebase/auth';
+import type { EventSeason } from '@/src/constants/event-schedule';
 
 export enum UserRole {
   FOSZERVEZO = 'Főszervező',
@@ -6,7 +8,7 @@ export enum UserRole {
   ZSURI = 'Zsűri',
   CSAPATKAPITANY = 'Csapatkapitány',
   ALCSAPATKAPITANY = 'Alcsapatkapitány',
-  CSAPATTAG = 'Csapattag'
+  CSAPATTAG = 'Csapattag',
 }
 
 export type AccountStatus =
@@ -28,6 +30,12 @@ export type MembershipStatus =
   | 'active'
   | 'rejected';
 
+export type EventVerification = {
+  imageUrl: string;
+  status: 'pending' | 'approved';
+  uploadedAt?: unknown;
+};
+
 export type UserProfile = {
   name: string;
   email: string;
@@ -36,13 +44,30 @@ export type UserProfile = {
   igazolas?: string;
   isVerified: boolean;
   profileImage?: string | null;
+
+  // Diáknapok – regisztráció és jóváhagyás
   accountStatus?: AccountStatus;
   membershipStatus?: MembershipStatus;
   pendingRole?: UserRole;
   requestedTeamName?: string;
+
+  // FebruTális és Diáknapok – eseményenkénti adatok
+  eventMemberships?: Partial<
+    Record<EventSeason, {
+      teamId?: string;
+      role: UserRole;
+    }>
+  >;
+
+  eventVerifications?: Partial<
+    Record<EventSeason, EventVerification>
+  >;
 };
 
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
+export type AuthStatus =
+  | 'loading'
+  | 'authenticated'
+  | 'unauthenticated';
 
 export type AuthState = {
   user: User | null;
@@ -54,12 +79,17 @@ export type RegistrationInput = {
   name: string;
   email: string;
   password: string;
+
+  // Meglévő regisztrációs rendszer
   team?: string;
   registrationCode?: string;
   invited?: boolean;
-  // Kompatibilitás a meglévő meghívós oldalakkal. Nem jogosultságigénylés:
-  // a szerver dönti el a tényleges szerepkört a meghívó/kapitányi kód alapján.
+
+  // A tényleges szerepkört a szerver határozza meg
   role?: UserRole;
+
+  // FebruTális / Diáknapok
+  eventType?: EventSeason;
 };
 
 export enum AuthMode {

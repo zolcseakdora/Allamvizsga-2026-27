@@ -9,9 +9,11 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensio
 import { db } from '@/src/config/firebase';
 import { useToast } from '@/src/context/ToastContext';
 import { useAuth } from '@/src/context/AuthContext';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 import { useAdmin } from '@/src/hooks/use-admin';
 import { useNotifications } from '@/src/hooks/use-notifications';
 import { navigationItemsForRole, type NavigationItem } from '@/src/constants/roles';
+import { EventSelector } from '@/src/components/event-selector';
 import { UserRole } from '@/src/types/auth';
 
 function translatedRole(role: UserRole, t: (key: string) => string) {
@@ -104,9 +106,11 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
   const router = useRouter();
   const { t } = useTranslation();
   const { logout, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const brandLabel = eventType === 'februtalis' ? t('navigation.brandFebrutalis') : t('navigation.brandDiaknapok');
 
   return (
     <View
@@ -127,7 +131,7 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
         accessibilityRole="link"
       >
         <Text style={[styles.brand, width < 600 && styles.compactBrand]} numberOfLines={1}>
-          {t('navigation.brand')}
+          {brandLabel}
         </Text>
       </Pressable>
       <View
@@ -136,6 +140,7 @@ export function AppNavigationHeader({ role }: { role: UserRole }) {
           width < 600 && styles.compactActions,
         ]}
       >
+        <EventSelector />
         <Pressable
           onPress={() => router.push('/notifications')}
           style={styles.bellButton}
@@ -188,13 +193,25 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
+  const { eventType } = useEventSeason();
   const { showToast } = useToast();
   const { unreadCount } = useNotifications();
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
-  const tabItems = navigationItemsForRole(role, 'tab');
-  const mainItems = navigationItemsForRole(role, 'main');
-  const organizingItems = navigationItemsForRole(role, 'organizing');
+  const isFebrutalisOrganizer = eventType === 'februtalis'
+    && profile?.eventMemberships?.februtalis?.role === UserRole.SZERVEZO
+    && profile.role !== UserRole.FOSZERVEZO;
+  const eventScopedItems = (items: NavigationItem[]) => isFebrutalisOrganizer
+    ? items.filter((item) => item.key !== 'users' && item.key !== 'invites')
+    : items;
+  const tabItems = navigationItemsForRole(role, 'tab', { februtalisOrganizer: isFebrutalisOrganizer });
+  const mainItems = navigationItemsForRole(role, 'main', { februtalisOrganizer: isFebrutalisOrganizer });
+  const organizingItems = eventScopedItems(
+    navigationItemsForRole(role, 'organizing', { februtalisOrganizer: isFebrutalisOrganizer }),
+  );
+  const moreItems = eventScopedItems(
+    navigationItemsForRole(role, 'more', { februtalisOrganizer: isFebrutalisOrganizer }),
+  );
 
   useEffect(() => {
     if (role !== UserRole.FOSZERVEZO || !sidebar) {
@@ -207,7 +224,12 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
       (snapshot) => {
         const count = snapshot.docs.filter((user) => {
           const data = user.data();
-          return typeof data.igazolas === 'string' && data.isVerified !== true;
+          const verification = data.eventVerifications?.[eventType];
+          return verification
+            ? verification.status !== 'approved'
+            : eventType === 'diaknapok'
+              && typeof data.igazolas === 'string'
+              && data.isVerified !== true;
         }).length;
         setPendingApprovalsCount(count);
       },
@@ -215,7 +237,7 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
         showToast(t('alerts.generic', { message: error.message }), 'error');
       },
     );
-  }, [role, showToast, sidebar, t]);
+  }, [eventType, role, showToast, sidebar, t]);
 
   const isActive = (item: NavigationItem) => Boolean(
     item.route && (
@@ -270,7 +292,7 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
     desktop: 'main',
   };
   const moreActive = pathname === '/more'
-    || navigationItemsForRole(role, 'more').some((item) => isActive(item));
+    || moreItems.some((item) => isActive(item));
 
   return (
     <View
@@ -304,17 +326,23 @@ export function AppNavigation({ role, sidebar = false }: { role: UserRole; sideb
 export function MoreMenuScreen({ role }: { role: UserRole }) {
   const router = useRouter();
   const { t } = useTranslation();
-  const { logout } = useAuth();
+  const { logout, profile } = useAuth();
   const { showToast } = useToast();
+  const { eventType } = useEventSeason();
   const { pendingUsers, refreshPendingUsers } = useAdmin();
   const pendingApprovalsCount = pendingUsers.filter((user) => !user.isVerified).length;
-  const items = navigationItemsForRole(role, 'more');
+  const isFebrutalisOrganizer = eventType === 'februtalis'
+    && profile?.eventMemberships?.februtalis?.role === UserRole.SZERVEZO
+    && profile.role !== UserRole.FOSZERVEZO;
+  const items = navigationItemsForRole(role, 'more', {
+    februtalisOrganizer: isFebrutalisOrganizer,
+  }).filter((item) => !isFebrutalisOrganizer || (item.key !== 'users' && item.key !== 'invites'));
 
   useFocusEffect(useCallback(() => {
     if (role !== UserRole.FOSZERVEZO) return undefined;
 
     let isFocused = true;
-    void refreshPendingUsers().catch((error: unknown) => {
+    void refreshPendingUsers(eventType).catch((error: unknown) => {
       if (!isFocused) return;
       const message = error instanceof Error ? error.message : String(error);
       showToast(t('alerts.generic', { message }), 'error');
@@ -322,7 +350,7 @@ export function MoreMenuScreen({ role }: { role: UserRole }) {
     return () => {
       isFocused = false;
     };
-  }, [refreshPendingUsers, role, showToast, t]));
+  }, [eventType, refreshPendingUsers, role, showToast, t]));
 
   return (
     <View style={styles.moreScreen}>

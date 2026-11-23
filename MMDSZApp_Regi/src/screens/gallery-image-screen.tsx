@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -111,7 +112,7 @@ export function GalleryImageScreen({
               if (distance < -60 && hasNext) onNext();
             }}
           >
-            <Image source={{ uri: image.image }} style={styles.fullScreenImage} resizeMode="contain" />
+            <Image source={{ uri: image.image }} style={styles.fullScreenImage} contentFit="contain" />
           </View>
           <View style={styles.navigationRow}>
             <TouchableOpacity

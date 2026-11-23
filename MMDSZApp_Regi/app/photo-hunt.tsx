@@ -6,17 +6,27 @@ import { useTranslation } from 'react-i18next';
 import { PhotoHuntScreen } from '@/src/screens/photo-hunt-screen';
 import { usePhotoHunt } from '@/src/hooks/use-photo-hunt';
 import { goBackOrHome } from '@/src/utils/navigation';
+import { useEventSeason } from '@/src/context/EventSeasonContext';
 
 export default function PhotoHuntRoute() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { eventType } = useEventSeason();
   const { progress, uploadingTaskId, refresh, upload } = usePhotoHunt();
 
   useEffect(() => {
+    if (eventType === 'februtalis') {
+      router.replace('/games');
+      return;
+    }
     void refresh();
-  }, [refresh]);
+  }, [eventType, refresh, router]);
 
   const handleUpload = async (taskId: number) => {
+    if (eventType === 'februtalis') {
+      router.replace('/games');
+      return;
+    }
     try {
       await upload(taskId);
     } catch (error) {
@@ -32,6 +42,8 @@ export default function PhotoHuntRoute() {
       Alert.alert(t('alerts.generic', { message }));
     }
   };
+
+  if (eventType === 'februtalis') return null;
 
   return (
     <PhotoHuntScreen

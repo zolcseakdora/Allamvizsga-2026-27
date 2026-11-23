@@ -1,6 +1,10 @@
-import { collection, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 
-import { db } from '@/src/config/firebase';
+import { db, functions } from '@/src/config/firebase';
+import type { EventSeason } from '@/src/constants/event-schedule';
+
+export type NotificationAudience = 'everyone' | 'captains' | 'organizers';
 
 const localNotificationIds = new Set<string>();
 
@@ -11,8 +15,8 @@ export function isLocallyCreatedNotification(id: string) {
 export async function createNotification(
   title: string,
   body: string,
-  createdBy: string,
-  createdByName: string,
+  eventType: EventSeason,
+  audience: NotificationAudience,
 ) {
   const notificationRef = doc(collection(db, 'notifications'));
   localNotificationIds.add(notificationRef.id);
@@ -22,12 +26,22 @@ export async function createNotification(
   }
 
   try {
-    await setDoc(notificationRef, {
+    const publish = httpsCallable<
+      {
+        title: string;
+        body: string;
+        eventType: EventSeason;
+        audience: NotificationAudience;
+        notificationId: string;
+      },
+      { notificationId: string }
+    >(functions, 'publishNotification');
+    await publish({
       title,
       body,
-      createdAt: serverTimestamp(),
-      createdBy,
-      createdByName,
+      eventType,
+      audience,
+      notificationId: notificationRef.id,
     });
   } catch (error) {
     localNotificationIds.delete(notificationRef.id);

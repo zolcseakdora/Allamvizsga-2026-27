@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useContext,
@@ -19,11 +18,13 @@ import {
   type User,
 } from 'firebase/auth';
 
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { auth, db, functions } from '@/src/config/firebase';
+import type { EventSeason } from '@/src/constants/event-schedule';
+import { normalizeTeamName, teamNameKey } from '@/src/utils/team-name';
 
 import {
   type AccountStatus,
@@ -47,16 +48,18 @@ type AuthContextValue = AuthState & {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (input: RegistrationInput) => Promise<void>;
+  registerForEvent: (eventType: EventSeason, teamName: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   confirmEmailAndRedeem: () => Promise<InviteRedemptionResult>;
   resetPassword: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
-export type InviteRedemptionResult =
-  | 'none'
-  | 'unverified'
-  | { status: 'accepted'; team: string };
+export type InviteRedemptionResult = 'none' | 'unverified' | {
+  status: 'accepted';
+  team?: string;
+  eventType?: 'februtalis';
+};
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -75,7 +78,7 @@ async function redeemPendingInvite(
 
   const redeemInvite = httpsCallable<
     { name: string },
-    { status: 'none' } | { status: 'accepted'; team: string }
+    { status: 'none' } | { status: 'accepted'; team: string; eventType?: 'februtalis' }
   >(functions, 'redeemInvite');
 
   const result = await redeemInvite({
@@ -93,6 +96,7 @@ async function redeemPendingInvite(
     return {
       status: 'accepted',
       team: result.data.team,
+      ...(result.data.eventType === 'februtalis' ? { eventType: 'februtalis' as const } : {}),
     };
   }
 
@@ -138,6 +142,43 @@ function toUserProfile(
       ? (rawRole as UserRole)
       : UserRole.CSAPATTAG;
 
+  const rawMemberships = data.eventMemberships;
+  const eventMemberships: UserProfile['eventMemberships'] = {};
+  if (rawMemberships && typeof rawMemberships === 'object') {
+    for (const eventType of ['februtalis', 'diaknapok'] as const) {
+      const membership = (rawMemberships as Record<string, unknown>)[eventType];
+      if (!membership || typeof membership !== 'object') continue;
+      const value = membership as Record<string, unknown>;
+      if (Object.values(UserRole).some((role) => role === value.role)
+        && (value.teamId === undefined || typeof value.teamId === 'string')) {
+        eventMemberships[eventType] = {
+          ...(typeof value.teamId === 'string' ? { teamId: value.teamId } : {}),
+          role: value.role as UserRole,
+        };
+      }
+    }
+  }
+
+  const rawVerifications = data.eventVerifications;
+  const eventVerifications: UserProfile['eventVerifications'] = {};
+  if (rawVerifications && typeof rawVerifications === 'object') {
+    for (const eventType of ['februtalis', 'diaknapok'] as const) {
+      const verification = (rawVerifications as Record<string, unknown>)[eventType];
+      if (!verification || typeof verification !== 'object') continue;
+      const value = verification as Record<string, unknown>;
+      if (
+        typeof value.imageUrl === 'string'
+        && (value.status === 'pending' || value.status === 'approved')
+      ) {
+        eventVerifications[eventType] = {
+          imageUrl: value.imageUrl,
+          status: value.status,
+          ...(value.uploadedAt ? { uploadedAt: value.uploadedAt } : {}),
+        };
+      }
+    }
+  }
+
   return {
     name: typeof data.name === 'string' ? data.name : '',
     email:
@@ -168,6 +209,8 @@ function toUserProfile(
       typeof data.requestedTeamName === 'string'
         ? data.requestedTeamName
         : undefined,
+    eventMemberships,
+    eventVerifications,
   };
 }
 
@@ -391,6 +434,54 @@ export function AuthProvider({ children }: PropsWithChildren) {
           'A regisztrációs kérelem létrejött, de az e-mail-megerősítést nem sikerült elküldeni. Jelentkezz be, és kérj új megerősítő e-mailt.'
         );
       }
+    },
+
+    // MÁR BEJELENTKEZETT FELHASZNÁLÓ FEBRUTÁLIS-JELENTKEZÉSE
+    // A Firestore-szabályok csak a saját, egyszer létrehozható
+    // event_registrations/{uid}_februtalis dokumentumot engedik.
+    registerForEvent: async (eventType, teamName) => {
+      if (eventType !== 'februtalis') {
+        throw new Error('Nem támogatott eseménytípus.');
+      }
+
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error('Előbb jelentkezz be.');
+      }
+
+      const normalizedTeam = normalizeTeamName(teamName);
+      if (normalizedTeam.length < 2 || normalizedTeam.length > 60) {
+        throw new Error('A csapatnév 2–60 karakter lehet.');
+      }
+
+      // A jelenlegi felhasználó már rendelkezzen szerver által létrehozott profillal.
+      const userProfile = await getDoc(doc(db, 'users', user.uid));
+      if (!userProfile.exists()) {
+        throw new Error('A felhasználói profil nem található.');
+      }
+
+      const role = userProfile.data().role;
+      if (![UserRole.CSAPATTAG, UserRole.CSAPATKAPITANY,
+        UserRole.ALCSAPATKAPITANY].includes(role as UserRole)) {
+        throw new Error('Ezzel a szerepkörrel nem lehet csapatként jelentkezni.');
+      }
+
+      // Nem végzünk előzetes getDoc-ot ezen a dokumentumon:
+      // a nem létező dokumentum olvasását a jelenlegi szabályok megtagadhatják.
+      // Ismételt jelentkezéskor a szerveroldali create-only szabály elutasítja az írást.
+      const registrationRef = doc(
+        db,
+        'event_registrations',
+        `${user.uid}_februtalis`
+      );
+
+      await setDoc(registrationRef, {
+        uid: user.uid,
+        eventType,
+        teamName: normalizedTeam,
+        teamKey: teamNameKey(normalizedTeam),
+        createdAt: serverTimestamp(),
+      });
     },
 
     // MEGERŐSÍTŐ E-MAIL ÚJRAKÜLDÉSE
