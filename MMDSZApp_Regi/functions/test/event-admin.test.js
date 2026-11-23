@@ -239,6 +239,12 @@ test('event days and program items validate fields, and callable deletion succee
     auth: { uid: 'admin' },
     data: { eventId: 'februtalis-2027', dayId: 'friday' },
   });
+  // A teszt elején létrehozott, tartományon kívüli programnapot is törölni kell,
+  // különben a kiírás (helyesen) nem törölhető.
+  await eventAdmin.deleteEventDayHandler({
+    auth: { uid: 'admin' },
+    data: { eventId: 'februtalis-2027', dayId: '2027-02-21' },
+  });
   await assertSucceeds(setDoc(eventRef, validEdition));
   await eventAdmin.deleteEventEditionHandler({
     auth: { uid: 'admin' },
